@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# 虚拟环境
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 数据（保留目录，忽略内容）
+data/solo_ops.db
+data/chromadb/
+data/backups/
+data/.secret_key
+data/config.json
+
+# 日志
+logs/*.log
+
+# 输出
+output/*
+
+# 实验结果缓存
+experiments/__pycache__/
+experiments/results/*.json
+
+# 旧版本归档（保留）
+app_v090.py
+frontend_v2/
+frontend/
+config/
+memory/
+knowledge/
+resilience/
+tasks/
+tools/
+crew.py
+agents/ceo.py
+agents/llm_config.py
+agents/researcher.py
+agents/writer.py
+
+# 测试缓存
+tests/__pycache__/
+.pytest_cache/
+
+# 操作系统
+.DS_Store
+Thumbs.db

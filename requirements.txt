@@ -1,0 +1,16 @@
+# S-O-P V1.0-MVP 依赖
+# 核心框架
+nicegui>=3.12.1
+
+# 数据层
+chromadb>=0.5.0,<0.6.0
+
+# 安全
+cryptography>=42.0.0
+
+# 工具
+requests>=2.31.0
+pyyaml>=6.0.1
+
+# 可选（增强功能）
+# psutil>=5.9.0  # 内存监控（Windows可选）

@@ -1,0 +1,49 @@
+[
+  {
+    "task_id": "t1",
+    "topic": "daily_report",
+    "model": "m",
+    "status": "completed",
+    "execution_time_seconds": 45,
+    "final_output": "done",
+    "execution_log": "",
+    "created_at": "2026-06-05T09:30:00",
+    "product_line_id": "default",
+    "task_type": "checklist",
+    "referenced_knowledge": []
+  },
+  {
+    "task_id": "t2",
+    "topic": "weekly_review",
+    "model": "m",
+    "status": "running",
+    "execution_time_seconds": 0,
+    "final_output": "",
+    "execution_log": "",
+    "created_at": "2026-06-05T10:00:00",
+    "product_line_id": "default",
+    "task_type": "checklist",
+    "referenced_knowledge": []
+  },
+  {
+    "task_id": "20260605-193525-8bqw",
+    "created_at": "2026-06-05T19:35:25",
+    "topic": "测试referenced_knowledge_V080",
+    "model": "test",
+    "status": "completed",
+    "execution_time_seconds": 1.0,
+    "execution_mode": "orchestrated",
+    "product_line_id": "default",
+    "task_type": "normal",
+    "final_output": "测试输出",
+    "execution_log": "",
+    "referenced_knowledge": [
+      {
+        "doc_id": "doc_001",
+        "doc_name": "测试文档",
+        "chunk_id": "c0",
+        "score": 0.85
+      }
+    ]
+  }
+]
