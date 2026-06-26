@@ -21,9 +21,12 @@ V2.0 子阶段 4.1 + 4.2:
 
 import uuid
 import json
+import logging
 import threading
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================
@@ -235,8 +238,8 @@ class EventBus:
                 callback(event)
                 notified += 1
             except Exception as e:
-                print(f"  ⚠️ [EventBus] 订阅者回调异常 "
-                      f"(event={event.event_type}, callback={callback}): {e}")
+                logger.error("订阅者回调异常 (event=%s, callback=%s): %s",
+                             event.event_type, callback, e)
 
         return notified
 
@@ -280,6 +283,38 @@ class EventBus:
             return sum(len(v) for v in self._subscribers.values())
 
     # ----------------------------------------------------------
+    # V2.2: event_log 清理
+    # ----------------------------------------------------------
+
+    def prune_event_log(self, days: int = 30) -> int:
+        """
+        删除指定天数之前的 event_log 记录，防止无限增长。
+
+        Args:
+            days: 保留最近多少天的记录（默认 30 天）
+
+        Returns:
+            删除的记录数
+        """
+        try:
+            from core.db import get_db
+            db = get_db()
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "DELETE FROM event_log WHERE timestamp < datetime('now', '-' || ? || ' days')",
+                (str(days),)
+            )
+            affected = cursor.rowcount
+            conn.commit()
+            if affected > 0:
+                logger.info("清理了 %s 条 event_log 记录（> %s 天）", affected, days)
+            return affected
+        except Exception as e:
+            logger.error("event_log 清理失败: %s", e)
+            return 0
+
+    # ----------------------------------------------------------
     # 内部辅助
     # ----------------------------------------------------------
 
@@ -319,7 +354,7 @@ class EventBus:
             })
         except Exception as e:
             # 持久化失败不影响事件分发
-            print(f"  ⚠️ [EventBus] 事件持久化失败 ({event.event_type}): {e}")
+            logger.error("事件持久化失败 (%s): %s", event.event_type, e)
 
     @classmethod
     def reset(cls) -> None:

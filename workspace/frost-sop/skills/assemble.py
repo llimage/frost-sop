@@ -235,7 +235,7 @@ def assemble_agent(context: dict) -> dict:
             from core.event_bus import Event
             bus.publish(Event(
                 event_type=EventType.AGENT_CREATED,
-                source="assemble_agent",
+                source="assemble:agent_creator",
                 data={
                     "agent_name": child.name,
                     "generation": child.generation,

@@ -366,6 +366,17 @@ class DBManager:
         )
         """)
         
+        # V2.2: event_log 查询索引
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_event_log_type ON event_log(event_type)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_event_log_source ON event_log(source)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_event_log_timestamp ON event_log(timestamp)"
+        )
+        
         conn.commit()
         print("✅ 19张表初始化完成")
         

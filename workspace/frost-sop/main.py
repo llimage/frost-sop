@@ -6,6 +6,7 @@ Main entry point for the FROST-SOP system.
 import sys
 import json
 import uuid
+import logging
 import argparse
 from datetime import datetime
 from stores.constitution import create_constitution_store
@@ -15,6 +16,8 @@ from agents.parent import create_parent
 from agents.elder import create_elder, subscribe_elder_to_events
 from core.store import Store
 from core.db import get_db
+
+logger = logging.getLogger(__name__)
 
 
 def main(task_input=None, sop_id=None):
@@ -43,12 +46,12 @@ def main(task_input=None, sop_id=None):
     print("   Ancestor Agent ready")
 
     # V2.0: 创建长老并订阅事件总线（fail-safe，EventBus 不可用时优雅跳过）
-    print("\n[2.1] V2.0 Initializing Elder event subscription...")
+    logger.info("[2.1] V2.0 Initializing Elder event subscription...")
     elder = create_elder("elder_main", asset_store=asset_store)
     if subscribe_elder_to_events(elder):
-        print("   [V2.0] 长老已订阅 TASK_COMPLETED 事件，审计将自动触发")
+        logger.info("  [V2.0] 长老已订阅 TASK_COMPLETED 事件，审计将自动触发")
     else:
-        print("   [V2.0] 长老事件订阅跳过（EventBus 不可用，不影响主流程）")
+        logger.info("  [V2.0] 长老事件订阅跳过（EventBus 不可用，不影响主流程）")
 
     # 3. Receive task input
     print(f"\n[3] Task: {task_input}")
@@ -228,18 +231,18 @@ def main(task_input=None, sop_id=None):
         bus = get_event_bus()
         bus.publish(Event(
             event_type=EventType.TASK_DECOMPOSED,
-            source="main",
+            source="main:task_decomposer",
             data={
                 "task_id": task_id,
-                "task_description": task_description,
+                "task_description": task_input,
                 "sop_id": sop_id,
                 "stage_count": len(sop_stages_detail),
                 "stages": [s.get("name", f"阶段{i+1}") for i, s in enumerate(sop_stages_detail)],
             },
         ))
-        print(f"   📡 [V2.0] TASK_DECOMPOSED 事件已发布（{len(sop_stages_detail)}个阶段）")
+        logger.info("  📡 [V2.0] TASK_DECOMPOSED 事件已发布（%s个阶段）", len(sop_stages_detail))
     except Exception as e:
-        print(f"   ⚠️ [V2.0] TASK_DECOMPOSED 发布失败（不影响流程）: {e}")
+        logger.warning("  [V2.0] TASK_DECOMPOSED 发布失败（不影响流程）: %s", e)
 
     # ================================================================
     # 5.4 父辈按内化后的 SOP 真实执行各阶段（孙辈Agent执行）

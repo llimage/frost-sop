@@ -7,9 +7,12 @@ PHILOSOPHY: 长老是退休的祖辈。它保留独立审计权，
 V2.0: 长老可订阅 TASK_COMPLETED 事件，自动执行 audit_family（fail-safe）。
 """
 
+import logging
 import threading
 from core.agent import Agent
 from core.skill import Skill
+
+logger = logging.getLogger(__name__)
 
 
 def audit_family(context: dict) -> dict:
@@ -158,7 +161,7 @@ def _make_elder_event_handler(elder_agent: "Agent"):
             }
             audit_family(ctx)
             report = ctx.get("_audit_report", {})
-            print(f"[Elder] 自动审计完成（事件触发）: {ctx.get('_reason', '已完成')}")
+            logger.info("自动审计完成（事件触发）: %s", ctx.get('_reason', '已完成'))
         except Exception as e:
             import warnings
             warnings.warn(f"[Elder] TASK_COMPLETED 自动审计失败（已忽略）: {e}")

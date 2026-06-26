@@ -1,0 +1,24 @@
+sop_id: "OPS-001"
+name: "财务月结"
+version: "1.0"
+stages:
+  - name: "数据收集"
+    agent: "accountant"
+    skills: ["collect_financial_data", "financial_analysis"]
+    requirement: "收集本月所有收支凭证、发票、银行流水"
+    output_type: "document"
+  - name: "对账核算"
+    agent: "accountant"
+    skills: ["reconcile_accounts", "financial_analysis"]
+    requirement: "核对账目与银行流水，完成月度核算"
+    output_type: "document"
+  - name: "报表生成"
+    agent: "financial_analyst"
+    skills: ["generate_report", "financial_analysis"]
+    requirement: "生成月度财务报表，包括收支明细和利润分析"
+    output_type: "document"
+required_stages:
+  - "报表生成"
+forbidden_skills:
+  - "direct_db_write"
+  - "modify_raw_data"

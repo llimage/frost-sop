@@ -3,10 +3,13 @@ F8 子任务1：决策管理器
 实现后端决策暂停与恢复机制
 """
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Union
 import json
+import logging
+from typing import Dict, List, Optional, Any, Union
 
 from core.db import DBManager
+
+logger = logging.getLogger(__name__)
 
 
 class DecisionManager:
@@ -60,7 +63,7 @@ class DecisionManager:
         
         # 拒绝无效 task_id
         if not task_id or task_id == "unknown":
-            print(f"  ⚠️ 跳过无效决策点（task_id='{task_id}'）: {question}")
+            logger.warning("跳过无效决策点（task_id='%s'）: %s", task_id, question)
             return -1
         
         # 确保父记录存在（防止外键约束失败）
@@ -98,9 +101,9 @@ class DecisionManager:
         
         conn.commit()
         
-        print(f"⏸️ 决策点已暂停: {decision_id}")
-        print(f"   问题: {question}")
-        print(f"   选项: {options}")
+        logger.info("决策点已暂停: %s", decision_id)
+        logger.info("  问题: %s", question)
+        logger.info("  选项: %s", options)
         
         return decision_id
     
@@ -144,15 +147,15 @@ class DecisionManager:
             )
             
             if cursor.rowcount == 0:
-                print(f"❌ 决策点不存在: {decision_id}")
+                logger.error("决策点不存在: %s", decision_id)
                 return False
             
             conn.commit()
         
-        print(f"▶️ 决策点已恢复: {decision_id}")
-        print(f"   用户选择: {user_choice}")
+        logger.info("决策点已恢复: %s", decision_id)
+        logger.info("  用户选择: %s", user_choice)
         if user_note:
-            print(f"   用户备注: {user_note}")
+            logger.info("  用户备注: %s", user_note)
         
         return True
     

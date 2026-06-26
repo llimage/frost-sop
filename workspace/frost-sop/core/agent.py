@@ -16,9 +16,12 @@ from core.store import Store
 from core.skill import Skill
 import copy
 import asyncio
+import logging
 import time
 from datetime import datetime
 from typing import Callable, Dict, Optional, Union
+
+logger = logging.getLogger(__name__)
 
 
 class Agent:
@@ -211,7 +214,7 @@ class Agent:
             bus.publish(event)
         except Exception as e:
             # 事件发布失败不影响主流程
-            print(f"  ⚠️ [V2.0-EventBus] 事件发布失败 ({self.name}, {event_type}): {e}")
+            logger.warning("事件发布失败 (%s, %s): %s", self.name, event_type, e)
 
     def _cleanup(self):
         """
@@ -278,7 +281,7 @@ class Agent:
 
         except Exception as e:
             # 生命周期记录失败不影响主流程
-            print(f"  ⚠️ [V2.0] Agent生命周期记录失败 ({self.name}, {status}): {e}")
+            logger.warning("Agent生命周期记录失败 (%s, %s): %s", self.name, status, e)
 
     def _execute_step_with_retry(
         self, step: Union[str, 'Agent'], context: dict, step_records: list
@@ -301,7 +304,8 @@ class Agent:
             try:
                 is_retry = attempt > 1
                 if is_retry:
-                    print(f"  🔄 [{self.name}] 重试 {attempt}/{self._max_retries} — 步骤: {step_name}")
+                    logger.info("[%s] 重试 %s/%s — 步骤: %s",
+                                self.name, attempt, self._max_retries, step_name)
                 
                 # Execute the step
                 if isinstance(step, str):
@@ -326,24 +330,25 @@ class Agent:
             except Exception as e:
                 last_error = e
                 error_str = str(e)[:200]
-                print(f"  ❌ [{self.name}] 步骤 '{step_name}' 失败 "
-                      f"(尝试 {attempt}/{self._max_retries}): {error_str}")
+                logger.error("[%s] 步骤 '%s' 失败 (尝试 %s/%s): %s",
+                             self.name, step_name, attempt, self._max_retries, error_str)
                 
                 if attempt < self._max_retries:
                     # 备用 Skill 切换（P0-2: 第2次重试时尝试）
                     if attempt == 2 and isinstance(step, str):
                         alt_step = self._find_alternate_skill(step)
                         if alt_step and alt_step != step:
-                            print(f"  🔀 [{self.name}] 切换备用 Skill: {step} → {alt_step}")
+                            logger.info("[%s] 切换备用 Skill: %s → %s",
+                                        self.name, step, alt_step)
                             step = alt_step
                     
                     # Wait before retry
-                    print(f"  ⏳ [{self.name}] 等待 {self._retry_delay_seconds}秒后重试...")
+                    logger.info("[%s] 等待 %s秒后重试...", self.name, self._retry_delay_seconds)
                     time.sleep(self._retry_delay_seconds)
                 else:
                     # Max retries exceeded — report to elder
-                    print(f"  🆘 [{self.name}] 步骤 '{step_name}' 已达最大重试 "
-                          f"({self._max_retries}次)，上报祖辈...")
+                    logger.error("[%s] 步骤 '%s' 已达最大重试 (%s次)，上报祖辈...",
+                                 self.name, step_name, self._max_retries)
                     
                     if self._on_max_retries:
                         try:
@@ -353,9 +358,9 @@ class Agent:
                                 error=last_error,
                                 agent_name=self.name,
                             )
-                            print(f"  📡 [{self.name}] 已上报祖辈 Agent")
+                            logger.info("[%s] 已上报祖辈 Agent", self.name)
                         except Exception as report_err:
-                            print(f"  ⚠️ [{self.name}] 上报祖辈失败: {report_err}")
+                            logger.warning("[%s] 上报祖辈失败: %s", self.name, report_err)
                     
                     # Record failure
                     step_records.append({

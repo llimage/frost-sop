@@ -64,11 +64,11 @@ def test_assemble_publishes_agent_created():
 
 
 # ---------------------------------------------------------------------------
-# 测试 2：事件 source 为 "assemble_agent"
+# 测试 2：事件 source 为 "assemble:agent_creator"
 # ---------------------------------------------------------------------------
 
 def test_assemble_event_source():
-    """AGENT_CREATED 事件的 source 应为 'assemble_agent'"""
+    """AGENT_CREATED 事件的 source 应为 'assemble:agent_creator'"""
     EventBus.reset()
     bus = get_event_bus()
     bus.clear_subscribers()
@@ -80,7 +80,7 @@ def test_assemble_event_source():
     log = bus.get_event_log()
     created_events = [e for e in log if e.event_type == EventType.AGENT_CREATED]
     assert len(created_events) >= 1
-    assert created_events[-1].source == "assemble_agent"
+    assert created_events[-1].source == "assemble:agent_creator"
 
 
 # ---------------------------------------------------------------------------
