@@ -39,13 +39,20 @@ class TestElderAutoAudit:
             "global": db_module._db_manager,
         }
 
-        # 重置单例
+        # 重置 DB 单例
         db_module.DBManager._instance = None
         db_module.DBManager._connection = None
         db_module._db_manager = None
 
         test_db = db_module.DBManager(db_path=tmp_db)
         db_module._db_manager = test_db
+
+        # V2.0: 同时重置 EventBus，避免旧 event_id 写入新 DB 时 UNIQUE 冲突
+        try:
+            from core.event_bus import EventBus
+            EventBus.reset()
+        except Exception:
+            pass
 
         return test_db, tmp_db, orig
 
@@ -114,8 +121,29 @@ class TestElderAutoAudit:
             asset_store = Store()
             asset_store.save("task:test", {"status": "completed", "stage_results": []})
 
-            # 同步触发（直接调用，不走线程）
-            _trigger_elder_audit("test_audit_002", asset_store=asset_store)
+            # V2.0: 临时 patch EventBus._persist_event，防止在临时 DB 上写 event_log 时冲突
+            try:
+                from core.event_bus import EventBus
+                _orig_persist = EventBus._persist_event
+
+                def _noop_persist(self_bus, event):
+                    pass  # 测试期间跳过持久化
+
+                EventBus._persist_event = _noop_persist
+            except Exception:
+                _orig_persist = None
+
+            try:
+                # 同步触发（直接调用，不走线程）
+                _trigger_elder_audit("test_audit_002", asset_store=asset_store)
+            finally:
+                # 恢复 EventBus._persist_event
+                if _orig_persist is not None:
+                    try:
+                        from core.event_bus import EventBus
+                        EventBus._persist_event = _orig_persist
+                    except Exception:
+                        pass
 
             # 检查 audit_log
             rows = test_db.select_all("audit_log", "action = 'auto_audit'")
