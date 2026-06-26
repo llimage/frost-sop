@@ -12,6 +12,7 @@ from stores.constitution import create_constitution_store
 from stores.asset import create_asset_store
 from agents.ancestor import create_ancestor
 from agents.parent import create_parent
+from agents.elder import create_elder, subscribe_elder_to_events
 from core.store import Store
 from core.db import get_db
 
@@ -40,6 +41,14 @@ def main(task_input=None, sop_id=None):
     print("\n[2] Creating Ancestor Agent...")
     ancestor = create_ancestor(constitution_store, asset_store)
     print("   Ancestor Agent ready")
+
+    # V2.0: 创建长老并订阅事件总线（fail-safe，EventBus 不可用时优雅跳过）
+    print("\n[2.1] V2.0 Initializing Elder event subscription...")
+    elder = create_elder("elder_main", asset_store=asset_store)
+    if subscribe_elder_to_events(elder):
+        print("   [V2.0] 长老已订阅 TASK_COMPLETED 事件，审计将自动触发")
+    else:
+        print("   [V2.0] 长老事件订阅跳过（EventBus 不可用，不影响主流程）")
 
     # 3. Receive task input
     print(f"\n[3] Task: {task_input}")
