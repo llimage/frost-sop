@@ -1,0 +1,15 @@
+{
+  "audit_time": "",
+  "checks_performed": [
+    "依赖漏洞扫描 (Safety, pip-audit)",
+    "静态安全分析 (Bandit)",
+    "敏感信息扫描 (detect-secrets)",
+    "开源协议检查 (pip-licenses)",
+    "硬编码密钥检测"
+  ],
+  "issues_summary": {
+    "bandit_high": 0,
+    "bandit_medium": 6
+  },
+  "risk_level": "MEDIUM"
+}

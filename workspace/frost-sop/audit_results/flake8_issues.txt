@@ -1,0 +1,643 @@
+agents/ancestor.py:12:1: F401 'core.skill.Skill' imported but unused
+agents/ancestor.py:17:1: E402 module level import not at top of file
+agents/elder.py:11:1: F401 'threading' imported but unused
+agents/elder.py:150:1: W293 blank line contains whitespace
+agents/elder.py:163:13: F841 local variable 'report' is assigned to but never used
+agents/elder.py:175:1: W293 blank line contains whitespace
+agents/parent.py:27:1: E402 module level import not at top of file
+agents/parent.py:100:13: F841 local variable 'decomposition' is assigned to but never used
+agents/parent.py:139:54: E226 missing whitespace around arithmetic operator
+agents/parent.py:153:28: E128 continuation line under-indented for visual indent
+app.py:11:1: F401 'time' imported but unused
+app.py:12:1: F401 'datetime.date' imported but unused
+app.py:18:1: E402 module level import not at top of file
+app.py:19:1: E402 module level import not at top of file
+app.py:20:1: E402 module level import not at top of file
+app.py:21:1: E402 module level import not at top of file
+app.py:22:1: E402 module level import not at top of file
+app.py:23:1: E402 module level import not at top of file
+app.py:24:1: E402 module level import not at top of file
+app.py:25:1: E402 module level import not at top of file
+app.py:26:1: E402 module level import not at top of file
+app.py:27:1: E402 module level import not at top of file
+app.py:28:1: F401 'core.workbench.get_business_radar_data' imported but unused
+app.py:28:1: E402 module level import not at top of file
+app.py:52:1: E302 expected 2 blank lines, found 1
+app.py:65:1: W293 blank line contains whitespace
+app.py:139:1: W293 blank line contains whitespace
+app.py:144:1: W293 blank line contains whitespace
+app.py:172:1: W293 blank line contains whitespace
+app.py:220:1: W293 blank line contains whitespace
+app.py:253:1: W293 blank line contains whitespace
+app.py:312:1: W293 blank line contains whitespace
+app.py:346:1: W293 blank line contains whitespace
+app.py:368:1: W293 blank line contains whitespace
+app.py:377:1: W293 blank line contains whitespace
+app.py:414:1: W293 blank line contains whitespace
+app.py:461:1: E302 expected 2 blank lines, found 1
+app.py:602:9: F841 local variable 'db_agents' is assigned to but never used
+app.py:613:9: F841 local variable 'ancestor_agent' is assigned to but never used
+app.py:768:76: E231 missing whitespace after ','
+app.py:889:78: E226 missing whitespace around arithmetic operator
+app.py:889:81: E226 missing whitespace around arithmetic operator
+app.py:889:92: E226 missing whitespace around arithmetic operator
+app.py:891:38: E226 missing whitespace around arithmetic operator
+app.py:895:60: E226 missing whitespace around arithmetic operator
+app.py:895:88: E226 missing whitespace around arithmetic operator
+app.py:895:106: E226 missing whitespace around arithmetic operator
+app.py:895:111: E226 missing whitespace around arithmetic operator
+app.py:947:20: F541 f-string is missing placeholders
+app.py:1030:17: F541 f-string is missing placeholders
+app.py:1204:83: E225 missing whitespace around operator
+app.py:1209:84: E231 missing whitespace after ','
+app.py:1477:42: E231 missing whitespace after ','
+app.py:1477:65: E231 missing whitespace after ','
+app.py:1501:82: E226 missing whitespace around arithmetic operator
+app.py:1503:39: E226 missing whitespace around arithmetic operator
+app.py:1535:64: E231 missing whitespace after ','
+app.py:1759:13: F841 local variable 'llm_response' is assigned to but never used
+app.py:1835:54: E226 missing whitespace around arithmetic operator
+app.py:1837:60: E226 missing whitespace around arithmetic operator
+app.py:1840:40: E226 missing whitespace around arithmetic operator
+app.py:1914:68: E226 missing whitespace around arithmetic operator
+app.py:1922:28: E226 missing whitespace around arithmetic operator
+app.py:1983:67: E226 missing whitespace around arithmetic operator
+app.py:1992:33: E127 continuation line over-indented for visual indent
+app.py:2038:69: E231 missing whitespace after ':'
+app.py:2038:75: E231 missing whitespace after ','
+app.py:2038:83: E231 missing whitespace after ':'
+app.py:2038:88: E231 missing whitespace after ','
+app.py:2038:97: E231 missing whitespace after ':'
+app.py:2038:102: E231 missing whitespace after ','
+app.py:2038:112: E231 missing whitespace after ':'
+app.py:2038:124: E231 missing whitespace after ','
+app.py:2076:61: E231 missing whitespace after ','
+app.py:2076:87: E231 missing whitespace after ','
+app.py:2306:36: E226 missing whitespace around arithmetic operator
+core/agent.py:16:1: F401 'core.skill.Skill' imported but unused
+core/agent.py:291:1: W293 blank line contains whitespace
+core/agent.py:296:1: W293 blank line contains whitespace
+core/agent.py:302:1: W293 blank line contains whitespace
+core/agent.py:309:1: W293 blank line contains whitespace
+core/agent.py:319:1: W293 blank line contains whitespace
+core/agent.py:329:1: W293 blank line contains whitespace
+core/agent.py:335:1: W293 blank line contains whitespace
+core/agent.py:344:1: W293 blank line contains whitespace
+core/agent.py:352:1: W293 blank line contains whitespace
+core/agent.py:364:1: W293 blank line contains whitespace
+core/agent.py:373:1: W293 blank line contains whitespace
+core/agent.py:380:1: W293 blank line contains whitespace
+core/agent.py:383:1: W293 blank line contains whitespace
+core/agent.py:391:1: W293 blank line contains whitespace
+core/agent.py:395:1: W293 blank line contains whitespace
+core/agent.py:403:1: W293 blank line contains whitespace
+core/cost.py:9:1: F401 'os' imported but unused
+core/cost.py:11:1: F401 'datetime.datetime' imported but unused
+core/cost.py:12:1: F401 'typing.Optional' imported but unused
+core/cost.py:13:1: F401 'pathlib.Path' imported but unused
+core/cost.py:15:1: F401 'core.db.DBManager' imported but unused
+core/cost.py:26:1: W293 blank line contains whitespace
+core/cost.py:32:1: W293 blank line contains whitespace
+core/cost.py:36:1: W293 blank line contains whitespace
+core/cost.py:44:1: W293 blank line contains whitespace
+core/cost.py:48:1: W293 blank line contains whitespace
+core/cost.py:53:1: W293 blank line contains whitespace
+core/cost.py:61:1: W293 blank line contains whitespace
+core/cost.py:72:1: W293 blank line contains whitespace
+core/cost.py:74:1: W293 blank line contains whitespace
+core/cost.py:78:1: W293 blank line contains whitespace
+core/cost.py:82:1: W293 blank line contains whitespace
+core/cost.py:90:1: W293 blank line contains whitespace
+core/cost.py:93:1: W293 blank line contains whitespace
+core/cost.py:96:1: W293 blank line contains whitespace
+core/cost.py:104:1: W293 blank line contains whitespace
+core/cost.py:113:1: W293 blank line contains whitespace
+core/cost.py:117:1: W293 blank line contains whitespace
+core/cost.py:122:1: W293 blank line contains whitespace
+core/cost.py:127:1: W293 blank line contains whitespace
+core/cost.py:132:1: W293 blank line contains whitespace
+core/cost.py:135:1: W293 blank line contains whitespace
+core/cost.py:139:1: W293 blank line contains whitespace
+core/cost.py:148:1: W293 blank line contains whitespace
+core/cost.py:163:1: E302 expected 2 blank lines, found 1
+core/cost.py:166:1: W293 blank line contains whitespace
+core/cost.py:181:1: W293 blank line contains whitespace
+core/cost.py:184:1: W293 blank line contains whitespace
+core/cost.py:189:1: W293 blank line contains whitespace
+core/cost.py:195:47: E226 missing whitespace around arithmetic operator
+core/cost.py:197:1: W293 blank line contains whitespace
+core/cost.py:205:1: W293 blank line contains whitespace
+core/db.py:10:1: F401 'json' imported but unused
+core/db.py:11:1: F401 'os' imported but unused
+core/db.py:20:1: W293 blank line contains whitespace
+core/db.py:26:1: W293 blank line contains whitespace
+core/db.py:29:1: W293 blank line contains whitespace
+core/db.py:34:1: W293 blank line contains whitespace
+core/db.py:38:1: W293 blank line contains whitespace
+core/db.py:44:1: W293 blank line contains whitespace
+core/db.py:47:1: W293 blank line contains whitespace
+core/db.py:55:1: W293 blank line contains whitespace
+core/db.py:57:1: W293 blank line contains whitespace
+core/db.py:63:1: W293 blank line contains whitespace
+core/db.py:69:1: W293 blank line contains whitespace
+core/db.py:74:1: W293 blank line contains whitespace
+core/db.py:85:1: W293 blank line contains whitespace
+core/db.py:101:1: W293 blank line contains whitespace
+core/db.py:113:1: W293 blank line contains whitespace
+core/db.py:129:1: W293 blank line contains whitespace
+core/db.py:143:1: W293 blank line contains whitespace
+core/db.py:157:1: W293 blank line contains whitespace
+core/db.py:172:1: W293 blank line contains whitespace
+core/db.py:189:1: W293 blank line contains whitespace
+core/db.py:201:1: W293 blank line contains whitespace
+core/db.py:217:1: W293 blank line contains whitespace
+core/db.py:238:1: W293 blank line contains whitespace
+core/db.py:254:1: W293 blank line contains whitespace
+core/db.py:267:1: W293 blank line contains whitespace
+core/db.py:277:1: W293 blank line contains whitespace
+core/db.py:291:1: W293 blank line contains whitespace
+core/db.py:304:1: W293 blank line contains whitespace
+core/db.py:322:1: W293 blank line contains whitespace
+core/db.py:346:1: W293 blank line contains whitespace
+core/db.py:368:1: W293 blank line contains whitespace
+core/db.py:379:1: W293 blank line contains whitespace
+core/db.py:382:1: W293 blank line contains whitespace
+core/db.py:385:1: W293 blank line contains whitespace
+core/db.py:388:1: W293 blank line contains whitespace
+core/db.py:391:1: W293 blank line contains whitespace
+core/db.py:394:1: W293 blank line contains whitespace
+core/db.py:397:1: W293 blank line contains whitespace
+core/db.py:399:1: W293 blank line contains whitespace
+core/db.py:414:1: W293 blank line contains whitespace
+core/db.py:433:1: W293 blank line contains whitespace
+core/db.py:449:1: W293 blank line contains whitespace
+core/db.py:458:1: W293 blank line contains whitespace
+core/db.py:478:1: W293 blank line contains whitespace
+core/db.py:482:1: W293 blank line contains whitespace
+core/db.py:486:1: W293 blank line contains whitespace
+core/db.py:490:1: W293 blank line contains whitespace
+core/db.py:496:1: W293 blank line contains whitespace
+core/db.py:500:1: W293 blank line contains whitespace
+core/db.py:504:1: W293 blank line contains whitespace
+core/db.py:506:1: W293 blank line contains whitespace
+core/db.py:510:1: W293 blank line contains whitespace
+core/db.py:516:1: W293 blank line contains whitespace
+core/db.py:522:1: W293 blank line contains whitespace
+core/db.py:525:1: W293 blank line contains whitespace
+core/db.py:529:1: W293 blank line contains whitespace
+core/db.py:531:1: W293 blank line contains whitespace
+core/db.py:535:1: W293 blank line contains whitespace
+core/db.py:540:1: W293 blank line contains whitespace
+core/db.py:546:1: W293 blank line contains whitespace
+core/db.py:550:1: W293 blank line contains whitespace
+core/db.py:552:1: W293 blank line contains whitespace
+core/db.py:556:1: W293 blank line contains whitespace
+core/db.py:561:1: W293 blank line contains whitespace
+core/db.py:567:1: W293 blank line contains whitespace
+core/db.py:571:1: W293 blank line contains whitespace
+core/db.py:575:1: W293 blank line contains whitespace
+core/db.py:579:1: W293 blank line contains whitespace
+core/db.py:584:1: W293 blank line contains whitespace
+core/db.py:590:1: W293 blank line contains whitespace
+core/db.py:594:1: W293 blank line contains whitespace
+core/db.py:599:1: W293 blank line contains whitespace
+core/db.py:602:1: W293 blank line contains whitespace
+core/db.py:606:1: W293 blank line contains whitespace
+core/db.py:610:1: W293 blank line contains whitespace
+core/db.py:616:1: W293 blank line contains whitespace
+core/db.py:621:1: W293 blank line contains whitespace
+core/db.py:628:1: W293 blank line contains whitespace
+core/db.py:632:1: W293 blank line contains whitespace
+core/db.py:636:1: W293 blank line contains whitespace
+core/db.py:639:1: W293 blank line contains whitespace
+core/db.py:644:1: W293 blank line contains whitespace
+core/db.py:653:1: W293 blank line contains whitespace
+core/db.py:655:1: W293 blank line contains whitespace
+core/db.py:659:1: W293 blank line contains whitespace
+core/db.py:662:1: W293 blank line contains whitespace
+core/db.py:667:1: W293 blank line contains whitespace
+core/db.py:674:1: W293 blank line contains whitespace
+core/db.py:676:1: W293 blank line contains whitespace
+core/db.py:680:1: W293 blank line contains whitespace
+core/db.py:683:1: W293 blank line contains whitespace
+core/db.py:688:1: W293 blank line contains whitespace
+core/db.py:692:1: W293 blank line contains whitespace
+core/db.py:695:1: W293 blank line contains whitespace
+core/db.py:700:1: W293 blank line contains whitespace
+core/db.py:704:1: W293 blank line contains whitespace
+core/db.py:708:1: W293 blank line contains whitespace
+core/db.py:721:1: W293 blank line contains whitespace
+core/db.py:725:1: W293 blank line contains whitespace
+core/db.py:730:68: W291 trailing whitespace
+core/db.py:731:63: W291 trailing whitespace
+core/db.py:736:1: W293 blank line contains whitespace
+core/db.py:742:13: E722 do not use bare 'except'
+core/db.py:744:1: W293 blank line contains whitespace
+core/db.py:746:1: W293 blank line contains whitespace
+core/db.py:750:1: W293 blank line contains whitespace
+core/db.py:754:1: W293 blank line contains whitespace
+core/db.py:759:1: W293 blank line contains whitespace
+core/db.py:773:1: W293 blank line contains whitespace
+core/db.py:784:1: W293 blank line contains whitespace
+core/db.py:788:1: W293 blank line contains whitespace
+core/db.py:791:1: W293 blank line contains whitespace
+core/db.py:797:24: W291 trailing whitespace
+core/db.py:798:77: W291 trailing whitespace
+core/db.py:802:1: W293 blank line contains whitespace
+core/db.py:806:1: W293 blank line contains whitespace
+core/db.py:812:24: W291 trailing whitespace
+core/db.py:817:1: W293 blank line contains whitespace
+core/db.py:821:1: W293 blank line contains whitespace
+core/db.py:822:71: W291 trailing whitespace
+core/db.py:823:70: W291 trailing whitespace
+core/db.py:827:1: W293 blank line contains whitespace
+core/db.py:835:1: W293 blank line contains whitespace
+core/db.py:853:1: W293 blank line contains whitespace
+core/db.py:857:1: W293 blank line contains whitespace
+core/db.py:861:1: W293 blank line contains whitespace
+core/db.py:866:67: W291 trailing whitespace
+core/db.py:879:1: W293 blank line contains whitespace
+core/db.py:880:77: W291 trailing whitespace
+core/db.py:881:74: W291 trailing whitespace
+core/db.py:885:1: W293 blank line contains whitespace
+core/db.py:894:1: W293 blank line contains whitespace
+core/db.py:908:1: W293 blank line contains whitespace
+core/db.py:912:1: W293 blank line contains whitespace
+core/db.py:915:1: W293 blank line contains whitespace
+core/db.py:921:1: W293 blank line contains whitespace
+core/db.py:925:1: W293 blank line contains whitespace
+core/db.py:928:1: W293 blank line contains whitespace
+core/db.py:933:56: W291 trailing whitespace
+core/db.py:936:70: W291 trailing whitespace
+core/db.py:941:1: W293 blank line contains whitespace
+core/db.py:945:1: W293 blank line contains whitespace
+core/db.py:955:1: E302 expected 2 blank lines, found 1
+core/db.py:958:1: W293 blank line contains whitespace
+core/db.py:967:1: E302 expected 2 blank lines, found 1
+core/db.py:975:1: E302 expected 2 blank lines, found 1
+core/decision_manager.py:18:1: W293 blank line contains whitespace
+core/decision_manager.py:22:1: W293 blank line contains whitespace
+core/decision_manager.py:24:62: W291 trailing whitespace
+core/decision_manager.py:27:1: W293 blank line contains whitespace
+core/decision_manager.py:31:1: W293 blank line contains whitespace
+core/decision_manager.py:37:1: W293 blank line contains whitespace
+core/decision_manager.py:39:14: W291 trailing whitespace
+core/decision_manager.py:40:22: W291 trailing whitespace
+core/decision_manager.py:41:23: W291 trailing whitespace
+core/decision_manager.py:42:23: W291 trailing whitespace
+core/decision_manager.py:47:1: W293 blank line contains whitespace
+core/decision_manager.py:53:1: W293 blank line contains whitespace
+core/decision_manager.py:56:1: W293 blank line contains whitespace
+core/decision_manager.py:63:1: W293 blank line contains whitespace
+core/decision_manager.py:68:1: W293 blank line contains whitespace
+core/decision_manager.py:82:1: W293 blank line contains whitespace
+core/decision_manager.py:86:40: W291 trailing whitespace
+core/decision_manager.py:98:1: W293 blank line contains whitespace
+core/decision_manager.py:101:1: W293 blank line contains whitespace
+core/decision_manager.py:103:1: W293 blank line contains whitespace
+core/decision_manager.py:107:1: W293 blank line contains whitespace
+core/decision_manager.py:109:1: W293 blank line contains whitespace
+core/decision_manager.py:111:14: W291 trailing whitespace
+core/decision_manager.py:112:38: W291 trailing whitespace
+core/decision_manager.py:113:26: W291 trailing whitespace
+core/decision_manager.py:118:1: W293 blank line contains whitespace
+core/decision_manager.py:123:1: W293 blank line contains whitespace
+core/decision_manager.py:130:1: W293 blank line contains whitespace
+core/decision_manager.py:134:39: W291 trailing whitespace
+core/decision_manager.py:135:41: W291 trailing whitespace
+core/decision_manager.py:136:39: W291 trailing whitespace
+core/decision_manager.py:137:35: W291 trailing whitespace
+core/decision_manager.py:148:1: W293 blank line contains whitespace
+core/decision_manager.py:152:1: W293 blank line contains whitespace
+core/decision_manager.py:154:1: W293 blank line contains whitespace
+core/decision_manager.py:159:1: W293 blank line contains whitespace
+core/decision_manager.py:161:1: W293 blank line contains whitespace
+core/decision_manager.py:165:1: W293 blank line contains whitespace
+core/decision_manager.py:169:1: W293 blank line contains whitespace
+core/decision_manager.py:174:1: W293 blank line contains whitespace
+core/decision_manager.py:178:1: W293 blank line contains whitespace
+core/decision_manager.py:185:1: W293 blank line contains whitespace
+core/decision_manager.py:189:42: W291 trailing whitespace
+core/decision_manager.py:190:37: W291 trailing whitespace
+core/decision_manager.py:191:37: W291 trailing whitespace
+core/decision_manager.py:195:1: W293 blank line contains whitespace
+core/decision_manager.py:197:1: W293 blank line contains whitespace
+core/decision_manager.py:200:1: W293 blank line contains whitespace
+core/decision_manager.py:204:1: W293 blank line contains whitespace
+core/decision_manager.py:210:1: W293 blank line contains whitespace
+core/decision_manager.py:212:1: W293 blank line contains whitespace
+core/decision_manager.py:216:1: W293 blank line contains whitespace
+core/decision_manager.py:221:1: W293 blank line contains whitespace
+core/decision_manager.py:225:1: W293 blank line contains whitespace
+core/decision_manager.py:228:1: W293 blank line contains whitespace
+core/decision_manager.py:234:1: W293 blank line contains whitespace
+core/decision_manager.py:237:1: W293 blank line contains whitespace
+core/decision_manager.py:240:1: W293 blank line contains whitespace
+core/decision_manager.py:243:1: W293 blank line contains whitespace
+core/decision_manager.py:249:1: W293 blank line contains whitespace
+core/decision_manager.py:251:1: W293 blank line contains whitespace
+core/decision_manager.py:255:1: W293 blank line contains whitespace
+core/decision_manager.py:258:1: W293 blank line contains whitespace
+core/decision_manager.py:264:1: W293 blank line contains whitespace
+core/decision_manager.py:269:1: W293 blank line contains whitespace
+core/decision_manager.py:272:1: W293 blank line contains whitespace
+core/decision_manager.py:282:1: W293 blank line contains whitespace
+core/decision_manager.py:293:1: W293 blank line contains whitespace
+core/decision_manager.py:296:1: W293 blank line contains whitespace
+core/decision_manager.py:301:1: W293 blank line contains whitespace
+core/decision_manager.py:304:1: W293 blank line contains whitespace
+core/event_bus.py:47:17: E221 multiple spaces before operator
+core/event_bus.py:49:19: E221 multiple spaces before operator
+core/event_bus.py:50:16: E221 multiple spaces before operator
+core/event_bus.py:51:17: E221 multiple spaces before operator
+core/event_bus.py:54:18: E221 multiple spaces before operator
+core/event_bus.py:56:17: E221 multiple spaces before operator
+core/event_bus.py:59:19: E221 multiple spaces before operator
+core/event_bus.py:62:18: E221 multiple spaces before operator
+core/event_bus.py:389:1: E402 module level import not at top of file
+core/event_bus.py:391:1: E302 expected 2 blank lines, found 1
+core/event_bus.py:466:1: W293 blank line contains whitespace
+core/event_bus.py:471:1: W293 blank line contains whitespace
+core/event_bus.py:537:32: E127 continuation line over-indented for visual indent
+core/memory.py:9:1: F401 'os' imported but unused
+core/memory.py:10:1: F401 'json' imported but unused
+core/memory.py:24:1: W293 blank line contains whitespace
+core/memory.py:28:1: W293 blank line contains whitespace
+core/memory.py:32:1: W293 blank line contains whitespace
+core/memory.py:40:1: W293 blank line contains whitespace
+core/memory.py:43:1: W293 blank line contains whitespace
+core/memory.py:48:1: W293 blank line contains whitespace
+core/memory.py:50:1: W293 blank line contains whitespace
+core/memory.py:53:1: W293 blank line contains whitespace
+core/memory.py:59:1: W293 blank line contains whitespace
+core/memory.py:68:1: W293 blank line contains whitespace
+core/memory.py:75:13: E722 do not use bare 'except'
+core/memory.py:81:1: W293 blank line contains whitespace
+core/memory.py:85:1: W293 blank line contains whitespace
+core/memory.py:89:1: W293 blank line contains whitespace
+core/memory.py:93:1: W293 blank line contains whitespace
+core/memory.py:106:1: W293 blank line contains whitespace
+core/memory.py:111:1: W293 blank line contains whitespace
+core/memory.py:115:1: W293 blank line contains whitespace
+core/memory.py:122:1: W293 blank line contains whitespace
+core/memory.py:124:1: W293 blank line contains whitespace
+core/memory.py:129:1: W293 blank line contains whitespace
+core/memory.py:133:1: W293 blank line contains whitespace
+core/memory.py:137:1: W293 blank line contains whitespace
+core/memory.py:145:1: W293 blank line contains whitespace
+core/memory.py:156:1: W293 blank line contains whitespace
+core/memory.py:160:1: W293 blank line contains whitespace
+core/memory.py:167:1: W293 blank line contains whitespace
+core/memory.py:178:1: W293 blank line contains whitespace
+core/memory.py:180:1: W293 blank line contains whitespace
+core/memory.py:185:1: W293 blank line contains whitespace
+core/memory.py:189:1: W293 blank line contains whitespace
+core/memory.py:192:1: W293 blank line contains whitespace
+core/memory.py:200:1: W293 blank line contains whitespace
+core/memory.py:208:1: W293 blank line contains whitespace
+core/memory.py:212:1: W293 blank line contains whitespace
+core/memory.py:218:1: W293 blank line contains whitespace
+core/memory.py:233:1: W293 blank line contains whitespace
+core/memory.py:239:1: W293 blank line contains whitespace
+core/memory.py:259:1: W293 blank line contains whitespace
+core/memory.py:262:1: W293 blank line contains whitespace
+core/memory.py:276:1: W293 blank line contains whitespace
+core/memory.py:279:1: W293 blank line contains whitespace
+core/memory.py:291:1: W293 blank line contains whitespace
+core/memory.py:298:1: W293 blank line contains whitespace
+core/memory.py:303:1: W293 blank line contains whitespace
+core/memory.py:308:1: W293 blank line contains whitespace
+core/notifier.py:7:1: F401 'sys' imported but unused
+core/notifier.py:8:1: F401 'time' imported but unused
+core/notifier.py:14:1: W293 blank line contains whitespace
+core/notifier.py:17:1: W293 blank line contains whitespace
+core/notifier.py:22:1: W293 blank line contains whitespace
+core/notifier.py:26:1: W293 blank line contains whitespace
+core/notifier.py:37:1: W293 blank line contains whitespace
+core/notifier.py:52:1: W293 blank line contains whitespace
+core/notifier.py:54:21: E226 missing whitespace around arithmetic operator
+core/notifier.py:55:11: F541 f-string is missing placeholders
+core/notifier.py:58:14: E226 missing whitespace around arithmetic operator
+core/notifier.py:59:1: W293 blank line contains whitespace
+core/notifier.py:66:1: W293 blank line contains whitespace
+core/notifier.py:70:1: W293 blank line contains whitespace
+core/notifier.py:75:1: W293 blank line contains whitespace
+core/notifier.py:86:1: W293 blank line contains whitespace
+core/notifier.py:90:1: W293 blank line contains whitespace
+core/notifier.py:97:1: W293 blank line contains whitespace
+core/notifier.py:102:1: W293 blank line contains whitespace
+core/notifier.py:108:1: W293 blank line contains whitespace
+core/notifier.py:115:1: W293 blank line contains whitespace
+core/notifier.py:123:1: W293 blank line contains whitespace
+core/notifier.py:129:1: W293 blank line contains whitespace
+core/secrets.py:37:1: W293 blank line contains whitespace
+core/secrets.py:42:1: W293 blank line contains whitespace
+core/secrets.py:48:1: W293 blank line contains whitespace
+core/secrets.py:54:1: W293 blank line contains whitespace
+core/secrets.py:60:1: W293 blank line contains whitespace
+core/secrets.py:64:1: W293 blank line contains whitespace
+core/secrets.py:73:1: W293 blank line contains whitespace
+core/secrets.py:76:1: W293 blank line contains whitespace
+core/secrets.py:94:1: W293 blank line contains whitespace
+core/secrets.py:97:1: W293 blank line contains whitespace
+core/secrets.py:103:1: W293 blank line contains whitespace
+core/secrets.py:106:1: W293 blank line contains whitespace
+core/secrets.py:109:1: W293 blank line contains whitespace
+core/secrets.py:118:1: W293 blank line contains whitespace
+core/secrets.py:121:1: W293 blank line contains whitespace
+core/secrets.py:128:1: W293 blank line contains whitespace
+core/secrets.py:131:1: W293 blank line contains whitespace
+core/secrets.py:135:1: W293 blank line contains whitespace
+core/secrets.py:146:1: W293 blank line contains whitespace
+core/secrets.py:150:1: W293 blank line contains whitespace
+core/secrets.py:158:1: W293 blank line contains whitespace
+core/secrets.py:161:1: W293 blank line contains whitespace
+core/secrets.py:165:1: W293 blank line contains whitespace
+core/secrets.py:169:1: W293 blank line contains whitespace
+core/secrets.py:180:1: W293 blank line contains whitespace
+core/secrets.py:183:1: W293 blank line contains whitespace
+core/secrets.py:224:1: W293 blank line contains whitespace
+core/secrets.py:238:1: W293 blank line contains whitespace
+core/secrets.py:240:1: W293 blank line contains whitespace
+core/secrets.py:249:1: W293 blank line contains whitespace
+core/secrets.py:255:1: W293 blank line contains whitespace
+core/secrets.py:260:1: W293 blank line contains whitespace
+core/secrets.py:293:1: W293 blank line contains whitespace
+core/secrets.py:297:1: W293 blank line contains whitespace
+core/secrets.py:304:1: W293 blank line contains whitespace
+core/secrets.py:310:1: W293 blank line contains whitespace
+core/secrets.py:317:1: W293 blank line contains whitespace
+core/secrets.py:326:1: W293 blank line contains whitespace
+core/secrets.py:337:1: W293 blank line contains whitespace
+core/secrets.py:343:1: W293 blank line contains whitespace
+core/secrets.py:346:15: F541 f-string is missing placeholders
+core/secrets.py:347:1: W293 blank line contains whitespace
+core/skill_extractor.py:15:1: F401 'core.db.get_db_connection' imported but unused
+core/skill_extractor.py:97:18: E226 missing whitespace around arithmetic operator
+core/skill_version.py:10:1: F401 'shutil' imported but unused
+core/skill_version.py:11:1: F401 'datetime.datetime' imported but unused
+core/store.py:19:1: E302 expected 2 blank lines, found 1
+core/store.py:22:1: W293 blank line contains whitespace
+core/store.py:30:1: W293 blank line contains whitespace
+core/store.py:40:1: W293 blank line contains whitespace
+core/store.py:53:1: W293 blank line contains whitespace
+core/store.py:61:1: W293 blank line contains whitespace
+core/store.py:65:1: W293 blank line contains whitespace
+core/store.py:121:1: W293 blank line contains whitespace
+core/store.py:230:1: W293 blank line contains whitespace
+core/store.py:233:1: W293 blank line contains whitespace
+core/store.py:236:1: W293 blank line contains whitespace
+core/store.py:240:1: W293 blank line contains whitespace
+core/store.py:246:1: W293 blank line contains whitespace
+core/store.py:250:1: W293 blank line contains whitespace
+core/store.py:254:1: W293 blank line contains whitespace
+core/store.py:260:1: W293 blank line contains whitespace
+core/store.py:267:1: W293 blank line contains whitespace
+core/store.py:269:1: W293 blank line contains whitespace
+core/store.py:273:1: W293 blank line contains whitespace
+core/store.py:276:1: W293 blank line contains whitespace
+core/store.py:285:1: W293 blank line contains whitespace
+core/store.py:289:1: W293 blank line contains whitespace
+core/store.py:297:1: W293 blank line contains whitespace
+core/store.py:301:1: W293 blank line contains whitespace
+core/workbench.py:13:1: F401 'os' imported but unused
+core/workbench.py:195:1: W293 blank line contains whitespace
+core/workbench.py:314:9: E128 continuation line under-indented for visual indent
+core/workbench.py:322:1: W293 blank line contains whitespace
+core/workbench.py:325:5: F841 local variable 'min_e' is assigned to but never used
+core/workbench.py:459:13: E128 continuation line under-indented for visual indent
+core/workbench.py:460:13: E128 continuation line under-indented for visual indent
+main.py:6:1: F401 'sys' imported but unused
+main.py:151:15: F541 f-string is missing placeholders
+main.py:190:23: F541 f-string is missing placeholders
+main.py:193:23: F541 f-string is missing placeholders
+main.py:241:48: E226 missing whitespace around arithmetic operator
+main.py:256:46: E226 missing whitespace around arithmetic operator
+main.py:303:5: E303 too many blank lines (2)
+main.py:344:15: F541 f-string is missing placeholders
+main.py:397:5: F841 local variable 'ancestor' is assigned to but never used
+skills/assemble.py:8:1: F401 'os' imported but unused
+skills/assemble.py:16:1: E302 expected 2 blank lines, found 1
+skills/assemble.py:40:1: W293 blank line contains whitespace
+skills/assemble.py:45:1: W293 blank line contains whitespace
+skills/assemble.py:51:1: W293 blank line contains whitespace
+skills/assemble.py:55:1: W293 blank line contains whitespace
+skills/assemble.py:60:1: W293 blank line contains whitespace
+skills/assemble.py:88:1: W293 blank line contains whitespace
+skills/assemble.py:94:1: W293 blank line contains whitespace
+skills/assemble.py:96:1: W293 blank line contains whitespace
+skills/assemble.py:106:1: W293 blank line contains whitespace
+skills/assemble.py:111:1: W293 blank line contains whitespace
+skills/assemble.py:125:1: W293 blank line contains whitespace
+skills/assemble.py:128:1: W293 blank line contains whitespace
+skills/assemble.py:138:1: W293 blank line contains whitespace
+skills/assemble.py:157:1: W293 blank line contains whitespace
+skills/assemble.py:163:1: W293 blank line contains whitespace
+skills/assemble.py:165:1: W293 blank line contains whitespace
+skills/assemble.py:172:1: W293 blank line contains whitespace
+skills/assemble.py:179:29: F841 local variable 'matched_template' is assigned to but never used
+skills/assemble.py:182:1: W293 blank line contains whitespace
+skills/assemble.py:192:1: W293 blank line contains whitespace
+skills/assemble.py:199:1: W293 blank line contains whitespace
+skills/assemble.py:204:1: W293 blank line contains whitespace
+skills/assemble.py:220:1: W293 blank line contains whitespace
+skills/assemble.py:229:108: E226 missing whitespace around arithmetic operator
+skills/assemble.py:263:1: W293 blank line contains whitespace
+skills/assemble.py:278:1: W293 blank line contains whitespace
+skills/assemble.py:284:1: W293 blank line contains whitespace
+skills/assemble.py:286:1: W293 blank line contains whitespace
+skills/assemble.py:296:1: W293 blank line contains whitespace
+skills/assemble.py:300:1: W293 blank line contains whitespace
+skills/evolution.py:112:5: F841 local variable 'task_history' is assigned to but never used
+skills/importer.py:7:1: F401 'os' imported but unused
+skills/importer.py:8:1: F401 're' imported but unused
+skills/importer.py:22:1: W293 blank line contains whitespace
+skills/importer.py:26:1: W293 blank line contains whitespace
+skills/importer.py:31:1: W293 blank line contains whitespace
+skills/importer.py:33:1: W293 blank line contains whitespace
+skills/importer.py:37:1: W293 blank line contains whitespace
+skills/importer.py:45:1: W293 blank line contains whitespace
+skills/importer.py:52:1: W293 blank line contains whitespace
+skills/importer.py:59:1: W293 blank line contains whitespace
+skills/importer.py:65:1: W293 blank line contains whitespace
+skills/importer.py:77:1: W293 blank line contains whitespace
+skills/importer.py:83:1: W293 blank line contains whitespace
+skills/importer.py:90:1: W293 blank line contains whitespace
+skills/importer.py:95:1: W293 blank line contains whitespace
+skills/importer.py:100:1: W293 blank line contains whitespace
+skills/importer.py:113:25: E722 do not use bare 'except'
+skills/importer.py:124:1: W293 blank line contains whitespace
+skills/importer.py:128:1: W293 blank line contains whitespace
+skills/importer.py:144:1: W293 blank line contains whitespace
+skills/importer.py:148:1: W293 blank line contains whitespace
+skills/importer.py:152:1: W293 blank line contains whitespace
+skills/importer.py:201:1: W293 blank line contains whitespace
+skills/importer.py:205:1: W293 blank line contains whitespace
+skills/importer.py:214:1: W293 blank line contains whitespace
+skills/intent.py:84:1: W293 blank line contains whitespace
+skills/intent.py:88:1: W293 blank line contains whitespace
+skills/intent.py:111:1: W293 blank line contains whitespace
+skills/intent.py:128:1: W293 blank line contains whitespace
+skills/intent.py:131:1: W293 blank line contains whitespace
+skills/intent.py:137:1: W293 blank line contains whitespace
+skills/intent.py:148:1: W293 blank line contains whitespace
+skills/intent.py:170:1: W293 blank line contains whitespace
+skills/intent.py:177:1: W293 blank line contains whitespace
+skills/llm.py:9:1: F401 'datetime.datetime' imported but unused
+skills/mercenary.py:15:1: W293 blank line contains whitespace
+skills/mercenary.py:20:1: W293 blank line contains whitespace
+skills/mercenary.py:47:1: W293 blank line contains whitespace
+skills/mercenary.py:52:1: W293 blank line contains whitespace
+skills/mercenary.py:55:1: W293 blank line contains whitespace
+skills/mercenary.py:62:1: W293 blank line contains whitespace
+skills/mercenary.py:90:1: W293 blank line contains whitespace
+skills/mercenary.py:94:1: W293 blank line contains whitespace
+skills/mercenary.py:170:43: E226 missing whitespace around arithmetic operator
+skills/mercenary.py:191:1: W293 blank line contains whitespace
+skills/mercenary.py:197:1: W293 blank line contains whitespace
+skills/mercenary.py:212:1: W293 blank line contains whitespace
+skills/mercenary.py:217:1: W293 blank line contains whitespace
+skills/mercenary.py:222:1: W293 blank line contains whitespace
+skills/mercenary.py:227:1: W293 blank line contains whitespace
+skills/orchestration.py:171:1: W293 blank line contains whitespace
+skills/orchestration.py:178:1: W293 blank line contains whitespace
+skills/orchestration.py:185:1: W293 blank line contains whitespace
+skills/orchestration.py:187:5: F401 'core.decision_manager.DecisionManager' imported but unused
+skills/orchestration.py:188:1: W293 blank line contains whitespace
+skills/orchestration.py:194:1: W293 blank line contains whitespace
+skills/orchestration.py:199:1: W293 blank line contains whitespace
+skills/orchestration.py:203:1: W293 blank line contains whitespace
+skills/orchestration.py:215:1: W293 blank line contains whitespace
+skills/orchestration.py:222:1: W293 blank line contains whitespace
+skills/orchestration.py:228:1: W293 blank line contains whitespace
+skills/orchestration.py:232:1: W293 blank line contains whitespace
+skills/orchestration.py:240:1: W293 blank line contains whitespace
+skills/orchestration.py:310:1: W293 blank line contains whitespace
+skills/orchestration.py:320:1: W293 blank line contains whitespace
+skills/orchestration.py:342:1: W293 blank line contains whitespace
+skills/orchestration.py:354:1: W293 blank line contains whitespace
+skills/orchestration.py:359:1: W293 blank line contains whitespace
+skills/orchestration.py:362:1: W293 blank line contains whitespace
+skills/orchestration.py:367:1: W293 blank line contains whitespace
+skills/orchestration.py:527:13: F824 `nonlocal _task_progress` is unused: name is never assigned in scope
+skills/orchestration.py:535:24: E128 continuation line under-indented for visual indent
+skills/orchestration.py:577:24: E128 continuation line under-indented for visual indent
+skills/orchestration.py:586:28: E128 continuation line under-indented for visual indent
+skills/search_gitee.py:15:1: W293 blank line contains whitespace
+skills/search_gitee.py:18:1: W293 blank line contains whitespace
+skills/tools.py:14:1: W293 blank line contains whitespace
+skills/tools.py:18:1: W293 blank line contains whitespace
+skills/tools.py:22:1: W293 blank line contains whitespace
+skills/tools.py:25:1: W293 blank line contains whitespace
+skills/tools.py:29:1: W293 blank line contains whitespace
+skills/tools.py:39:1: W293 blank line contains whitespace
+skills/tools.py:47:1: W293 blank line contains whitespace
+skills/tools.py:52:1: W293 blank line contains whitespace
+skills/tools.py:57:1: W293 blank line contains whitespace
+skills/tools.py:59:1: W293 blank line contains whitespace
+skills/tools.py:63:1: W293 blank line contains whitespace
+skills/tools.py:88:1: W293 blank line contains whitespace
+skills/tools.py:90:1: W293 blank line contains whitespace
+skills/tools.py:98:1: W293 blank line contains whitespace
+skills/tools.py:101:1: W293 blank line contains whitespace
+skills/tools.py:106:1: W293 blank line contains whitespace

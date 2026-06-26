@@ -1,0 +1,240 @@
+core\sop.py:16: error: Incompatible default for parameter "required_stages" (default has type "None", parameter has type "list[Any]")  [assignment]
+core\sop.py:16: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\sop.py:16: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\sop.py:16: error: Incompatible default for parameter "forbidden_skills" (default has type "None", parameter has type "list[Any]")  [assignment]
+core\skill.py:14: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+skills\evolution.py:53: error: Need type annotation for "error_types" (hint: "error_types: dict[<type>, <type>] = ...")  [var-annotated]
+skills\evolution.py:68: error: Item "None" of "Any | None" has no attribute "__iter__" (not iterable)  [union-attr]
+skills\evolution.py:71: error: Unsupported right operand type for in ("Any | None")  [operator]
+skills\evolution.py:93: error: Argument "key" to "max" has incompatible type overloaded function; expected "Callable[[str], SupportsDunderLT[Any] | SupportsDunderGT[Any]]"  [arg-type]
+skills\succession.py:55: error: Argument 1 to "len" has incompatible type "Any | None"; expected "Sized"  [arg-type]
+skills\succession.py:56: error: Item "None" of "Any | None" has no attribute "__iter__" (not iterable)  [union-attr]
+core\notifier.py:11: error: Function is missing a return type annotation  [no-untyped-def]
+core\notifier.py:63: error: Function is missing a return type annotation  [no-untyped-def]
+core\notifier.py:63: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+core\notifier.py:94: error: Function is missing a return type annotation  [no-untyped-def]
+core\db.py:30: error: Function is missing a type annotation  [no-untyped-def]
+core\db.py:61: error: Accessing "__init__" on an instance is unsound, since instance.__init__ could be from an incompatible subclass  [misc]
+core\db.py:62: error: Incompatible return value type (got "Connection | None", expected "Connection")  [return-value]
+core\db.py:64: error: Function is missing a return type annotation  [no-untyped-def]
+core\db.py:64: note: Use "-> None" if function does not return a value
+core\db.py:70: error: Function is missing a return type annotation  [no-untyped-def]
+core\db.py:70: note: Use "-> None" if function does not return a value
+core\db.py:400: error: Function is missing a type annotation  [no-untyped-def]
+core\db.py:415: error: Function is missing a type annotation  [no-untyped-def]
+core\db.py:434: error: Function is missing a type annotation  [no-untyped-def]
+core\db.py:450: error: Function is missing a type annotation  [no-untyped-def]
+core\db.py:459: error: Function is missing a type annotation  [no-untyped-def]
+core\db.py:576: error: Incompatible default for parameter "where" (default has type "None", parameter has type "str")  [assignment]
+core\db.py:576: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\db.py:576: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\db.py:576: error: Incompatible default for parameter "params" (default has type "None", parameter has type "list[Any]")  [assignment]
+core\db.py:603: error: Incompatible default for parameter "params" (default has type "None", parameter has type "list[Any]")  [assignment]
+core\db.py:603: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\db.py:603: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\db.py:816: error: Incompatible return value type (got "Any | None", expected "dict[Any, Any]")  [return-value]
+core\db.py:878: error: Argument 2 to "execute_sql" of "DBManager" has incompatible type "list[str] | None"; expected "list[Any]"  [arg-type]
+core\db.py:967: error: Function is missing a return type annotation  [no-untyped-def]
+core\db.py:967: note: Use "-> None" if function does not return a value
+core\db.py:975: error: Function is missing a return type annotation  [no-untyped-def]
+core\workbench.py:81: error: Function is missing a return type annotation  [no-untyped-def]
+core\workbench.py:81: note: Use "-> None" if function does not return a value
+core\workbench.py:102: error: Function is missing a return type annotation  [no-untyped-def]
+core\workbench.py:102: note: Use "-> None" if function does not return a value
+core\workbench.py:367: error: Incompatible default for parameter "narrative" (default has type "None", parameter has type "str")  [assignment]
+core\workbench.py:367: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\workbench.py:367: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\workbench.py:424: error: Incompatible default for parameter "snapshot_name" (default has type "None", parameter has type "str")  [assignment]
+core\workbench.py:424: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\workbench.py:424: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\store.py:27: error: Incompatible default for parameter "db" (default has type "None", parameter has type "DBManager")  [assignment]
+core\store.py:27: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\store.py:27: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\store.py:34: error: Need type annotation for "_memory" (hint: "_memory: dict[<type>, <type>] = ...")  [var-annotated]
+core\store.py:37: error: Function is missing a return type annotation  [no-untyped-def]
+core\store.py:37: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+core\store.py:45: error: Function is missing a return type annotation  [no-untyped-def]
+core\store.py:49: error: Function is missing a return type annotation  [no-untyped-def]
+core\store.py:62: error: Function is missing a return type annotation  [no-untyped-def]
+core\store.py:62: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+core\store.py:122: error: Function is missing a return type annotation  [no-untyped-def]
+core\store.py:142: error: Incompatible default for parameter "own_store" (default has type "None", parameter has type "Store")  [assignment]
+core\store.py:142: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\store.py:142: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\store.py:142: error: Incompatible default for parameter "parent" (default has type "None", parameter has type "HierarchicalStore")  [assignment]
+core\store.py:143: error: Incompatible default for parameter "readonly_keys" (default has type "None", parameter has type "set[Any]")  [assignment]
+core\store.py:143: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\store.py:143: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\store.py:143: error: Incompatible default for parameter "overrideable_keys" (default has type "None", parameter has type "set[Any]")  [assignment]
+core\store.py:150: error: Function is missing a return type annotation  [no-untyped-def]
+core\store.py:150: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+core\store.py:161: error: Function is missing a return type annotation  [no-untyped-def]
+core\store.py:175: error: Function is missing a return type annotation  [no-untyped-def]
+core\store.py:207: error: Function is missing a return type annotation  [no-untyped-def]
+core\store.py:207: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+core\store.py:237: error: Function is missing a type annotation  [no-untyped-def]
+core\skill_version.py:113: error: Function is missing a return type annotation  [no-untyped-def]
+core\decision_manager.py:108: error: Incompatible return value type (got "int | None", expected "int")  [return-value]
+core\cost.py:75: error: Incompatible default for parameter "year" (default has type "None", parameter has type "int")  [assignment]
+core\cost.py:75: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\cost.py:75: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\cost.py:75: error: Incompatible default for parameter "month" (default has type "None", parameter has type "int")  [assignment]
+core\cost.py:114: error: Function is missing a return type annotation  [no-untyped-def]
+core\cost.py:136: error: Function is missing a return type annotation  [no-untyped-def]
+core\cost.py:136: error: Incompatible default for parameter "monthly_budget" (default has type "None", parameter has type "float")  [assignment]
+core\cost.py:136: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\cost.py:136: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\cost.py:136: error: Incompatible default for parameter "alert_ratio" (default has type "None", parameter has type "float")  [assignment]
+core\cost.py:176: error: Function is missing a return type annotation  [no-untyped-def]
+core\secrets.py:278: error: Function is missing a return type annotation  [no-untyped-def]
+core\secrets.py:330: error: Function is missing a return type annotation  [no-untyped-def]
+core\event_bus.py:86: error: Incompatible default for parameter "event_id" (default has type "None", parameter has type "str")  [assignment]
+core\event_bus.py:86: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\event_bus.py:86: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\event_bus.py:87: error: Incompatible default for parameter "timestamp" (default has type "None", parameter has type "datetime")  [assignment]
+core\event_bus.py:87: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\event_bus.py:87: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\event_bus.py:140: error: Function is missing a return type annotation  [no-untyped-def]
+core\event_bus.py:140: note: Use "-> None" if function does not return a value
+core\event_bus.py:144: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+core\event_bus.py:146: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+core\event_bus.py:147: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+core\event_bus.py:149: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+core\event_bus.py:190: error: Incompatible default for parameter "event_type" (default has type "None", parameter has type "str")  [assignment]
+core\event_bus.py:190: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\event_bus.py:190: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\event_bus.py:253: error: Incompatible default for parameter "event_type" (default has type "None", parameter has type "str")  [assignment]
+core\event_bus.py:253: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\event_bus.py:253: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\event_bus.py:275: error: Incompatible default for parameter "event_type" (default has type "None", parameter has type "str")  [assignment]
+core\event_bus.py:275: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\event_bus.py:275: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\event_bus.py:336: error: Incompatible types in assignment (expression has type "dict[Any, Any]", target has type "str")  [assignment]
+core\event_bus.py:417: error: Function is missing a return type annotation  [no-untyped-def]
+core\event_bus.py:417: note: Use "-> None" if function does not return a value
+core\event_bus.py:421: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+core\event_bus.py:423: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+core\event_bus.py:424: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+core\event_bus.py:426: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+core\event_bus.py:463: error: Incompatible default for parameter "is_async" (default has type "None", parameter has type "bool")  [assignment]
+core\event_bus.py:463: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\event_bus.py:463: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\event_bus.py:486: error: Incompatible default for parameter "event_type" (default has type "None", parameter has type "str")  [assignment]
+core\event_bus.py:486: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\event_bus.py:486: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\event_bus.py:527: error: Function is missing a type annotation  [no-untyped-def]
+core\event_bus.py:566: error: Incompatible default for parameter "event_type" (default has type "None", parameter has type "str")  [assignment]
+core\event_bus.py:566: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\event_bus.py:566: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\event_bus.py:579: error: Incompatible default for parameter "event_type" (default has type "None", parameter has type "str")  [assignment]
+core\event_bus.py:579: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\event_bus.py:579: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\event_bus.py:601: error: Incompatible types in assignment (expression has type "dict[Any, Any]", target has type "str")  [assignment]
+core\agent.py:36: error: Incompatible default for parameter "name" (default has type "None", parameter has type "str")  [assignment]
+core\agent.py:36: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\agent.py:36: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\agent.py:36: error: Incompatible default for parameter "store" (default has type "None", parameter has type "Store")  [assignment]
+core\agent.py:36: error: Incompatible default for parameter "skills" (default has type "None", parameter has type "dict[Any, Any]")  [assignment]
+core\agent.py:37: error: Incompatible default for parameter "sop_steps" (default has type "None", parameter has type "list[Any]")  [assignment]
+core\agent.py:37: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\agent.py:37: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\agent.py:38: error: Incompatible default for parameter "max_spawn_generation" (default has type "None", parameter has type "int")  [assignment]
+core\agent.py:38: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\agent.py:38: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\agent.py:39: error: Incompatible default for parameter "retry_config" (default has type "None", parameter has type "dict[Any, Any]")  [assignment]
+core\agent.py:39: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\agent.py:39: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\agent.py:66: error: Need type annotation for "_pending_sop" (hint: "_pending_sop: list[<type>] = ...")  [var-annotated]
+core\agent.py:67: error: Need type annotation for "_execution_history" (hint: "_execution_history: list[<type>] = ...")  [var-annotated]
+core\agent.py:93: error: Incompatible default for parameter "initial_context" (default has type "None", parameter has type "dict[Any, Any]")  [assignment]
+core\agent.py:93: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\agent.py:93: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\agent.py:114: error: Need type annotation for "step_records" (hint: "step_records: list[<type>] = ...")  [var-annotated]
+core\agent.py:166: error: Function is missing a return type annotation  [no-untyped-def]
+core\agent.py:166: note: Use "-> None" if function does not return a value
+core\agent.py:219: error: Function is missing a return type annotation  [no-untyped-def]
+core\agent.py:219: note: Use "-> None" if function does not return a value
+core\agent.py:233: error: Function is missing a return type annotation  [no-untyped-def]
+core\agent.py:406: error: Incompatible default for parameter "initial_context" (default has type "None", parameter has type "dict[Any, Any]")  [assignment]
+core\agent.py:406: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\agent.py:406: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\agent.py:430: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+core\agent.py:430: error: Incompatible default for parameter "name" (default has type "None", parameter has type "str")  [assignment]
+core\agent.py:430: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\agent.py:430: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\agent.py:430: error: Incompatible default for parameter "store" (default has type "None", parameter has type "Store")  [assignment]
+core\agent.py:430: error: Incompatible default for parameter "skills" (default has type "None", parameter has type "dict[Any, Any]")  [assignment]
+core\agent.py:431: error: Incompatible default for parameter "sop_steps" (default has type "None", parameter has type "list[Any]")  [assignment]
+core\agent.py:431: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\agent.py:431: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+core\agent.py:463: error: Function is missing a return type annotation  [no-untyped-def]
+core\agent.py:472: error: Incompatible types in assignment (expression has type "Agent", variable has type "None")  [assignment]
+core\agent.py:474: error: Function is missing a return type annotation  [no-untyped-def]
+core\agent.py:483: error: Function is missing a return type annotation  [no-untyped-def]
+core\agent.py:483: note: Use "-> None" if function does not return a value
+core\agent.py:488: error: Function is missing a return type annotation  [no-untyped-def]
+core\agent.py:488: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+core\agent.py:498: error: Function is missing a return type annotation  [no-untyped-def]
+core\agent.py:510: error: Incompatible default for parameter "limit" (default has type "None", parameter has type "int")  [assignment]
+core\agent.py:510: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+core\agent.py:510: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+skills\mercenary.py:12: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+skills\mercenary.py:12: error: Incompatible default for parameter "skill_name" (default has type "None", parameter has type "str")  [assignment]
+skills\mercenary.py:12: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+skills\mercenary.py:12: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+agents\elder.py:55: error: Unsupported target for indexed assignment ("Collection[str]")  [index]
+agents\elder.py:66: error: Item "None" of "Any | None" has no attribute "__iter__" (not iterable)  [union-attr]
+agents\elder.py:81: error: Unsupported target for indexed assignment ("Collection[str]")  [index]
+agents\elder.py:82: error: Unsupported target for indexed assignment ("Collection[str]")  [index]
+agents\elder.py:88: error: Unsupported target for indexed assignment ("Collection[str]")  [index]
+agents\elder.py:98: error: Unsupported target for indexed assignment ("Collection[str]")  [index]
+agents\elder.py:101: error: Incompatible types in assignment (expression has type "int", target has type "Collection[str]")  [assignment]
+agents\elder.py:102: error: Incompatible types in assignment (expression has type "int", target has type "Collection[str]")  [assignment]
+agents\elder.py:103: error: Incompatible types in assignment (expression has type "int", target has type "Collection[str]")  [assignment]
+agents\elder.py:104: error: Incompatible types in assignment (expression has type "int", target has type "Collection[str]")  [assignment]
+agents\elder.py:108: error: "Collection[str]" has no attribute "append"  [attr-defined]
+agents\elder.py:110: error: "Collection[str]" has no attribute "append"  [attr-defined]
+agents\elder.py:113: error: "Collection[str]" has no attribute "append"  [attr-defined]
+agents\elder.py:116: error: "Collection[str]" has no attribute "append"  [attr-defined]
+agents\elder.py:119: error: "Collection[str]" has no attribute "append"  [attr-defined]
+agents\elder.py:126: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+agents\elder.py:147: error: Function is missing a return type annotation  [no-untyped-def]
+agents\elder.py:154: error: Function is missing a type annotation  [no-untyped-def]
+agents\elder.py:183: error: "Agent" has no attribute "_event_handler"  [attr-defined]
+skills\llm.py:28: error: Function is missing a return type annotation  [no-untyped-def]
+skills\llm.py:255: error: Argument "messages" to "create" of "Completions" has incompatible type "list[dict[str, Any]]"; expected "Iterable[ChatCompletionDeveloperMessageParam | ChatCompletionSystemMessageParam | ChatCompletionUserMessageParam | ChatCompletionAssistantMessageParam | ChatCompletionToolMessageParam | ChatCompletionFunctionMessageParam]"  [arg-type]
+skills\llm.py:265: error: Item "None" of "CompletionUsage | None" has no attribute "prompt_tokens"  [union-attr]
+skills\llm.py:266: error: Item "None" of "CompletionUsage | None" has no attribute "completion_tokens"  [union-attr]
+skills\llm.py:267: error: Item "None" of "CompletionUsage | None" has no attribute "total_tokens"  [union-attr]
+skills\llm.py:270: error: Item "None" of "CompletionUsage | None" has no attribute "total_tokens"  [union-attr]
+skills\llm.py:277: error: Item "None" of "CompletionUsage | None" has no attribute "total_tokens"  [union-attr]
+skills\llm.py:416: error: Incompatible return value type (got "object", expected "str")  [return-value]
+skills\assemble.py:16: error: Function is missing a return type annotation  [no-untyped-def]
+skills\assemble.py:24: error: Function is missing a type annotation  [no-untyped-def]
+skills\assemble.py:26: error: Function is missing a type annotation  [no-untyped-def]
+skills\assemble.py:254: error: Function is missing a return type annotation  [no-untyped-def]
+skills\assemble.py:261: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+skills\orchestration.py:380: error: Function is missing a return type annotation  [no-untyped-def]
+skills\orchestration.py:380: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+skills\orchestration.py:496: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+skills\orchestration.py:525: error: Function is missing a return type annotation  [no-untyped-def]
+core\memory.py:52: error: Need type annotation for "_memory_keywords" (hint: "_memory_keywords: list[<type>] = ...")  [var-annotated]
+core\memory.py:54: error: Function is missing a return type annotation  [no-untyped-def]
+core\memory.py:54: note: Use "-> None" if function does not return a value
+core\memory.py:117: error: "None" has no attribute "add"  [attr-defined]
+core\memory.py:163: error: "None" has no attribute "query"  [attr-defined]
+core\memory.py:203: error: "None" has no attribute "delete"  [attr-defined]
+core\memory.py:220: error: "None" has no attribute "get"  [attr-defined]
+core\memory.py:234: error: Function is missing a return type annotation  [no-untyped-def]
+core\memory.py:234: note: Use "-> None" if function does not return a value
+core\memory.py:253: error: Need type annotation for "_memory_stores" (hint: "_memory_stores: dict[<type>, <type>] = ...")  [var-annotated]
+core\memory.py:271: error: Function is missing a return type annotation  [no-untyped-def]
+agents\parent.py:30: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+agents\parent.py:33: error: Incompatible default for parameter "sop_id" (default has type "None", parameter has type "str")  [assignment]
+agents\parent.py:33: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+agents\parent.py:33: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+agents\parent.py:83: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+agents\parent.py:97: error: Function is missing a return type annotation  [no-untyped-def]
+agents\ancestor.py:20: error: Function is missing a type annotation for one or more parameters  [no-untyped-def]
+agents\ancestor.py:70: error: Function is missing a return type annotation  [no-untyped-def]
+Found 159 errors in 22 files (checked 32 source files)

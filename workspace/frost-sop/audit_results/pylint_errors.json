@@ -1,0 +1,6 @@
+[]
+
+
+--- STDERR ---
+Unable to create directory C:\Users\13810\AppData\Local\pylint\pylint\Cache
+Unable to create file C:\Users\13810\AppData\Local\pylint\pylint\Cache\app_1.stats: [Errno 13] Permission denied: 'C:\\Users\\13810\\AppData\\Local\\pylint\\pylint\\Cache\\app_1.stats'
