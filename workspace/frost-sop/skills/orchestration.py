@@ -7,6 +7,7 @@ from core.skill import Skill
 from core.agent import Agent
 from core.store import Store
 from datetime import datetime
+import asyncio
 
 
 def spawn(context: dict) -> dict:
@@ -540,8 +541,8 @@ def register_stage_executor(parent_agent, asset_store) -> bool:
                 "_task_id": task_id,
             }
 
-            # 调用 execute_stage
-            result_context = execute_stage(stage_context)
+            # 调用 execute_stage（P1-1 修复：asyncio.to_thread 避免阻塞事件循环）
+            result_context = await asyncio.to_thread(execute_stage, stage_context)
             result = result_context.get("_current_stage_result", {})
             stage_status = result.get("status", "unknown")
 

@@ -14,6 +14,7 @@ from skills.orchestration import spawn_skill, emit_skill, validate_sop_skill
 from skills.llm import call_llm_skill
 
 logger = logging.getLogger(__name__)
+import asyncio
 
 
 def create_ancestor(constitution_store, asset_store, event_driven: bool = False) -> Agent:
@@ -73,12 +74,14 @@ def _subscribe_ancestor_to_events(ancestor: Agent) -> bool:
 
             logger.info("[V3.0] ancestor 收到 TASK_CREATED: %s", task_id)
 
-            # 调用 LLM 分解任务
-            context = ancestor.run(
-                sop_steps=["call_llm"],
-                initial_context={
-                    "_prompt": f"Analyze the following task, decompose into 1-3 parent agents, return JSON: {task_input}"
-                }
+            # 调用 LLM 分解任务（P1-1 修复：asyncio.to_thread 避免阻塞事件循环）
+            context = await asyncio.to_thread(
+                lambda: ancestor.run(
+                    sop_steps=["call_llm"],
+                    initial_context={
+                        "_prompt": f"Analyze the following task, decompose into 1-3 parent agents, return JSON: {task_input}"
+                    }
+                )
             )
             llm_response = context.get("_llm_response", "")
 
