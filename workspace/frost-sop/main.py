@@ -6,6 +6,7 @@ Main entry point for the FROST-SOP system.
 import sys
 import json
 import uuid
+import asyncio
 import logging
 import argparse
 from datetime import datetime
@@ -350,9 +351,149 @@ def main(task_input=None, sop_id=None):
     print("=" * 60)
 
 
+# ============================================================
+# V3.0: 异步事件驱动入口
+# ============================================================
+
+async def main_async(task_input: str = None, sop_id: str = None, timeout: int = 600):
+    """
+    V3.0 异步事件驱动入口。
+
+    流程：
+    1. 创建所有组件（ancestor/parent/elder）
+    2. 注册所有事件订阅
+    3. 发布 TASK_CREATED 事件
+    4. 进入事件循环，等待 TASK_COMPLETED / TASK_FAILED / TASK_TIMEOUT
+
+    Args:
+        task_input: 任务描述
+        sop_id: SOP 模板 ID
+        timeout: 超时时间（秒，默认 600）
+    """
+    import asyncio
+    from core.event_bus import get_async_event_bus, Event, EventType
+    from agents.ancestor import create_ancestor
+    from agents.parent import create_parent
+    from agents.elder import create_elder, subscribe_elder_to_events
+    from skills.orchestration import register_stage_executor
+
+    if task_input is None:
+        task_input = "Add user authentication feature to the project"
+    if sop_id is None:
+        sop_id = "DEV-001"
+
+    logger.info("=" * 60)
+    logger.info("FROST-SOP V3.0 - Async Event-Driven Mode")
+    logger.info("=" * 60)
+
+    # 1. 创建 Stores
+    constitution_store = create_constitution_store()
+    asset_store = create_asset_store()
+
+    # 2. 获取 AsyncEventBus（不 reset，由调用方负责清理）
+    bus = get_async_event_bus()
+
+    # 3. 创建组件（event_driven=True）
+    ancestor = create_ancestor(constitution_store, asset_store, event_driven=True)
+    parent = create_parent("parent_v3", Store(), event_driven=True,
+                           asset_store=asset_store, sop_id=sop_id)
+    elder = create_elder("elder_v3", asset_store=asset_store)
+    # V2.0 长老订阅（使用同步 EventBus，fail-safe）
+    subscribe_elder_to_events(elder)
+
+    # 4. 注册 execute_stage 事件订阅
+    register_stage_executor(parent, asset_store)
+
+    # 5. 等待终止事件
+    task_done = asyncio.Event()
+    final_status = {"status": None, "event": None}
+
+    async def on_task_completed(event: Event):
+        final_status["status"] = "completed"
+        final_status["event"] = event
+        task_done.set()
+
+    async def on_task_failed(event: Event):
+        final_status["status"] = "failed"
+        final_status["event"] = event
+        task_done.set()
+
+    async def on_task_timeout(event: Event):
+        final_status["status"] = "timeout"
+        final_status["event"] = event
+        task_done.set()
+
+    bus.subscribe_async(EventType.TASK_COMPLETED, on_task_completed)
+    bus.subscribe_async(EventType.TASK_FAILED, on_task_failed)
+    bus.subscribe_async(EventType.TASK_TIMEOUT, on_task_timeout)
+
+    # 6. 发布 TASK_CREATED
+    task_id = f"task_v3_{uuid.uuid4().hex[:8]}"
+    logger.info("[V3.0] 发布 TASK_CREATED: %s", task_id)
+
+    await bus.publish(Event(
+        event_type=EventType.TASK_CREATED,
+        source="main:async_entry",
+        data={
+            "task_id": task_id,
+            "task_description": task_input,
+            "sop_id": sop_id,
+        },
+    ))
+
+    # 7. 等待任务完成或超时
+    try:
+        await asyncio.wait_for(task_done.wait(), timeout=timeout)
+    except asyncio.TimeoutError:
+        # 超时 → 发布 TASK_TIMEOUT（非 TASK_FAILED）
+        logger.warning("[V3.0] 任务超时（%s秒），发布 TASK_TIMEOUT", timeout)
+        await bus.publish(Event(
+            event_type=EventType.TASK_TIMEOUT,
+            source="main:async_entry",
+            data={
+                "task_id": task_id,
+                "timeout_seconds": timeout,
+            },
+        ))
+        final_status["status"] = "timeout"
+
+    # 8. 输出结果
+    logger.info("=" * 60)
+    if final_status["status"] == "completed":
+        event = final_status["event"]
+        logger.info("[V3.0] 任务完成: %s (阶段: %s/%s)",
+                    task_id,
+                    event.data.get("stages_completed", "?"),
+                    event.data.get("total_stages", "?"))
+    elif final_status["status"] == "failed":
+        event = final_status["event"]
+        logger.error("[V3.0] 任务失败: %s — %s",
+                     task_id, event.data.get("error", "unknown"))
+    elif final_status["status"] == "timeout":
+        logger.warning("[V3.0] 任务超时: %s (%s秒)", task_id, timeout)
+    logger.info("=" * 60)
+
+    return final_status["status"]
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="FROST-SOP CLI")
     parser.add_argument("--task", type=str, default=None, help="Task description")
     parser.add_argument("--sop", type=str, default=None, help="SOP template ID (e.g. DEV-001)")
+    parser.add_argument("--async-mode", action="store_true", help="Use V3.0 async event-driven mode")
+    parser.add_argument("--timeout", type=int, default=600, help="Timeout in seconds (async mode)")
     args = parser.parse_args()
-    main(task_input=args.task, sop_id=args.sop)
+
+    if args.async_mode:
+        # V3.0 异步事件驱动模式
+        # CLI 入口负责重置 AsyncEventBus，确保干净状态
+        from core.event_bus import AsyncEventBus
+        AsyncEventBus.reset()
+        asyncio.run(main_async(
+            task_input=args.task,
+            sop_id=args.sop,
+            timeout=args.timeout,
+        ))
+    else:
+        # V2.0 同步管道模式（默认）
+        main(task_input=args.task, sop_id=args.sop)

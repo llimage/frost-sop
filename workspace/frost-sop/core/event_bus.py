@@ -44,9 +44,11 @@ class EventType:
     - AGENT_*: Agent 自身生命周期事件
     """
     # 任务生命周期
+    TASK_CREATED    = "task_created"         # V3.0: 任务创建（main_async 发布）
     TASK_DECOMPOSED = "task_decomposed"     # 祖辈完成任务分解
     TASK_COMPLETED  = "task_completed"      # 任务全部阶段完成
     TASK_FAILED     = "task_failed"         # 任务失败（不可恢复）
+    TASK_TIMEOUT    = "task_timeout"        # 任务超时（V3.0: main_async 超时触发）
 
     # SOP 阶段生命周期
     STAGE_STARTED   = "stage_started"      # 阶段开始执行
@@ -378,3 +380,226 @@ def get_event_bus() -> EventBus:
         EventBus 实例
     """
     return EventBus()
+
+
+# ============================================================
+# V3.0: AsyncEventBus — 异步事件总线（独立实现，不继承 EventBus）
+# ============================================================
+
+import asyncio
+
+class AsyncEventBus:
+    """
+    V3.0 异步事件总线。
+
+    设计决策（Kimi Work 评审修正）：
+    - 独立实现，不继承 EventBus（避免同步/异步语义混淆）
+    - 使用 asyncio.Lock 替代 threading.Lock
+    - 同步回调和异步回调可共存
+    - 同步回调通过 asyncio.to_thread() 在线程池中执行
+    - 持久化复用 EventBus._persist_event 的逻辑（同步 DB 写，不读共享状态）
+
+    与 V2.0 EventBus 的关系：
+    - EventBus（同步）继续用于 V2.0 兼容模式和 Streamlit UI
+    - AsyncEventBus 用于 V3.0 事件驱动控制流（main_async 入口）
+    - 两者各自独立单例，互不干扰
+    """
+
+    _instance: Optional['AsyncEventBus'] = None
+
+    def __new__(cls) -> 'AsyncEventBus':
+        if cls._instance is None:
+            instance = super().__new__(cls)
+            instance._initialized = False
+            cls._instance = instance
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+        # 订阅者注册表：event_type -> [(callback, is_async), ...]
+        self._subscribers: Dict[str, List[tuple]] = {}
+        # 内存事件缓冲
+        self._event_log: List[Event] = []
+        self._max_log_size: int = 500
+        # asyncio.Lock（必须在事件循环内创建）
+        self._lock: Optional[asyncio.Lock] = None
+        self._initialized = True
+
+    def _get_lock(self) -> asyncio.Lock:
+        """延迟创建 asyncio.Lock（确保在事件循环内）"""
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
+
+    # ----------------------------------------------------------
+    # 订阅管理
+    # ----------------------------------------------------------
+
+    def subscribe(self, event_type: str, callback: Callable) -> None:
+        """
+        注册同步订阅者。
+
+        Args:
+            event_type: 事件类型
+            callback: 同步回调函数 callback(event: Event) -> None
+        """
+        if event_type not in self._subscribers:
+            self._subscribers[event_type] = []
+        self._subscribers[event_type].append((callback, False))
+
+    def subscribe_async(self, event_type: str, callback: Callable) -> None:
+        """
+        注册异步订阅者。
+
+        Args:
+            event_type: 事件类型
+            callback: 异步回调函数 async callback(event: Event) -> None
+        """
+        if event_type not in self._subscribers:
+            self._subscribers[event_type] = []
+        self._subscribers[event_type].append((callback, True))
+
+    def unsubscribe(self, event_type: str, callback: Callable) -> bool:
+        """取消订阅"""
+        if event_type in self._subscribers:
+            for i, (cb, _) in enumerate(self._subscribers[event_type]):
+                if cb == callback:
+                    self._subscribers[event_type].pop(i)
+                    return True
+        return False
+
+    def clear_subscribers(self, event_type: str = None) -> None:
+        """清空订阅者"""
+        if event_type is None:
+            self._subscribers.clear()
+        elif event_type in self._subscribers:
+            del self._subscribers[event_type]
+
+    # ----------------------------------------------------------
+    # 事件发布（异步）
+    # ----------------------------------------------------------
+
+    async def publish(self, event: Event) -> int:
+        """
+        异步发布事件：通知所有订阅者，并持久化。
+
+        - 异步订阅者通过 await 调用
+        - 同步订阅者通过 asyncio.to_thread() 在线程池中执行
+        - 单个订阅者异常不影响其他订阅者
+
+        Args:
+            event: 要发布的事件
+
+        Returns:
+            实际通知的订阅者数量
+        """
+        lock = self._get_lock()
+
+        # 1. 记录到内存缓冲 + 快照订阅者
+        async with lock:
+            self._event_log.append(event)
+            if len(self._event_log) > self._max_log_size:
+                self._event_log = self._event_log[-self._max_log_size:]
+            callbacks = list(self._subscribers.get(event.event_type, []))
+
+        # 2. 持久化（同步 DB 写，通过 to_thread 避免阻塞事件循环）
+        try:
+            await asyncio.to_thread(self._persist_event, event)
+        except Exception as e:
+            logger.error("[AsyncEventBus] 持久化失败 (%s): %s", event.event_type, e)
+
+        # 3. 异步分发
+        notified = 0
+        for callback, is_async in callbacks:
+            # 循环事件防护
+            if (hasattr(callback, '__name__') and callback.__name__ != '<lambda>'
+                    and callback.__name__ == event.source):
+                continue
+            try:
+                if is_async:
+                    await callback(event)
+                else:
+                    await asyncio.to_thread(callback, event)
+                notified += 1
+            except Exception as e:
+                logger.error("[AsyncEventBus] 订阅者回调异常 "
+                           "(event=%s, callback=%s): %s",
+                           event.event_type, callback, e)
+
+        return notified
+
+    # ----------------------------------------------------------
+    # 事件日志查询
+    # ----------------------------------------------------------
+
+    async def get_event_log(self,
+                            event_type: str = None,
+                            limit: int = 50) -> List[Event]:
+        """从内存缓冲获取事件历史（最新在前）"""
+        lock = self._get_lock()
+        async with lock:
+            log = list(self._event_log)
+
+        if event_type:
+            log = [e for e in log if e.event_type == event_type]
+
+        log.reverse()
+        return log[:limit]
+
+    def get_subscriber_count(self, event_type: str = None) -> int:
+        """获取订阅者数量"""
+        if event_type:
+            return len(self._subscribers.get(event_type, []))
+        return sum(len(v) for v in self._subscribers.values())
+
+    # ----------------------------------------------------------
+    # 持久化（复用 V2.0 逻辑）
+    # ----------------------------------------------------------
+
+    _SENSITIVE_KEYS = {"api_key", "token", "password", "secret", "authorization",
+                       "access_token", "refresh_token", "private_key", "credential"}
+
+    def _sanitize_data(self, data: dict) -> dict:
+        """递归过滤敏感键"""
+        if not isinstance(data, dict):
+            return data
+        sanitized = {}
+        for k, v in data.items():
+            if k.lower() in self._SENSITIVE_KEYS:
+                sanitized[k] = "***REDACTED***"
+            elif isinstance(v, dict):
+                sanitized[k] = self._sanitize_data(v)
+            else:
+                sanitized[k] = v
+        return sanitized
+
+    def _persist_event(self, event: Event) -> None:
+        """持久化到 event_log 表（同步，通过 to_thread 调用）"""
+        try:
+            from core.db import get_db
+            db = get_db()
+            safe_data = self._sanitize_data(event.data) if isinstance(event.data, dict) else event.data
+            db.insert("event_log", {
+                "event_id": event.event_id,
+                "event_type": event.event_type,
+                "source": event.source,
+                "data": json.dumps(safe_data, ensure_ascii=False),
+                "timestamp": event.timestamp.isoformat(),
+            })
+        except Exception as e:
+            logger.error("[AsyncEventBus] 持久化失败 (%s): %s", event.event_type, e)
+
+    # ----------------------------------------------------------
+    # 重置（测试用）
+    # ----------------------------------------------------------
+
+    @classmethod
+    def reset(cls) -> None:
+        """重置单例（测试隔离用）"""
+        cls._instance = None
+
+
+def get_async_event_bus() -> AsyncEventBus:
+    """获取 AsyncEventBus 全局单例"""
+    return AsyncEventBus()
