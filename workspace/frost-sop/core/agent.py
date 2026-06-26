@@ -240,7 +240,7 @@ class Agent:
             from core.db import get_db
             db = get_db()
 
-            # 确保 agents 表有此 Agent 的记录
+            # P1-9: 确保 agents 表有此 Agent 的记录（UPSERT）
             existing_agent = db.select_one("agents", "id", self.name)
             if not existing_agent:
                 db.insert("agents", {
@@ -250,6 +250,16 @@ class Agent:
                     "generation": self.generation,
                     "created_at": self._created_at.isoformat(),
                 })
+            else:
+                # 重复运行时不报 UNIQUE 约束错误，直接更新
+                conn = db.get_connection()
+                conn.execute(
+                    "INSERT OR REPLACE INTO agents (id, name, agent_type, generation, created_at) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (self.name, self.name, "transient", self.generation,
+                     self._created_at.isoformat())
+                )
+                conn.commit()
 
             # 写入 agent_status 记录
             existing_status = db.select_one("agent_status", "agent_id", self.name)

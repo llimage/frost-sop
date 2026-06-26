@@ -215,21 +215,28 @@ class DBManager:
         )
         """)
         
-        # 10. schedule - 调度表
+        # 10. schedule - 调度表（含 F9 migration 列，P0-1 修复）
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS schedule (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
+            title TEXT DEFAULT '',
+            description TEXT DEFAULT '',
             cron_expression TEXT,
             task_template TEXT,
             enabled BOOLEAN DEFAULT 1,
+            start_time TIMESTAMP,
+            end_time TIMESTAMP,
+            repeat_type TEXT DEFAULT 'none',
+            repeat_end TEXT DEFAULT '',
+            notified BOOLEAN DEFAULT 0,
             last_run TIMESTAMP,
             next_run TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """)
         
-        # 11. energy_log - 能量日志表（Agent 能量/健康度）
+        # 11. energy_log - 能量日志表（Agent 能量/健康度，含 F9 migration 列，P0-1 修复）
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS energy_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -237,6 +244,9 @@ class DBManager:
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             energy_level REAL,
             health_score REAL,
+            level INTEGER DEFAULT 50,
+            emotion TEXT DEFAULT '',
+            user_note TEXT DEFAULT '',
             notes TEXT,
             FOREIGN KEY (agent_id) REFERENCES agents(id)
         )
@@ -310,17 +320,25 @@ class DBManager:
         )
         """)
         
-        # 17. decision_points - 决策点表
+        # 17. decision_points - 决策点表（含 F8 migration 列，P0-1 修复）
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS decision_points (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             agent_id TEXT,
             task_id TEXT,
+            stage_id TEXT DEFAULT '',
             decision_type TEXT,
+            question TEXT DEFAULT '',
+            options_json TEXT DEFAULT '[]',
             context TEXT,
             decision TEXT NOT NULL,
             reasoning TEXT,
+            status TEXT DEFAULT 'pending',
+            user_decision TEXT DEFAULT '',
+            user_note TEXT DEFAULT '',
+            created_at TIMESTAMP,
+            responded_at TIMESTAMP,
             FOREIGN KEY (agent_id) REFERENCES agents(id),
             FOREIGN KEY (task_id) REFERENCES tasks(id)
         )
@@ -349,7 +367,7 @@ class DBManager:
         """)
         
         conn.commit()
-        print("✅ 17张表初始化完成")
+        print("✅ 19张表初始化完成")
         
         # F9: 迁移 energy_log 表（添加创始人需要的列）
         self._migrate_energy_log_table(cursor)

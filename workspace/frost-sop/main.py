@@ -222,6 +222,25 @@ def main(task_input=None, sop_id=None):
     for step in internalized_steps:
         print(f"   - {step}")
 
+    # V2.0 P1-6: 发布 TASK_DECOMPOSED 事件（SOP 内化完成 = 任务分解完成）
+    try:
+        from core.event_bus import get_event_bus, Event, EventType
+        bus = get_event_bus()
+        bus.publish(Event(
+            event_type=EventType.TASK_DECOMPOSED,
+            source="main",
+            data={
+                "task_id": task_id,
+                "task_description": task_description,
+                "sop_id": sop_id,
+                "stage_count": len(sop_stages_detail),
+                "stages": [s.get("name", f"阶段{i+1}") for i, s in enumerate(sop_stages_detail)],
+            },
+        ))
+        print(f"   📡 [V2.0] TASK_DECOMPOSED 事件已发布（{len(sop_stages_detail)}个阶段）")
+    except Exception as e:
+        print(f"   ⚠️ [V2.0] TASK_DECOMPOSED 发布失败（不影响流程）: {e}")
+
     # ================================================================
     # 5.4 父辈按内化后的 SOP 真实执行各阶段（孙辈Agent执行）
     # ================================================================

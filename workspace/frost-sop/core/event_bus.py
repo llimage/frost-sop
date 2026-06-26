@@ -227,6 +227,10 @@ class EventBus:
         # 3. 同步分发给所有订阅者
         notified = 0
         for callback in callbacks:
+            # P1-8: 循环事件防护 — 源与订阅者同名时跳过（排除 lambda）
+            if (hasattr(callback, '__name__') and callback.__name__ != '<lambda>'
+                    and callback.__name__ == event.source):
+                continue
             try:
                 callback(event)
                 notified += 1
@@ -279,6 +283,24 @@ class EventBus:
     # 内部辅助
     # ----------------------------------------------------------
 
+    # P1-7: 敏感数据键名列表
+    _SENSITIVE_KEYS = {"api_key", "token", "password", "secret", "authorization",
+                       "access_token", "refresh_token", "private_key", "credential"}
+
+    def _sanitize_data(self, data: dict) -> dict:
+        """递归过滤敏感键，替换为 '***REDACTED***'。"""
+        if not isinstance(data, dict):
+            return data
+        sanitized = {}
+        for k, v in data.items():
+            if k.lower() in self._SENSITIVE_KEYS:
+                sanitized[k] = "***REDACTED***"
+            elif isinstance(v, dict):
+                sanitized[k] = self._sanitize_data(v)
+            else:
+                sanitized[k] = v
+        return sanitized
+
     def _persist_event(self, event: Event) -> None:
         """
         将事件持久化到 event_log 表。
@@ -287,11 +309,12 @@ class EventBus:
         try:
             from core.db import get_db
             db = get_db()
+            safe_data = self._sanitize_data(event.data) if isinstance(event.data, dict) else event.data
             db.insert("event_log", {
                 "event_id": event.event_id,
                 "event_type": event.event_type,
                 "source": event.source,
-                "data": json.dumps(event.data, ensure_ascii=False),
+                "data": json.dumps(safe_data, ensure_ascii=False),
                 "timestamp": event.timestamp.isoformat(),
             })
         except Exception as e:
