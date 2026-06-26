@@ -7,6 +7,9 @@ V2.0 变更：
 - 新增 destroy() 方法：写入 agent_status 销毁事件，记录生命周期结束
 - 新增 _cleanup() 方法：释放临时资源
 - run() 方法增加生命周期追踪：开始时记录 "running"，结束时调用 destroy()
+- V2.0 子阶段 4.3: run() 在步骤完成后发布 STEP_COMPLETED 事件
+- V2.0 子阶段 4.3: __init__ 发布 AGENT_CREATED 事件，destroy() 发布 AGENT_DESTROYED 事件
+- 向后兼容：保持原有直接调用模式不变，事件驱动作为可选扩展
 """
 
 from core.store import Store
@@ -24,13 +27,15 @@ class Agent:
     Behavior is entirely determined by external SOP steps.
 
     V2.0: 支持瞬态生命周期追踪（created → running → destroyed）
+    V2.0 子阶段 4.3: 集成 EventBus，步骤完成时发布 STEP_COMPLETED 事件
     """
 
     def __init__(self, name: str = None, store: Store = None, skills: dict = None,
                  sop_steps: list = None, generation: int = 0,
                  max_spawn_generation: int = None,
                  retry_config: Dict = None,
-                 on_max_retries: Optional[Callable] = None):
+                 on_max_retries: Optional[Callable] = None,
+                 event_driven: bool = False):
         """
         Initialize an Agent.
 
@@ -45,6 +50,8 @@ class Agent:
                 max_retries (default 3), retry_delay_seconds (default 5)
             on_max_retries: Callback function(max_retries, step_name, error)
                 Called when max retries exceeded, for elder reporting
+            event_driven: V2.0 新增。True 时在步骤完成后发布 STEP_COMPLETED 事件。
+                          默认 False，保持向后兼容。
         """
         self.name = name
         self.store = store if store is not None else Store()
@@ -68,11 +75,24 @@ class Agent:
         self._created_at: datetime = datetime.now()
         self._destroyed_at: Optional[datetime] = None
 
+        # V2.0 子阶段 4.3: 事件驱动模式开关
+        # True = 步骤完成后发布 STEP_COMPLETED 事件
+        # False = 纯直接调用模式（V1.0 兼容）
+        self._event_driven: bool = event_driven
+
+        # V2.0 子阶段 4.3: 发布 AGENT_CREATED 事件
+        if self._event_driven:
+            self._publish_event("agent_created", {
+                "agent_name": self.name,
+                "generation": self.generation,
+            })
+
     def run(self, sop_steps: list, initial_context: dict = None) -> dict:
         """
         Core execution loop. Execute SOP steps sequentially.
         P0-2: Supports retry on failure (max 3 retries, 5s interval).
         V2.0: 在任务开始/结束时写入 agent_status 生命周期记录。
+        V2.0 子阶段 4.3: event_driven=True 时，步骤完成后发布 STEP_COMPLETED 事件。
 
         Args:
             sop_steps: List of steps (string skill names or Agent instances)
@@ -98,6 +118,7 @@ class Agent:
 
         try:
             for step in sop_steps:
+                step_name = step if isinstance(step, str) else (step.name if step else "unknown")
                 step_result = self._execute_step_with_retry(step, context, step_records)
                 if not step_result["success"]:
                     overall_success = False
@@ -105,6 +126,14 @@ class Agent:
                     # Already recorded in step_records by _execute_step_with_retry
                     break
                 context = step_result["context"]
+
+                # V2.0 子阶段 4.3: 步骤成功后发布 STEP_COMPLETED 事件
+                if self._event_driven:
+                    self._publish_event("step_completed", {
+                        "agent_name": self.name,
+                        "step_name": step_name,
+                        "task_id": context.get("_task_id", ""),
+                    })
 
             # Record execution history
             self._execution_history.append({
@@ -138,6 +167,7 @@ class Agent:
         - 设置 _status = "destroyed"
         - 记录 _destroyed_at 时间戳
         - 调用 _write_agent_status() 写入 destroyed 事件
+        - V2.0 子阶段 4.3: event_driven=True 时发布 AGENT_DESTROYED 事件
         - 调用 _cleanup() 释放资源
         """
         if self._status == "destroyed":
@@ -150,8 +180,38 @@ class Agent:
         # 写入 agent_status 销毁记录
         self._write_agent_status("destroyed", "")
 
+        # V2.0 子阶段 4.3: 发布 AGENT_DESTROYED 事件
+        if self._event_driven:
+            self._publish_event("agent_destroyed", {
+                "agent_name": self.name,
+                "generation": self.generation,
+                "destroyed_at": self._destroyed_at.isoformat(),
+            })
+
         # 释放资源
         self._cleanup()
+
+    def _publish_event(self, event_type: str, data: dict) -> None:
+        """
+        V2.0 子阶段 4.3: 向 EventBus 发布事件。
+        失败时仅打印警告，不影响主流程。
+
+        Args:
+            event_type: 事件类型（对应 EventType 常量值）
+            data: 事件数据字典
+        """
+        try:
+            from core.event_bus import get_event_bus, Event
+            bus = get_event_bus()
+            event = Event(
+                event_type=event_type,
+                source=self.name or "unknown_agent",
+                data=data,
+            )
+            bus.publish(event)
+        except Exception as e:
+            # 事件发布失败不影响主流程
+            print(f"  ⚠️ [V2.0-EventBus] 事件发布失败 ({self.name}, {event_type}): {e}")
 
     def _cleanup(self):
         """
