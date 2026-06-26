@@ -44,6 +44,7 @@ class EventType:
     - AGENT_*: Agent 自身生命周期事件
     """
     # 任务生命周期
+    TASK_CREATED    = "task_created"         # V3.0: 任务创建（main_async 发布）
     TASK_DECOMPOSED = "task_decomposed"     # 祖辈完成任务分解
     TASK_COMPLETED  = "task_completed"      # 任务全部阶段完成
     TASK_FAILED     = "task_failed"         # 任务失败（不可恢复）
