@@ -1,0 +1,23 @@
+sop_id: "DEV-001"
+name: "新功能开发"
+version: "1.0"
+stages:
+  - name: "需求分析"
+    agent: "product_manager"
+    skills: ["analyze_requirements"]
+  - name: "技术设计"
+    agent: "architect"
+    skills: ["design_architecture"]
+  - name: "代码实现"
+    agent: "developer"
+    skills: ["generate_code"]
+  - name: "测试验证"
+    agent: "tester"
+    skills: ["run_tests"]
+  - name: "审查交付"
+    agent: "auditor"
+    skills: ["audit_code"]
+required_stages:
+  - "审查交付"
+forbidden_skills:
+  - "direct_db_write"
