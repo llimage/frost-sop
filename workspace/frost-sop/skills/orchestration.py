@@ -370,3 +370,119 @@ def execute_stage(context: dict) -> dict:
 # 新增 Skill 实例
 internalize_sop_skill = Skill("internalize_sop", internalize_sop)
 execute_stage_skill = Skill("execute_stage", execute_stage)
+
+
+# ============================================================
+# V2.0 阶段三：长老审计自动化
+# ============================================================
+
+def _trigger_elder_audit(task_id: str, asset_store=None, constitution_store=None):
+    """
+    V2.0: 在后台触发长老审计（不阻塞主流程）。
+
+    流程：
+    1. 创建长老 Agent 实例
+    2. 执行 audit_family Skill
+    3. 将审计结果写入 audit_log 表
+
+    Args:
+        task_id: 关联的任务 ID
+        asset_store: 资产 Store（供长老访问任务/错题记录）
+        constitution_store: 宪法 Store（可为 None）
+    """
+    try:
+        from agents.elder import create_elder
+        from core.db import get_db
+
+        # 创建长老 Agent（静默模式：使用 asset_store 访问任务数据）
+        elder = create_elder(
+            name=f"elder_audit_{task_id[:8]}",
+            asset_store=asset_store,
+            constitution_store=constitution_store,
+        )
+
+        # 执行审计
+        audit_context = elder.run(
+            sop_steps=["audit_family"],
+            initial_context={
+                "_asset_store": asset_store,
+                "_constitution_store": constitution_store,
+                "_task_id": task_id,
+            }
+        )
+
+        audit_report = audit_context.get("_audit_report", {})
+        reason = audit_context.get("_reason", "审计完成")
+
+        # 将审计结果写入 audit_log 表
+        db = get_db()
+        db.log_audit({
+            "agent_id": f"elder_audit_{task_id[:8]}",
+            "action": "auto_audit",
+            "details": f"task_id={task_id} | {reason} | report={str(audit_report)[:500]}",
+            "level": "info",
+        })
+        print(f"  ✅ [V2.0-长老审计] 完成 task_id={task_id}: {reason}")
+
+    except Exception as e:
+        # 长老审计失败仅记录日志，不影响任务完成状态
+        try:
+            from core.db import get_db
+            db = get_db()
+            db.log_audit({
+                "agent_id": "elder_audit",
+                "action": "auto_audit_failed",
+                "details": f"task_id={task_id} | 长老审计失败: {str(e)[:200]}",
+                "level": "warning",
+            })
+        except Exception:
+            pass
+        print(f"  ⚠️ [V2.0-长老审计] 失败（不影响任务状态）: {e}")
+
+
+def finalize_task(context: dict) -> dict:
+    """
+    V2.0: 任务收尾 Skill。
+    在所有阶段执行完成后，在后台触发长老审计。
+
+    输入 context 键：
+        _task_id: str —— 任务 ID
+        _asset_store: Store —— 资产 Store
+        _constitution_store: Store —— 宪法 Store（可为 None）
+        _stage_results: list —— 阶段结果列表
+
+    输出 context 键：
+        _elder_audit_triggered: bool —— 是否已触发长老审计
+        _reason: str —— 推理痕迹
+    """
+    import threading
+
+    task_id = context.get("_task_id", "unknown")
+    asset_store = context.get("_asset_store")
+    constitution_store = context.get("_constitution_store")
+
+    if not task_id or task_id == "unknown":
+        # 无有效 task_id，跳过长老审计
+        context["_elder_audit_triggered"] = False
+        context["_reason"] = "finalize_task: 无有效 task_id，跳过长老审计"
+        return context
+
+    # 在后台线程触发长老审计（不阻塞主流程）
+    audit_thread = threading.Thread(
+        target=_trigger_elder_audit,
+        args=(task_id, asset_store, constitution_store),
+        daemon=True,   # 守护线程：主线程结束时自动结束，不阻塞
+        name=f"elder_audit_{task_id[:8]}",
+    )
+    audit_thread.start()
+
+    context["_elder_audit_triggered"] = True
+    context["_elder_audit_thread"] = audit_thread   # 供测试等待使用
+    context["_reason"] = f"finalize_task: 长老审计后台线程已启动，task_id={task_id}"
+
+    print(f"  🔮 [V2.0-长老审计] 后台审计已启动，task_id={task_id}")
+    return context
+
+
+# finalize_task Skill 实例
+finalize_task_skill = Skill("finalize_task", finalize_task)
