@@ -501,6 +501,7 @@ def register_stage_executor(parent_agent, asset_store) -> bool:
     1. 从事件数据中提取阶段信息
     2. 调用 execute_stage 执行阶段（assemble_agent → child.run()）
     3. 发布 STAGE_COMPLETED 事件
+    4. 如果所有阶段已完成，发布 TASK_COMPLETED 事件
 
     Args:
         parent_agent: 父辈 Agent 实例
@@ -517,8 +518,14 @@ def register_stage_executor(parent_agent, asset_store) -> bool:
 
         bus = get_async_event_bus()
 
+        # V3.0 修复：跟踪每个任务的阶段完成状态
+        # {task_id: {"total": N, "completed": set(), "total_stages": N}}
+        _task_progress: dict = {}
+
         async def on_stage_started(event: Event):
-            """STAGE_STARTED 回调：执行阶段 → 发布 STAGE_COMPLETED"""
+            """STAGE_STARTED 回调：执行阶段 → 发布 STAGE_COMPLETED → 检查是否全部完成"""
+            nonlocal _task_progress
+
             task_id = event.data.get("task_id", "unknown")
             stage_name = event.data.get("stage_name", "未知阶段")
             stage_order = event.data.get("stage_order", 0)
@@ -526,6 +533,14 @@ def register_stage_executor(parent_agent, asset_store) -> bool:
 
             logger.info("[V3.0] execute_stage 收到 STAGE_STARTED: %s (阶段 %s/%s)",
                        stage_name, stage_order, total_stages)
+
+            # 初始化任务进度跟踪
+            if task_id not in _task_progress:
+                _task_progress[task_id] = {
+                    "total": total_stages,
+                    "completed": set(),
+                    "total_stages": total_stages,
+                }
 
             # 构造 execute_stage 的 context
             stage_context = {
@@ -560,6 +575,27 @@ def register_stage_executor(parent_agent, asset_store) -> bool:
             ))
             logger.info("[V3.0] execute_stage 发布 STAGE_COMPLETED: %s (status=%s)",
                        stage_name, stage_status)
+
+            # V3.0 修复：检查是否所有阶段已完成
+            progress = _task_progress[task_id]
+            progress["completed"].add(stage_order)
+
+            if len(progress["completed"]) >= progress["total"]:
+                # 所有阶段已完成 → 发布 TASK_COMPLETED
+                logger.info("[V3.0] 所有阶段已完成 (%s/%s)，发布 TASK_COMPLETED: %s",
+                           len(progress["completed"]), progress["total"], task_id)
+                await bus.publish(Event(
+                    event_type=EventType.TASK_COMPLETED,
+                    source="orchestration:stage_executor",
+                    data={
+                        "task_id": task_id,
+                        "stages_completed": len(progress["completed"]),
+                        "total_stages": progress["total"],
+                        "status": "completed",
+                    },
+                ))
+                # 清理进度跟踪
+                del _task_progress[task_id]
 
         bus.subscribe_async(EventType.STAGE_STARTED, on_stage_started)
         logger.info("[V3.0] execute_stage 已订阅 STAGE_STARTED 事件")

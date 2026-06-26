@@ -134,18 +134,11 @@ def _subscribe_parent_to_events(parent: Agent, asset_store, sop_id: str) -> bool
             sop_stages = int_context.get("_sop_stages", [])
             logger.info("[V3.0] SOP 内化完成: %s 个阶段", len(sop_stages))
 
-            # 3. 逐阶段执行
-            stage_context = {
-                "_stage_results": [],
-                "_parent_agent": parent,
-                "_task_id": task_id,
-                "_asset_store": asset_store,
-            }
-
+            # 3. 逐阶段发布 STAGE_STARTED（由 orchestration.py 的 stage executor 异步执行）
             for i, stage in enumerate(sop_stages):
                 stage_name = stage.get("name", f"阶段{i+1}")
 
-                # 发布 STAGE_STARTED
+                # 发布 STAGE_STARTED（orchestration.py 的 stage executor 会处理）
                 await bus.publish(Event(
                     event_type=EventType.STAGE_STARTED,
                     source="parent:stage_executor",
@@ -156,48 +149,13 @@ def _subscribe_parent_to_events(parent: Agent, asset_store, sop_id: str) -> bool
                         "total_stages": len(sop_stages),
                     },
                 ))
+                logger.info("[V3.0] 发布 STAGE_STARTED: %s (阶段 %s/%s)",
+                           stage_name, i + 1, len(sop_stages))
 
-                # 执行阶段（P1-1 修复：asyncio.to_thread 避免阻塞事件循环）
-                stage_context["_current_stage"] = stage
-                stage_context = await asyncio.to_thread(
-                    parent.run,
-                    sop_steps=["execute_stage"],
-                    initial_context=stage_context
-                )
-
-                result = stage_context.get("_current_stage_result", {})
-                stage_status = result.get("status", "unknown")
-
-                # 发布 STAGE_COMPLETED
-                await bus.publish(Event(
-                    event_type=EventType.STAGE_COMPLETED,
-                    source="parent:stage_executor",
-                    data={
-                        "task_id": task_id,
-                        "stage_name": stage_name,
-                        "stage_order": i + 1,
-                        "status": stage_status,
-                    },
-                ))
-                logger.info("[V3.0] 阶段 %s/%s 完成: %s",
-                           i + 1, len(sop_stages), stage_name)
-
-            # 4. 全部完成 → 发布 TASK_COMPLETED
-            all_results = stage_context.get("_stage_results", [])
-            await bus.publish(Event(
-                event_type=EventType.TASK_COMPLETED,
-                source="parent:stage_executor",
-                data={
-                    "task_id": task_id,
-                    "stages_completed": len(all_results),
-                    "total_stages": len(sop_stages),
-                    "stage_results": [
-                        {"stage": r.get("stage", ""), "status": r.get("status", "")}
-                        for r in all_results
-                    ],
-                },
-            ))
-            logger.info("[V3.0] parent 发布 TASK_COMPLETED: %s", task_id)
+            # 4. 等待所有阶段完成（由 stage executor 发布 TASK_COMPLETED）
+            # 注意：不直接执行阶段，而是由事件驱动的 stage executor 处理
+            logger.info("[V3.0] 所有 STAGE_STARTED 已发布，等待阶段执行完成...")
+            logger.info("[V3.0] TASK_COMPLETED 将由 orchestration.py 的 stage executor 发布")
 
         bus.subscribe_async(EventType.TASK_DECOMPOSED, on_task_decomposed)
         logger.info("[V3.0] parent 已订阅 TASK_DECOMPOSED 事件")
