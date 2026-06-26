@@ -126,13 +126,10 @@ def _subscribe_parent_to_events(parent: Agent, asset_store, sop_id: str) -> bool
             }
 
             # 2. 内化 SOP（P1-1 修复：asyncio.to_thread 避免阻塞事件循环）
-            import functools
             int_context = await asyncio.to_thread(
-                functools.partial(
-                    parent.run,
-                    sop_steps=["internalize_sop"],
-                    initial_context={"_sop_to_internalize": sop_to_internalize}
-                )
+                parent.run,
+                sop_steps=["internalize_sop"],
+                initial_context={"_sop_to_internalize": sop_to_internalize}
             )
             sop_stages = int_context.get("_sop_stages", [])
             logger.info("[V3.0] SOP 内化完成: %s 个阶段", len(sop_stages))
@@ -163,11 +160,9 @@ def _subscribe_parent_to_events(parent: Agent, asset_store, sop_id: str) -> bool
                 # 执行阶段（P1-1 修复：asyncio.to_thread 避免阻塞事件循环）
                 stage_context["_current_stage"] = stage
                 stage_context = await asyncio.to_thread(
-                    functools.partial(
-                        parent.run,
-                        sop_steps=["execute_stage"],
-                        initial_context=stage_context
-                    )
+                    parent.run,
+                    sop_steps=["execute_stage"],
+                    initial_context=stage_context
                 )
 
                 result = stage_context.get("_current_stage_result", {})

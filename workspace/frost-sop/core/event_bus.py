@@ -460,14 +460,28 @@ class AsyncEventBus:
             self._subscribers[event_type] = []
         self._subscribers[event_type].append((callback, True))
 
-    def unsubscribe(self, event_type: str, callback: Callable) -> bool:
-        """取消订阅"""
+    def unsubscribe(self, event_type: str, callback: Callable, is_async: bool = None) -> int:
+        """
+        取消订阅。
+        
+        Args:
+            event_type: 事件类型
+            callback: 回调函数
+            is_async: 是否异步回调（None=匹配所有，True=只匹配异步，False=只匹配同步）
+        
+        Returns:
+            实际移除的订阅数量
+        """
+        removed = 0
         if event_type in self._subscribers:
-            for i, (cb, _) in enumerate(self._subscribers[event_type]):
-                if cb == callback:
-                    self._subscribers[event_type].pop(i)
-                    return True
-        return False
+            new_list = []
+            for cb, async_flag in self._subscribers[event_type]:
+                if cb == callback and (is_async is None or async_flag == is_async):
+                    removed += 1
+                else:
+                    new_list.append((cb, async_flag))
+            self._subscribers[event_type] = new_list
+        return removed
 
     def clear_subscribers(self, event_type: str = None) -> None:
         """清空订阅者"""
@@ -509,23 +523,38 @@ class AsyncEventBus:
         except Exception as e:
             logger.error("[AsyncEventBus] 持久化失败 (%s): %s", event.event_type, e)
 
-        # 3. 异步分发
-        notified = 0
+        # 3. 异步分发（并发执行）
+        async def _run_one(cb, is_async, evt):
+            """执行单个订阅者回调"""
+            try:
+                if is_async:
+                    await cb(evt)
+                else:
+                    await asyncio.to_thread(cb, evt)
+                return True
+            except Exception as e:
+                logger.error("[AsyncEventBus] 订阅者回调异常 "
+                               "(event=%s, callback=%s): %s",
+                               evt.event_type, cb, e)
+                return False
+
+        tasks = []
         for callback, is_async in callbacks:
             # 循环事件防护
             if (hasattr(callback, '__name__') and callback.__name__ != '<lambda>'
                     and callback.__name__ == event.source):
                 continue
-            try:
-                if is_async:
-                    await callback(event)
-                else:
-                    await asyncio.to_thread(callback, event)
-                notified += 1
-            except Exception as e:
-                logger.error("[AsyncEventBus] 订阅者回调异常 "
-                           "(event=%s, callback=%s): %s",
-                           event.event_type, callback, e)
+            tasks.append(_run_one(callback, is_async, event))
+
+        if tasks:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            # results 中包含 True（成功）/ False（失败）/ Exception（意外异常）
+            notified = sum(1 for r in results if r is True)
+            for r in results:
+                if isinstance(r, Exception):
+                    logger.error("[AsyncEventBus] gather 意外异常: %s", r)
+        else:
+            notified = 0
 
         return notified
 

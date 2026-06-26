@@ -76,12 +76,11 @@ def _subscribe_ancestor_to_events(ancestor: Agent) -> bool:
 
             # 调用 LLM 分解任务（P1-1 修复：asyncio.to_thread 避免阻塞事件循环）
             context = await asyncio.to_thread(
-                lambda: ancestor.run(
-                    sop_steps=["call_llm"],
-                    initial_context={
-                        "_prompt": f"Analyze the following task, decompose into 1-3 parent agents, return JSON: {task_input}"
-                    }
-                )
+                ancestor.run,
+                sop_steps=["call_llm"],
+                initial_context={
+                    "_prompt": f"Analyze the following task, decompose into 1-3 parent agents, return JSON: {task_input}"
+                }
             )
             llm_response = context.get("_llm_response", "")
 

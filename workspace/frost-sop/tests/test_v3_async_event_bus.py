@@ -274,7 +274,7 @@ async def test_12_unsubscribe():
     assert bus.get_subscriber_count(EventType.TASK_FAILED) == 1
 
     result = bus.unsubscribe(EventType.TASK_FAILED, cb)
-    assert result is True
+    assert result == 1  # unsubscribe() 返回移除数量（int）
     assert bus.get_subscriber_count(EventType.TASK_FAILED) == 0
 
     await bus.publish(Event(EventType.TASK_FAILED, source="test"))
