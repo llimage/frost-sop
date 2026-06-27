@@ -1,0 +1,45 @@
+# 环境变量（包含 API Key，禁止提交）
+.env
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 数据目录
+data/
+
+# 输出目录
+output/
+test_outputs/
+tmpcpjfciuc/
+
+# HuggingFace 缓存
+.hf_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 临时文件
+test_output.txt
+test_full_output.txt
+debug_audit.log
+test_report.md
+test_report_fix.md
+
+# 备份文件
+*.bak_*
+
+# Skill 草稿（自动生成）
+skills/*_draft_*.md
+
+# Node.js
+frontend/node_modules/
+frontend/.next/
+sop_ui/node_modules/

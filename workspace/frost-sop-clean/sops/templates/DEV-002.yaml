@@ -1,0 +1,28 @@
+sop_id: "DEV-002"
+name: "Bug修复"
+version: "1.0"
+stages:
+  - name: "问题定位"
+    agent: "debugger"
+    skills: ["analyze_log", "locate_issue"]
+    requirement: "分析错误日志，定位Bug根因"
+    output_type: "document"
+  - name: "修复方案"
+    agent: "developer"
+    skills: ["design_fix", "generate_patch"]
+    requirement: "设计修复方案，生成代码补丁"
+    output_type: "code"
+  - name: "修复验证"
+    agent: "tester"
+    skills: ["run_tests", "verify_fix"]
+    requirement: "运行测试，验证修复是否生效"
+    output_type: "document"
+  - name: "审查交付"
+    agent: "auditor"
+    skills: ["audit_code", "review_fix"]
+    requirement: "审查修复代码，确保质量"
+    output_type: "document"
+required_stages:
+  - "审查交付"
+forbidden_skills:
+  - "direct_db_write"

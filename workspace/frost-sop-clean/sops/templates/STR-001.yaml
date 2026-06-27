@@ -1,0 +1,34 @@
+sop_id: "STR-001"
+name: "项目立项"
+version: "1.0"
+stages:
+  - name: "需求调研"
+    agent: "product_manager"
+    skills: ["research_market", "analyze_requirements"]
+    requirement: "调研市场需求和竞品，明确项目要解决的核心问题"
+    output_type: "document"
+  - name: "可行性分析"
+    agent: "strategist"
+    skills: ["analyze_feasibility", "financial_analysis"]
+    requirement: "分析技术可行性、资源需求、投入产出比"
+    output_type: "document"
+  - name: "方案设计"
+    agent: "architect"
+    skills: ["design_solution", "technical_design"]
+    requirement: "设计项目技术方案，包括架构、模块、里程碑"
+    output_type: "document"
+  - name: "资源规划"
+    agent: "project_manager"
+    skills: ["plan_resources", "estimate_timeline"]
+    requirement: "规划人力资源、预算、时间线，制定项目计划"
+    output_type: "document"
+  - name: "立项评审"
+    agent: "stakeholder"
+    skills: ["review_proposal", "make_decision"]
+    requirement: "向决策层汇报方案，完成立项评审和审批"
+    output_type: "document"
+required_stages:
+  - "立项评审"
+forbidden_skills:
+  - "direct_db_write"
+  - "auto_approve_without_review"

@@ -1,0 +1,20 @@
+sop_id: "STR-002"
+name: "自进化验证"
+version: "1.0"
+stages:
+  - name: "读取历史数据"
+    agent: "analyst"
+    skills: ["load_task_history"]
+  - name: "分析执行数据"
+    agent: "analyst"
+    skills: ["analyze_trends"]
+  - name: "生成优化建议"
+    agent: "optimizer"
+    skills: ["generate_suggestions"]
+  - name: "创始人确认"
+    agent: "secretary"
+    skills: ["present_for_approval"]
+required_stages:
+  - "创始人确认"
+forbidden_skills:
+  - "direct_db_write"

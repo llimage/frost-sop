@@ -1,0 +1,29 @@
+sop_id: "MT-001"
+name: "内容发布"
+version: "1.0"
+stages:
+  - name: "选题策划"
+    agent: "content_strategist"
+    skills: ["analyze_audience", "generate_topics"]
+    requirement: "分析目标受众，确定本期内容选题和角度"
+    output_type: "document"
+  - name: "内容创作"
+    agent: "copywriter"
+    skills: ["write_copy", "content_creation"]
+    requirement: "根据选题撰写内容草稿，确保符合品牌调性"
+    output_type: "document"
+  - name: "审核优化"
+    agent: "editor"
+    skills: ["review_content", "optimize_copy"]
+    requirement: "审核内容质量，优化表达，确保无合规风险"
+    output_type: "document"
+  - name: "发布追踪"
+    agent: "marketing_analyst"
+    skills: ["publish_content", "track_metrics"]
+    requirement: "执行发布，配置追踪链接，记录初始数据"
+    output_type: "document"
+required_stages:
+  - "审核优化"
+forbidden_skills:
+  - "direct_db_write"
+  - "auto_publish_without_review"
