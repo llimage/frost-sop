@@ -739,7 +739,7 @@ class DBManager:
             try:
                 result = self.execute_sql(f"SELECT COUNT(*) as cnt FROM {table}")
                 counts[table] = result[0]["cnt"] if result else 0
-            except:
+            except Exception:
                 counts[table] = -1  # 表不存在
 
         return counts

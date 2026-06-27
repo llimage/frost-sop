@@ -72,7 +72,7 @@ class MemoryStore:
                     name=self.collection_name
                 )
                 logger.info(f"✅ 已加载 ChromaDB Collection: {self.collection_name}")
-            except:
+            except Exception:
                 self.collection = self.chroma_client.create_collection(
                     name=self.collection_name,
                     metadata={"agent_id": self.agent_id}

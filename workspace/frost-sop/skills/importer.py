@@ -110,7 +110,7 @@ def import_agency_agents(context: dict) -> dict:
                                 role_name = fm_data.get("name", "")
                                 role_desc = fm_data.get("description", "")
                                 emoji = fm_data.get("emoji", "")
-                        except:
+                        except Exception:
                             pass
                     else:
                         # 简单解析（无yaml模块时）
