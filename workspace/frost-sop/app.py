@@ -49,6 +49,8 @@ st.set_page_config(
 # CSS 注入 — 专业 SaaS 后台视觉设计规范
 # 色调：中性冷灰底色，蓝色强调，拒绝暖色和花哨渐变
 # ================================================================
+
+
 def inject_css():
     """注入全局CSS样式——专业SaaS后台风格"""
     st.markdown("""
@@ -62,7 +64,7 @@ def inject_css():
         max-width: 100%;
         background-color: #F4F6F8;
     }
-    
+
     /* === 顶部导航栏 === */
     .saas-navbar {
         background: #1E293B;
@@ -136,12 +138,12 @@ def inject_css():
         background: #0F172A;
         border-radius: 12px;
     }
-    
+
     /* === 主内容区 === */
     .saas-content {
         padding: 20px 24px;
     }
-    
+
     /* === KPI 卡片 === */
     .saas-stat-card {
         background: #FFFFFF;
@@ -169,7 +171,7 @@ def inject_css():
         color: #64748B;
         margin-top: 2px;
     }
-    
+
     /* === 项目概览卡片 === */
     .saas-project-header {
         background: #FFFFFF;
@@ -217,7 +219,7 @@ def inject_css():
         background: #F8FAFC;
         color: #94A3B8;
     }
-    
+
     /* === 成本条 === */
     .saas-cost-bar {
         background: #FFFFFF;
@@ -250,7 +252,7 @@ def inject_css():
     .saas-progress-fill.danger {
         background: #EF4444;
     }
-    
+
     /* === AI 员工卡片 === */
     .saas-agent-grid {
         display: grid;
@@ -309,7 +311,7 @@ def inject_css():
         font-style: italic;
         margin-top: 2px;
     }
-    
+
     /* === 侧边栏/对话面板 === */
     .saas-panel {
         background: #FFFFFF;
@@ -343,7 +345,7 @@ def inject_css():
         color: #FFFFFF;
         border-color: #3B82F6;
     }
-    
+
     /* === 日志窗口 === */
     .saas-log-window {
         background: #0F172A;
@@ -365,7 +367,7 @@ def inject_css():
     .saas-log-success { color: #4ADE80; }
     .saas-log-warn { color: #FBBF24; }
     .saas-log-error { color: #F87171; }
-    
+
     /* === 日终回顾 === */
     .daily-review-panel {
         background: #FFFFFF;
@@ -374,7 +376,7 @@ def inject_css():
         border: 1px solid #E2E8F0;
         box-shadow: 0 4px 16px rgba(0,0,0,0.08);
     }
-    
+
     /* === Streamlit 原生元素覆盖 === */
     div[data-testid="stHorizontalBlock"] {
         gap: 12px;
@@ -411,7 +413,7 @@ def inject_css():
         background: #E2E8F0;
         color: #0F172A;
     }
-    
+
     /* === 移动端适配 === */
     @media (max-width: 768px) {
         .saas-content { padding: 12px; }
@@ -457,6 +459,7 @@ if "initialized" not in st.session_state:
     st.session_state.wb_daily_review_dismissed = False
     st.session_state.wb_alt_index = 0  # 备选任务索引
     st.session_state.wb_nav = "dashboard"  # 导航激活项
+
 
 def add_log(message: str, level: str = "info"):
     """追加日志到会话状态"""
@@ -765,7 +768,7 @@ def _render_skills_view():
             for s in skills:
                 status = s.get("status", "unknown")
                 badge = "🟢" if status == "active" else ("🟡" if status == "draft" else "⚪")
-                with st.expander(f"{badge} {s['name']} ({s.get('skill_type','通用')})"):
+                with st.expander(f"{badge} {s['name']} ({s.get('skill_type', '通用')})"):
                     st.caption(f"状态: {status}")
                     if s.get("trigger_keywords"):
                         st.caption(f"触发词: {s['trigger_keywords']}")
@@ -886,13 +889,13 @@ def _render_outputs_view():
 
     # 分页
     page_size = 30
-    page = st.number_input("页码", min_value=1, max_value=max(1, (len(filtered)-1)//page_size+1), value=1, key="output_page")
+    page = st.number_input("页码", min_value=1, max_value=max(1, (len(filtered) - 1) // page_size + 1), value=1, key="output_page")
     start = (page - 1) * page_size
-    page_files = filtered[start:start+page_size]
+    page_files = filtered[start:start + page_size]
 
     for relpath, mtime, size, fpath in page_files:
         mtime_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
-        size_str = f"{size:,}B" if size < 1024 else f"{size/1024:.1f}KB" if size < 1024*1024 else f"{size/1024/1024:.1f}MB"
+        size_str = f"{size:,}B" if size < 1024 else f"{size / 1024:.1f}KB" if size < 1024 * 1024 else f"{size / 1024 / 1024:.1f}MB"
         col1, col2, col3 = st.columns([5, 2, 1])
         with col1:
             st.caption(f"📄 {relpath}")
@@ -1201,12 +1204,12 @@ def render_commander_dashboard():
                     <span style="font-size:14px;font-weight:700;color:#0F172A;">预算消耗</span>
                     <span style="font-size:12px;color:#64748B;margin-left:8px;">已消耗 ¥{total_cost:.2f} / 预算 ¥{monthly_budget:,.0f}</span>
                 </div>
-                <div style="font-size:14px;font-weight:700;color:{'#EF4444' if pct>80 else '#3B82F6'};">
+                <div style="font-size:14px;font-weight:700;color:{'#EF4444' if pct > 80 else '#3B82F6'};">
                     {pct:.1f}%
                 </div>
             </div>
             <div class="saas-progress">
-                <div class="saas-progress-fill {pfill_class}" style="width:{min(pct,100):.1f}%;"></div>
+                <div class="saas-progress-fill {pfill_class}" style="width:{min(pct, 100):.1f}%;"></div>
             </div>
             <div style="margin-top:10px;">{model_detail}</div>
         </div>
@@ -1474,7 +1477,7 @@ def render_project_detail():
             st.session_state.wb_active_project = None
             st.rerun()
     with col_title:
-        st.markdown(f"## {proj.get('icon','📂')} {proj.get('name','项目详情')}")
+        st.markdown(f"## {proj.get('icon', '📂')} {proj.get('name', '项目详情')}")
     st.caption(proj.get("description", ""))
 
     # ========== 保留现有3标签页功能 ==========
@@ -1498,9 +1501,9 @@ def render_project_detail():
                 sop = SOP.load_from_yaml(sop_file)
                 stages = getattr(sop, 'stages', [])
                 for i, stage in enumerate(stages):
-                    phase_id = stage.get('phase_id', stage.get('name', f'Phase {i+1}'))
+                    phase_id = stage.get('phase_id', stage.get('name', f'Phase {i + 1}'))
                     st.markdown(
-                        f"🔄 **Phase {i+1}/{len(stages)}** — {phase_id} — "
+                        f"🔄 **Phase {i + 1}/{len(stages)}** — {phase_id} — "
                         f"{stage.get('description', '')[:60]}"
                     )
             except Exception:
@@ -1532,7 +1535,7 @@ def render_project_detail():
         )
         if skills_raw:
             for s in skills_raw:
-                st.caption(f"- {s['name']} ({s.get('skill_type','通用')})")
+                st.caption(f"- {s['name']} ({s.get('skill_type', '通用')})")
         else:
             st.caption("暂无活跃 Skill")
     except Exception:
@@ -1832,12 +1835,12 @@ def execute_task(task_text: str):
             stage_context = {"_stage_results": [], "_parent_agent": parent}
             progress_bar = st.progress(0)
             for i, stage in enumerate(sop_stages_detail):
-                stage_name = stage.get("name", f"阶段{i+1}")
+                stage_name = stage.get("name", f"阶段{i + 1}")
                 status_status.update(
-                    label=f"Step 5/6: 孙辈执行「{stage_name}」({i+1}/{len(sop_stages_detail)})...",
+                    label =f"Step 5/6: 孙辈执行「{stage_name}」({i + 1}/{len(sop_stages_detail)})...",
                     state="running"
                 )
-                add_log(f"--- Step 5.{i+1}: 孙辈执行「{stage_name}」---")
+                add_log(f"--- Step 5.{i + 1}: 孙辈执行「{stage_name}」---")
                 stage_context["_current_stage"] = stage
                 stage_context = parent.run(
                     sop_steps=["execute_stage"],
@@ -1911,7 +1914,7 @@ def render_cost_dashboard():
     with col1:
         st.metric("已用成本", f"¥{total_cost:.2f}", delta=f"预算: ¥{monthly_budget:.2f}")
     with col2:
-        st.metric("剩余预算", f"¥{remaining:.2f}", delta=f"{usage_ratio*100:.1f}% 已用")
+        st.metric("剩余预算", f"¥{remaining:.2f}", delta=f"{usage_ratio * 100:.1f}% 已用")
     with col3:
         st.metric("使用状态", alert_text)
     with col4:
@@ -1919,7 +1922,7 @@ def render_cost_dashboard():
 
     st.write("**预算使用进度:**")
     st.progress(min(usage_ratio, 1.0))
-    st.write(f"{usage_ratio*100:.1f}% 已用 (¥{total_cost:.2f} / ¥{monthly_budget:.2f})")
+    st.write(f"{usage_ratio * 100:.1f}% 已用 (¥{total_cost:.2f} / ¥{monthly_budget:.2f})")
 
 
 # ================================================================
@@ -1980,7 +1983,7 @@ def render_energy_logger():
     emotions = ["专注", "疲惫", "焦虑", "平静", "兴奋", "低落"]
     for row_idx in range(0, 6, 3):
         cols = st.columns(3)
-        for col_idx, emotion in enumerate(emotions[row_idx:row_idx+3]):
+        for col_idx, emotion in enumerate(emotions[row_idx:row_idx + 3]):
             with cols[col_idx]:
                 is_selected = st.session_state.energy_emotion == emotion
                 btn_label = f"{'✅ ' if is_selected else ''}{emotion}"
@@ -2035,7 +2038,7 @@ def render_schedule_page():
             start_dt = st.text_input("开始时间 (YYYY-MM-DD HH:MM)", key="schedule_start")
         with col2:
             repeat_type = st.selectbox("重复", ["none", "daily", "weekly", "monthly"], key="schedule_repeat",
-                                       format_func=lambda x: {"none":"不重复","daily":"每天","weekly":"每周","monthly":"每月"}.get(x,x))
+                                       format_func=lambda x: {"none": "不重复", "daily": "每天", "weekly": "每周", "monthly": "每月"}.get(x, x))
             end_dt = st.text_input("结束时间 (YYYY-MM-DD HH:MM)", key="schedule_end")
         description = st.text_area("描述（可选）", key="schedule_desc", height=80)
         if st.button("✅ 添加日程", key="add_schedule_btn", use_container_width=True):
@@ -2073,7 +2076,7 @@ def render_schedule_page():
                         with col_main:
                             title_text = s.get("title") or s.get("name", "无标题")
                             st.write(f"**{title_text}**")
-                            st.caption(f"{s.get('start_time','?')} → {s.get('end_time','?')}")
+                            st.caption(f"{s.get('start_time', '?')} → {s.get('end_time', '?')}")
                         with col_del:
                             if st.button("🗑️", key=f"del_sch_{s['id']}"):
                                 db.delete_schedule(s["id"])
@@ -2303,7 +2306,7 @@ def main():
         if st.session_state.get("task_result"):
             with st.expander("📦 最新任务产出"):
                 for i, stage_result in enumerate(st.session_state.task_result):
-                    st.write(f"阶段{i+1}: {stage_result.get('stage', '未知')}")
+                    st.write(f"阶段{i + 1}: {stage_result.get('stage', '未知')}")
 
 
 def render_sidebar():

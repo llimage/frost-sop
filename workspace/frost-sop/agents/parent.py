@@ -136,7 +136,7 @@ def _subscribe_parent_to_events(parent: Agent, asset_store, sop_id: str) -> bool
 
             # 3. 逐阶段发布 STAGE_STARTED（由 orchestration.py 的 stage executor 异步执行）
             for i, stage in enumerate(sop_stages):
-                stage_name = stage.get("name", f"阶段{i+1}")
+                stage_name = stage.get("name", f"阶段{i + 1}")
 
                 # 发布 STAGE_STARTED（orchestration.py 的 stage executor 会处理）
                 await bus.publish(Event(
@@ -150,7 +150,7 @@ def _subscribe_parent_to_events(parent: Agent, asset_store, sop_id: str) -> bool
                     },
                 ))
                 logger.info("[V3.0] 发布 STAGE_STARTED: %s (阶段 %s/%s)",
-                           stage_name, i + 1, len(sop_stages))
+                            stage_name, i + 1, len(sop_stages))
 
             # 4. 等待所有阶段完成（由 stage executor 发布 TASK_COMPLETED）
             # 注意：不直接执行阶段，而是由事件驱动的 stage executor 处理

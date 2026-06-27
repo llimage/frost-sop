@@ -299,7 +299,6 @@ def main(task_input=None, sop_id=None):
             for key, value in child_data.items():
                 coordination_store.save(f"child_{stage_name}_{key}", value)
 
-
     # ================================================================
     # 5.5 父辈收割产出到资产Store
     # ================================================================

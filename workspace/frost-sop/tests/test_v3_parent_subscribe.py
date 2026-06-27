@@ -66,7 +66,7 @@ def test_02_parent_v3_mode_subscribes_task_decomposed():
 
 @pytest.mark.asyncio
 async def test_03_parent_publishes_stage_events():
-    """parent 收到 TASK_DECOMPOSED 后发布 STAGE_STARTED 和 STAGE_COMPLETED"""
+    """parent 收到 TASK_DECOMPOSED 后发布 STAGE_STARTED（STAGE_COMPLETED 由 orchestration 发布）"""
     bus = _setup()
     asset = create_asset_store()
 
@@ -75,18 +75,12 @@ async def test_03_parent_publishes_stage_events():
 
     # 捕获事件
     stage_started = []
-    stage_completed = []
-    task_completed = []
     task_failed = []
 
     async def capture_started(e): stage_started.append(e)
-    async def capture_completed(e): stage_completed.append(e)
-    async def capture_task_completed(e): task_completed.append(e)
     async def capture_task_failed(e): task_failed.append(e)
 
     bus.subscribe_async(EventType.STAGE_STARTED, capture_started)
-    bus.subscribe_async(EventType.STAGE_COMPLETED, capture_completed)
-    bus.subscribe_async(EventType.TASK_COMPLETED, capture_task_completed)
     bus.subscribe_async(EventType.TASK_FAILED, capture_task_failed)
 
     # 发布 TASK_DECOMPOSED
@@ -103,12 +97,10 @@ async def test_03_parent_publishes_stage_events():
     # 等待异步处理完成
     await asyncio.sleep(0.5)
 
-    # 验证：DEV-001 有 5 个阶段
+    # 验证：DEV-001 有 5 个阶段，parent 应发布 5 个 STAGE_STARTED
     assert len(stage_started) >= 1, f"Expected STAGE_STARTED events, got {len(stage_started)}"
-    assert len(stage_completed) >= 1, f"Expected STAGE_COMPLETED events, got {len(stage_completed)}"
-
-    # 验证 STAGE_STARTED 和 STAGE_COMPLETED 数量一致
-    assert len(stage_started) == len(stage_completed)
+    # V3.0 新架构：parent 只发布 STAGE_STARTED，STAGE_COMPLETED 由 orchestration 的 stage executor 发布
+    assert len(task_failed) == 0, f"Unexpected TASK_FAILED: {task_failed}"
 
 
 # ---------------------------------------------------------------------------
@@ -117,12 +109,16 @@ async def test_03_parent_publishes_stage_events():
 
 @pytest.mark.asyncio
 async def test_04_parent_publishes_task_completed():
-    """parent 完成所有阶段后发布 TASK_COMPLETED"""
+    """parent + orchestration 完成所有阶段后发布 TASK_COMPLETED"""
     bus = _setup()
     asset = create_asset_store()
 
     parent = create_parent("parent_v3", Store(), event_driven=True,
                            asset_store=asset, sop_id="DEV-001")
+
+    # V3.0 新架构：注册 orchestration 的 stage executor 来处理 STAGE_STARTED → STAGE_COMPLETED → TASK_COMPLETED
+    from skills.orchestration import register_stage_executor
+    register_stage_executor(parent, asset)
 
     task_completed = []
 
@@ -139,12 +135,14 @@ async def test_04_parent_publishes_task_completed():
         },
     ))
 
-    await asyncio.sleep(0.5)
+    # 等待异步处理完成（mock 模式下 LLM 调用很快，但需要足够时间让事件链完成）
+    await asyncio.sleep(2.0)
 
     assert len(task_completed) >= 1
     event = task_completed[0]
     assert event.event_type == EventType.TASK_COMPLETED
-    assert event.source == "parent:stage_executor"
+    # V3.0 新架构：TASK_COMPLETED 由 orchestration 的 stage executor 发布
+    assert event.source == "orchestration:stage_executor"
     assert event.data.get("task_id") == "test_v3_004"
     assert "stages_completed" in event.data
     assert "total_stages" in event.data

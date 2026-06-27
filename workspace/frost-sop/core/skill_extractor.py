@@ -94,7 +94,7 @@ class SkillExtractor:
         # 构造 SKILL.md 内容
         steps = extracted.get("analysis_dimensions", [])
         steps_text = "\n".join(
-            [f"{i+1}. {step}" for i, step in enumerate(steps)]
+            [f"{i + 1}. {step}" for i, step in enumerate(steps)]
         ) if steps else "1. 执行任务\n2. 输出结果"
 
         skill_md = f"""# {skill_name}

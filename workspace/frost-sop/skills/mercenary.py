@@ -12,12 +12,12 @@ from core.skill import Skill
 def create_mercenary(name: str, skill_func, skill_name: str = None) -> Agent:
     """
     创建一个雇佣兵Agent。
-    
+
     Args:
         name: 雇佣兵名称
         skill_func: 确定性函数，签名 func(context: dict) -> dict
         skill_name: Skill名称，默认与name相同
-    
+
     Returns:
         一个瞬态Agent实例，generation=99（不进入家族谱系）
     """
@@ -44,22 +44,22 @@ def markdown_to_html(context: dict) -> dict:
     """
     import re
     text = context.get("_content", context.get("_task_description", ""))
-    
+
     # 逐行处理
     lines = text.split("\n")
     html_lines = []
     in_paragraph = False
-    
+
     for line in lines:
         line = line.strip()
-        
+
         # 空行结束当前段落
         if not line:
             if in_paragraph:
                 html_lines.append("</p>")
                 in_paragraph = False
             continue
-        
+
         # 标题
         if line.startswith("# "):
             if in_paragraph:
@@ -87,11 +87,11 @@ def markdown_to_html(context: dict) -> dict:
             line = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', line)
             line = re.sub(r'\*(.+?)\*', r'<em>\1</em>', line)
             html_lines.append(line)
-    
+
     # 关闭最后的段落
     if in_paragraph:
         html_lines.append("</p>")
-    
+
     result = "\n".join(html_lines)
     context["_result"] = result
     context["_reason"] = "雇佣兵(Markdown→HTML)执行完成"
@@ -167,7 +167,7 @@ def extract_keywords(context: dict) -> dict:
                     # 尝试滑动窗口提取2-4字词组
                     for n in [2, 3, 4]:
                         for i in range(len(seg) - n + 1):
-                            word = seg[i:i+n]
+                            word = seg[i:i + n]
                             if word not in stopwords and word not in keywords:
                                 keywords.append(word)
 
@@ -188,13 +188,13 @@ def format_date(context: dict) -> dict:
     """日期格式化"""
     from datetime import datetime
     date_str = context.get("_content", str(datetime.now()))
-    
+
     try:
         dt = datetime.fromisoformat(date_str.replace("Z", "+00:00").split("+")[0])
         formatted = dt.strftime("%Y年%m月%d日 %H:%M")
     except (ValueError, AttributeError):
         formatted = datetime.now().strftime("%Y年%m月%d日 %H:%M")
-    
+
     context["_result"] = formatted
     context["_reason"] = "雇佣兵(日期格式化)执行完成"
     return context
@@ -209,22 +209,22 @@ mercenary_date = create_mercenary("日期格式化", format_date, "format_date")
 if __name__ == "__main__":
     # 简单测试
     print("=== 雇佣兵工厂测试 ===")
-    
+
     # 测试Markdown转HTML
     ctx1 = {"_content": "# 标题\n这是**粗体**和*斜体*"}
     result1 = markdown_to_html(ctx1)
     print("Markdown→HTML:", result1["_result"][:100])
-    
+
     # 测试关键词提取
     ctx2 = {"_content": "这是一段测试文本，包含一些关键词如FROST、AI、Agent"}
     result2 = extract_keywords(ctx2)
     print("关键词提取:", result2["_result"])
-    
+
     # 测试日期格式化
     ctx3 = {"_content": "2026-06-20T10:30:00"}
     result3 = format_date(ctx3)
     print("日期格式化:", result3["_result"])
-    
+
     print("\n=== 雇佣兵Agent创建测试 ===")
     agent1 = create_mercenary("测试雇佣兵", markdown_to_html)
     print("雇佣兵名称:", agent1.name)

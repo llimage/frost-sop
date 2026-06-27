@@ -44,22 +44,22 @@ class EventType:
     - AGENT_*: Agent 自身生命周期事件
     """
     # 任务生命周期
-    TASK_CREATED    = "task_created"         # V3.0: 任务创建（main_async 发布）
+    TASK_CREATED = "task_created"         # V3.0: 任务创建（main_async 发布）
     TASK_DECOMPOSED = "task_decomposed"     # 祖辈完成任务分解
-    TASK_COMPLETED  = "task_completed"      # 任务全部阶段完成
-    TASK_FAILED     = "task_failed"         # 任务失败（不可恢复）
-    TASK_TIMEOUT    = "task_timeout"        # 任务超时（V3.0: main_async 超时触发）
+    TASK_COMPLETED = "task_completed"      # 任务全部阶段完成
+    TASK_FAILED = "task_failed"         # 任务失败（不可恢复）
+    TASK_TIMEOUT = "task_timeout"        # 任务超时（V3.0: main_async 超时触发）
 
     # SOP 阶段生命周期
-    STAGE_STARTED   = "stage_started"      # 阶段开始执行
+    STAGE_STARTED = "stage_started"      # 阶段开始执行
     STAGE_COMPLETED = "stage_completed"    # 阶段执行完成
-    STAGE_FAILED    = "stage_failed"       # 阶段执行失败
+    STAGE_FAILED = "stage_failed"       # 阶段执行失败
 
     # Agent 步骤
-    STEP_COMPLETED  = "step_completed"     # Agent 单步 Skill 执行完成
+    STEP_COMPLETED = "step_completed"     # Agent 单步 Skill 执行完成
 
     # Agent 自身生命周期
-    AGENT_CREATED   = "agent_created"      # Agent 被创建
+    AGENT_CREATED = "agent_created"      # Agent 被创建
     AGENT_DESTROYED = "agent_destroyed"    # Agent 被销毁
 
 
@@ -388,6 +388,7 @@ def get_event_bus() -> EventBus:
 
 import asyncio
 
+
 class AsyncEventBus:
     """
     V3.0 异步事件总线。
@@ -463,12 +464,12 @@ class AsyncEventBus:
     def unsubscribe(self, event_type: str, callback: Callable, is_async: bool = None) -> int:
         """
         取消订阅。
-        
+
         Args:
             event_type: 事件类型
             callback: 回调函数
             is_async: 是否异步回调（None=匹配所有，True=只匹配异步，False=只匹配同步）
-        
+
         Returns:
             实际移除的订阅数量
         """
@@ -534,8 +535,8 @@ class AsyncEventBus:
                 return True
             except Exception as e:
                 logger.error("[AsyncEventBus] 订阅者回调异常 "
-                               "(event=%s, callback=%s): %s",
-                               evt.event_type, cb, e)
+                             "(event=%s, callback=%s): %s",
+                             evt.event_type, cb, e)
                 return False
 
         tasks = []

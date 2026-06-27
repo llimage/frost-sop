@@ -147,7 +147,7 @@ audit_family_skill = Skill("audit_family", audit_family)
 def _make_elder_event_handler(elder_agent: "Agent"):
     """
     创建长老的 TASK_COMPLETED 事件处理函数。
-    
+
     当任务完成时，在后台守护线程中自动运行 audit_family。
     fail-safe：任何异常只打印警告，不影响主流程。
     """
@@ -172,7 +172,7 @@ def _make_elder_event_handler(elder_agent: "Agent"):
 def subscribe_elder_to_events(elder_agent: "Agent") -> bool:
     """
     让长老订阅 TASK_COMPLETED 事件。
-    
+
     返回 True 表示订阅成功，False 表示不支持事件总线（fail-safe）。
     """
     try:

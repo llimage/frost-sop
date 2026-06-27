@@ -192,7 +192,7 @@ def get_recommended_task(mode: str = "dev") -> Dict[str, Any]:
     # 获取该项目的任务列表
     tasks = db.select_all("tasks", where="project_id = ? AND status != 'completed'",
                           params=[proj["id"]])
-    
+
     # 简化的推荐逻辑：按紧急度和能量匹配排序
     recommended = _build_task_recommendation(proj, tasks, energy_level, mode)
     return recommended
@@ -311,7 +311,7 @@ def generate_daily_narrative() -> str:
 
     # 获取今日任务完成情况
     tasks_today = len(db.select_all("tasks",
-        where="date(updated_at) = date('now', 'localtime') AND status = 'completed'"))
+                                    where="date(updated_at) = date('now', 'localtime') AND status = 'completed'"))
 
     # 获取今日能量数据
     energy_data = db.execute_sql("""
@@ -319,7 +319,7 @@ def generate_daily_narrative() -> str:
         FROM energy_log
         WHERE date(timestamp) = date('now', 'localtime')
     """)
-    
+
     avg_e = energy_data[0]["avg_energy"] if energy_data and energy_data[0]["avg_energy"] else 0
     max_e = energy_data[0]["max_energy"] if energy_data and energy_data[0]["max_energy"] else 0
     min_e = energy_data[0]["min_energy"] if energy_data and energy_data[0]["min_energy"] else 0
@@ -456,8 +456,8 @@ def get_business_radar_data() -> List[Dict]:
     for proj in DEFAULT_PROJECTS:
         # 活跃任务数
         active_tasks = len(db.select_all("tasks",
-            where="project_id = ? AND status != 'completed'",
-            params=[proj["id"]]))
+                                         where="project_id = ? AND status != 'completed'",
+                                         params=[proj["id"]]))
 
         # 本月收入（模拟数据）
         revenue = proj.get("revenue_monthly", 0)

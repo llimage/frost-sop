@@ -288,25 +288,25 @@ class Agent:
     ) -> dict:
         """
         Execute a single step with retry logic (P0-2).
-        
+
         Retry behavior:
         1. Try the primary step/skill up to max_retries times
         2. Between retries, apply backoff delay
         3. On max retries exceeded, invoke on_max_retries callback for elder reporting
-        
+
         Returns:
             {"success": bool, "context": dict, "error": Exception|None}
         """
         step_name = step if isinstance(step, str) else step.name
         last_error = None
-        
+
         for attempt in range(1, self._max_retries + 1):
             try:
                 is_retry = attempt > 1
                 if is_retry:
                     logger.info("[%s] 重试 %s/%s — 步骤: %s",
                                 self.name, attempt, self._max_retries, step_name)
-                
+
                 # Execute the step
                 if isinstance(step, str):
                     if step not in self.skills:
@@ -316,7 +316,7 @@ class Agent:
                     new_context = step.run(step._sop_steps, dict(context))
                 else:
                     raise TypeError(f"Invalid step type: {type(step)}")
-                
+
                 # Success!
                 step_records.append({
                     "step": step_name,
@@ -326,13 +326,13 @@ class Agent:
                     "reason": new_context.get("_reason", None)
                 })
                 return {"success": True, "context": new_context, "error": None}
-                
+
             except Exception as e:
                 last_error = e
                 error_str = str(e)[:200]
                 logger.error("[%s] 步骤 '%s' 失败 (尝试 %s/%s): %s",
                              self.name, step_name, attempt, self._max_retries, error_str)
-                
+
                 if attempt < self._max_retries:
                     # 备用 Skill 切换（P0-2: 第2次重试时尝试）
                     if attempt == 2 and isinstance(step, str):
@@ -341,7 +341,7 @@ class Agent:
                             logger.info("[%s] 切换备用 Skill: %s → %s",
                                         self.name, step, alt_step)
                             step = alt_step
-                    
+
                     # Wait before retry
                     logger.info("[%s] 等待 %s秒后重试...", self.name, self._retry_delay_seconds)
                     time.sleep(self._retry_delay_seconds)
@@ -349,7 +349,7 @@ class Agent:
                     # Max retries exceeded — report to elder
                     logger.error("[%s] 步骤 '%s' 已达最大重试 (%s次)，上报祖辈...",
                                  self.name, step_name, self._max_retries)
-                    
+
                     if self._on_max_retries:
                         try:
                             self._on_max_retries(
@@ -361,7 +361,7 @@ class Agent:
                             logger.info("[%s] 已上报祖辈 Agent", self.name)
                         except Exception as report_err:
                             logger.warning("[%s] 上报祖辈失败: %s", self.name, report_err)
-                    
+
                     # Record failure
                     step_records.append({
                         "step": step_name,
@@ -370,17 +370,17 @@ class Agent:
                         "retries": self._max_retries,
                         "escalated_to_elder": True,
                     })
-        
+
         return {"success": False, "context": context, "error": last_error}
 
     def _find_alternate_skill(self, skill_name: str) -> Optional[str]:
         """
         Find an alternate skill for the given skill name (P0-2).
         Uses simple heuristic: append '_backup' or search for similar named skills.
-        
+
         Args:
             skill_name: Original skill name
-            
+
         Returns:
             Alternate skill name or None
         """
@@ -388,11 +388,11 @@ class Agent:
         backup_name = f"{skill_name}_backup"
         if backup_name in self.skills:
             return backup_name
-        
+
         # Check for generic fallback
         if "call_llm_base" in self.skills and skill_name.startswith("call_llm"):
             return "call_llm_base"
-        
+
         # Check for similar named skills (same prefix)
         prefixes = skill_name.split("_")[:2]
         if len(prefixes) >= 1:
@@ -400,7 +400,7 @@ class Agent:
             for key in self.skills:
                 if key != skill_name and key.startswith(prefix):
                     return key
-        
+
         return None
 
     async def run_async(self, sop_steps: list, initial_context: dict = None) -> dict:
