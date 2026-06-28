@@ -166,72 +166,61 @@ def internalize_sop(context: dict) -> dict:
     return context
 
 
-def execute_stage(context: dict) -> dict:
+
+# ============================================================
+# execute_stage 子函数（降低复杂度，每个子函数 <10）
+# ============================================================
+
+def _check_decision_point(context: dict, stage: dict) -> bool:
     """
-    为当前SOP阶段动态组装孙辈Agent并执行。
-
-    输入 context 键：
-        _current_stage: dict —— 当前阶段定义
-            {"name": "阶段名", "agent": "角色名", "skills": ["skill1"], "requirement": "任务描述"}
-        _parent_agent: Agent —— 父辈Agent引用
-        _asset_store: Store —— 资产Store引用
-        _stage_results: list
-
-    输出 context 键：
-        _stage_results: list
-        _current_stage_result: dict
-        _child_store_data: dict
-        _reason: str
+    检查当前阶段是否需要暂停等待君主决策。
+    如果需要暂停，在context中设置决策点信息，返回True。
+    否则返回False，继续执行。
     """
-
-    from skills.assemble import assemble_agent
-    from core.decision_manager import get_decision_manager
-
-    stage = context.get("_current_stage", {})
-    parent_agent = context.get("_parent_agent")
-    asset_store = context.get("_asset_store")
     stage_name = stage.get("name", "未知阶段")
-    stage_requirement = stage.get("requirement", f"执行{stage_name}任务")
-
-    # F8 新增：决策点检查
-    # 检查阶段名称是否包含决策关键词
     decision_keywords = ["确认", "审核", "审批", "决策", "confirm", "approve", "review"]
     requires_decision = any(keyword in stage_name.lower() for keyword in decision_keywords)
 
-    # 也检查阶段定义中是否有 requires_confirmation 字段
     if stage.get("requires_confirmation", False):
         requires_decision = True
 
     if requires_decision:
-        # 触发决策点暂停（仅在有有效 task_id 时）
         task_id = context.get("_task_id", "unknown")
         if task_id == "unknown":
-            # 无有效任务ID，跳过决策点创建
             print(f"  ⚠️ 跳过决策点（无有效 task_id）: {stage_name}")
         else:
+            from core.decision_manager import get_decision_manager
             decision_manager = get_decision_manager()
             stage_id = stage.get("id", stage_name)
             question = stage.get("description", f"是否需要执行 {stage_name}？")
             options = stage.get("decision_options", ["确认", "驳回", "修改"])
-
             decision_id = decision_manager.pause_decision(
                 task_id=task_id,
                 stage_id=stage_id,
                 question=question,
                 options=options
             )
-
-            # 在 context 中设置决策点信息，让上层知道需要暂停
             context["_decision_id"] = decision_id
             context["_paused_for_decision"] = True
             context["_decision_question"] = question
             context["_decision_options"] = options
 
-    # 返回当前 context，不执行后续步骤（如果是决策阶段）
-    if context.get("_paused_for_decision"):
-        return context
+    return context.get("_paused_for_decision", False)
 
-    # 1. 动态组装孙辈Agent
+
+def _assemble_child(context: dict, stage: dict):
+    """
+    为当前阶段动态组装孙辈Agent。
+    包含 DEFECT-001 修复（显式检查技能）和 F14 持久化。
+    成功返回 child，失败返回 None（错误信息已写入context）。
+    """
+    from skills.assemble import assemble_agent
+
+    asset_store = context.get("_asset_store")
+    parent_agent = context.get("_parent_agent")
+    stage_name = stage.get("name", "未知阶段")
+    stage_requirement = stage.get("requirement", f"执行{stage_name}任务")
+
     assemble_context = {
         "_agent_requirement": f"角色：{stage.get('agent', '执行者')}。任务：{stage_requirement}",
         "_asset_store": asset_store,
@@ -242,7 +231,6 @@ def execute_stage(context: dict) -> dict:
     child = assemble_context.get("_assembled_agent")
     agent_config = assemble_context.get("_agent_config", {})
 
-    # 修复DEFECT-001：显式检查孙辈是否真的具备技能，防止静默失败
     if child is not None:
         child_skills = getattr(child, "skills", {})
         child_sop = agent_config.get("sop_steps", [])
@@ -259,7 +247,7 @@ def execute_stage(context: dict) -> dict:
             }
             context["_stage_results"] = context.get("_stage_results", []) + [result]
             context["_current_stage_result"] = result
-            return context
+            return None
 
         # F14: Persist child agent to database
         try:
@@ -268,6 +256,7 @@ def execute_stage(context: dict) -> dict:
             agent_id = child.name
             existing_agent = db.select_one("agents", "id", agent_id)
             if not existing_agent:
+                from datetime import datetime
                 db.insert("agents", {
                     "id": agent_id,
                     "name": child.name,
@@ -275,17 +264,17 @@ def execute_stage(context: dict) -> dict:
                     "generation": child.generation,
                     "created_at": datetime.now().isoformat(),
                 })
-            # Update agent status for current task
             task_id = context.get("_task_id", "")
-            # Check if agent_status record exists
             existing_status = db.select_one("agent_status", "agent_id", agent_id)
             if existing_status:
+                from datetime import datetime
                 db.update("agent_status", "agent_id", agent_id, {
                     "status": "active",
                     "current_task_id": task_id,
                     "last_heartbeat": datetime.now().isoformat(),
                 })
             else:
+                from datetime import datetime
                 db.insert("agent_status", {
                     "agent_id": agent_id,
                     "status": "active",
@@ -298,7 +287,6 @@ def execute_stage(context: dict) -> dict:
             traceback.print_exc()
 
     if child is None:
-        # 组装失败，返回错误
         result = {
             "stage": stage_name,
             "agent": stage.get("agent", "未知"),
@@ -307,33 +295,42 @@ def execute_stage(context: dict) -> dict:
         }
         context["_stage_results"] = context.get("_stage_results", []) + [result]
         context["_current_stage_result"] = result
-        return context
+        return None
 
-    # 2. 孙辈执行任务
-    # 注入任务上下文（含 F14 持久化所需字段）
+    # 将 agent_config 存入 context，供 _execute_child 使用
+    context["_agent_config"] = agent_config
+    return child
+
+
+def _execute_child(child, context: dict, stage: dict) -> dict:
+    """
+    执行孙辈Agent，返回结果上下文。
+    包含：构造initial_context、调用child.run()、更新agent_status为destroyed。
+    """
+    stage_name = stage.get("name", "未知阶段")
+    stage_requirement = stage.get("requirement", f"执行{stage_name}任务")
+
     initial_context = {
         "_task_description": stage_requirement,
         "_output_type": stage.get("output_type", "document"),
         "_output_path": f"output/{stage_name.replace(' ', '_')}_{child.name}.md",
-        "_task_id": context.get("_task_id", ""),        # F14: 传递 task_id 给 cost_log
-        "_agent_id": child.name,                          # F14: 传递 agent_id 给 cost_log
+        "_task_id": context.get("_task_id", ""),
+        "_agent_id": child.name,
     }
 
+    agent_config = context.get("_agent_config", {})
     try:
         result_context = child.run(
             sop_steps=agent_config.get("sop_steps", ["call_llm_for_output"]),
             initial_context=initial_context
         )
-        result_text = result_context.get("_generated_content", result_context.get(
-            "_result", result_context.get("_llm_response", "执行完成")))
-        status = "completed"
     except Exception as e:
-        result_text = f"执行失败: {str(e)}"
-        status = "failed"
+        result_context = {"_generated_content": f"执行失败: {str(e)}"}
 
-    # V2.0: 孙辈执行完毕后，更新 agent_status 为 destroyed（run() 已调用 destroy()，此处同步 DB 状态）
+    # V2.0: 更新 agent_status 为 destroyed
     try:
         from core.db import get_db
+        from datetime import datetime
         db_after = get_db()
         db_after.update("agent_status", "agent_id", child.name, {
             "status": "destroyed",
@@ -342,22 +339,36 @@ def execute_stage(context: dict) -> dict:
     except Exception as e:
         print(f"    ⚠️ [V2.0] 孙辈销毁状态更新失败 ({child.name}): {e}")
 
-    # 3. 构建阶段结果
+    return result_context
+
+
+def _persist_result(context: dict, stage_name: str, result_context: dict, child) -> dict:
+    """
+    持久化阶段执行结果到context。
+    构建result字典，保存child.store数据，更新_stage_results。
+    """
+    agent_config = context.get("_agent_config", {})
+    result_text = result_context.get(
+        "_generated_content",
+        result_context.get("_result", result_context.get("_llm_response", "执行完成"))
+    )
+    status = "completed" if "_generated_content" in result_context else "failed"
+
     result = {
         "stage": stage_name,
-        "agent": stage.get("agent", "未知"),
+        "agent": child.name if child else "未知",
         "skills_used": agent_config.get("skills", []),
         "skill_sources": agent_config.get("skill_sources", {}),
         "output": f"[{stage_name}] {result_text[:100]}",
         "status": status,
-        "child_generation": child.generation,
+        "child_generation": child.generation if child else 0,
         "agent_assembled": True,
     }
 
-    # 4. 保存孙辈Store数据
     child_store_data = {}
-    for key in child.store.list_keys():
-        child_store_data[key] = child.store.load(key)
+    if child is not None:
+        for key in child.store.list_keys():
+            child_store_data[key] = child.store.load(key)
 
     stage_results = context.get("_stage_results", [])
     stage_results.append(result)
@@ -365,8 +376,48 @@ def execute_stage(context: dict) -> dict:
     context["_stage_results"] = stage_results
     context["_current_stage_result"] = result
     context["_child_store_data"] = child_store_data
-    context["_reason"] = f"孙辈Agent(组装)执行阶段'{stage_name}'完成。Skills: {agent_config.get('skills')}（来源: {agent_config.get('skill_sources')}）"
+    context["_reason"] = (
+        f"孙辈Agent(组装)执行阶段'{stage_name}'完成。"
+        f"Skills: {agent_config.get('skills')}（来源: {agent_config.get('skill_sources')}）"
+    )
 
+    return context
+
+
+def execute_stage(context: dict) -> dict:
+    """
+    为当前SOP阶段动态组装孙辈Agent并执行。
+
+    输入 context 键：
+        _current_stage: dict —— 当前阶段定义
+        _parent_agent: Agent —— 父辈Agent引用
+        _asset_store: Store —— 资产Store引用
+        _stage_results: list
+
+    输出 context 键：
+        _stage_results: list
+        _current_stage_result: dict
+        _child_store_data: dict
+        _reason: str
+    """
+
+    stage = context.get("_current_stage", {})
+    stage_name = stage.get("name", "未知阶段")
+
+    # 1. 决策点检查
+    if _check_decision_point(context, stage):
+        return context  # 暂停执行，等待君主决策
+
+    # 2. 组装子Agent
+    child = _assemble_child(context, stage)
+    if child is None:
+        return context  # 组装失败，已写入错误结果
+
+    # 3. 执行子Agent
+    result_context = _execute_child(child, context, stage)
+
+    # 4. 持久化结果
+    context = _persist_result(context, stage_name, result_context, child)
     return context
 
 

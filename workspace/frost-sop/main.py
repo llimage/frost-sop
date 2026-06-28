@@ -484,13 +484,14 @@ if __name__ == "__main__":
     parser.add_argument("--timeout", type=int, default=600, help="Timeout in seconds (async mode)")
     args = parser.parse_args()
 
+    # 日志配置（覆盖同步和异步两种模式）
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
+
     if args.async_mode:
-        # V3.1: 配置异步模式日志handler，使日志输出到控制台
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[logging.StreamHandler()]
-        )
         # V3.0 异步事件驱动模式
         # CLI 入口负责重置 AsyncEventBus，确保干净状态
         from core.event_bus import AsyncEventBus
