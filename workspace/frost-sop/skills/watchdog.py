@@ -244,6 +244,175 @@ def start_heartbeat_loop(agent_id: str, agent_role: str,
 
 
 # ============================================================
+# V4.0 P1: 呼吸监控
+# ============================================================
+
+def report_stage_status(context: dict) -> dict:
+    """
+    阶段状态上报：向 EventBus 发布 stage_status 事件。
+    由父辈在每个 SOP 阶段完成时调用。
+    
+    输入 context 键：
+        _stage_name: str —— 阶段名称
+        _stage_status: str —— 状态（completed / failed / skipped）
+        _task_id: str —— 当前任务 ID
+        _agent_id: str —— 执行 Agent ID
+    
+    输出 context 键：
+        _stage_status_reported: bool
+    """
+    event_bus = get_event_bus()
+    stage_name = context.get("_stage_name", "unknown")
+    stage_status = context.get("_stage_status", "unknown")
+    task_id = context.get("_task_id", "unknown")
+    agent_id = context.get("_agent_id", "unknown")
+    now = datetime.now()
+    
+    event = Event(
+        event_type="stage_status",
+        source=agent_id,
+        data={
+            "stage_name": stage_name,
+            "status": stage_status,
+            "task_id": task_id,
+            "agent_id": agent_id,
+            "timestamp": now.isoformat(),
+        }
+    )
+    
+    try:
+        notified = event_bus.publish(event)
+        logger.info(
+            "[StageStatus] %s: %s (%s), 通知了 %s 个订阅者",
+            stage_name, stage_status, task_id, notified
+        )
+        context["_stage_status_reported"] = True
+    except Exception as e:
+        logger.error("[StageStatus] 上报失败: %s", e)
+        context["_stage_status_reported"] = False
+    
+    return context
+
+
+def report_task_health(context: dict) -> dict:
+    """
+    任务健康上报：向 EventBus 发布 task_health 事件。
+    由父辈定期检查任务健康状态时调用。
+    
+    输入 context 键：
+        _task_id: str —— 任务 ID
+        _health_score: float —— 健康分数 (0.0 - 1.0)
+        _health_reason: str —— 健康状态原因
+        _agent_id: str —— 检查 Agent ID
+    
+    输出 context 键：
+        _task_health_reported: bool
+        _health_level: str —— 健康等级 (healthy / warning / critical)
+    """
+    event_bus = get_event_bus()
+    task_id = context.get("_task_id", "unknown")
+    health_score = context.get("_health_score", 1.0)
+    health_reason = context.get("_health_reason", "")
+    agent_id = context.get("_agent_id", "unknown")
+    now = datetime.now()
+    
+    # 确定健康等级
+    if health_score >= 0.7:
+        health_level = "healthy"
+    elif health_score >= 0.4:
+        health_level = "warning"
+    else:
+        health_level = "critical"
+    
+    event = Event(
+        event_type="task_health",
+        source=agent_id,
+        data={
+            "task_id": task_id,
+            "health_score": health_score,
+            "health_level": health_level,
+            "reason": health_reason,
+            "agent_id": agent_id,
+            "timestamp": now.isoformat(),
+        }
+    )
+    
+    try:
+        notified = event_bus.publish(event)
+        logger.info(
+            "[TaskHealth] %s: %s (%.2f), 通知了 %s 个订阅者",
+            task_id, health_level, health_score, notified
+        )
+        context["_task_health_reported"] = True
+        context["_health_level"] = health_level
+    except Exception as e:
+        logger.error("[TaskHealth] 上报失败: %s", e)
+        context["_task_health_reported"] = False
+    
+    return context
+
+
+def check_consecutive_failures(context: dict) -> dict:
+    """
+    连续失败熔断：检查任务/阶段的连续失败次数，超过阈值触发熔断。
+    
+    输入 context 键：
+        _task_id: str —— 任务 ID
+        _failure_history: list —— 失败历史列表
+        _circuit_breaker_threshold: int —— 熔断阈值（默认 3）
+    
+    输出 context 键：
+        _circuit_breaker_triggered: bool
+        _consecutive_failures: int
+        _circuit_breaker_reason: str
+    """
+    task_id = context.get("_task_id", "unknown")
+    failure_history = context.get("_failure_history", [])
+    threshold = context.get("_circuit_breaker_threshold", 3)
+    
+    # 计算连续失败次数
+    consecutive = 0
+    for record in reversed(failure_history):
+        if isinstance(record, dict) and record.get("status") in ("failed", "error"):
+            consecutive += 1
+        else:
+            break
+    
+    context["_consecutive_failures"] = consecutive
+    
+    # 检查是否触发熔断
+    if consecutive >= threshold:
+        logger.warning(
+            "[CircuitBreaker] 任务 %s 连续失败 %s 次，触发熔断！",
+            task_id, consecutive
+        )
+        context["_circuit_breaker_triggered"] = True
+        context["_circuit_breaker_reason"] = f"连续失败 {consecutive} 次，超过阈值 {threshold}"
+        
+        # 发布熔断事件
+        event_bus = get_event_bus()
+        event = Event(
+            event_type="circuit_breaker_triggered",
+            source="watchdog",
+            data={
+                "task_id": task_id,
+                "consecutive_failures": consecutive,
+                "threshold": threshold,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+        try:
+            event_bus.publish(event)
+        except Exception as e:
+            logger.error("[CircuitBreaker] 发布熔断事件失败: %s", e)
+    else:
+        context["_circuit_breaker_triggered"] = False
+        context["_circuit_breaker_reason"] = ""
+    
+    return context
+
+
+# ============================================================
 # Skill 注册（供 agents/parent.py 导入）
 # ============================================================
 
@@ -254,4 +423,8 @@ def get_watchdog_skills():
     return {
         "send_heartbeat": send_heartbeat,
         "monitor_heartbeat": monitor_heartbeat,
+        # V4.0 P1: 呼吸监控
+        "report_stage_status": report_stage_status,
+        "report_task_health": report_task_health,
+        "check_consecutive_failures": check_consecutive_failures,
     }

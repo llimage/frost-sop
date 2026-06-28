@@ -457,6 +457,11 @@ if "initialized" not in st.session_state:
     st.session_state.wb_daily_review_dismissed = False
     st.session_state.wb_alt_index = 0  # 备选任务索引
     st.session_state.wb_nav = "dashboard"  # 导航激活项
+    
+    # V4.0 P1: 驾驶舱动态面板
+    st.session_state.panel_templates = {}  # 面板模板库
+    st.session_state.dynamic_panels = []  # 当前动态面板列表
+    st.session_state.suggested_panels = []  # 军师建议的面板配置
 
 
 def add_log(message: str, level: str = "info"):
@@ -587,6 +592,80 @@ def render_decision_dialog():
     except Exception as e:
         st.error(f"❌ 渲染决策对话框失败: {e}")
         add_log(f"❌ 渲染决策对话框失败: {e}", level="error")
+
+# ================================================================
+# V4.0 P1: 驾驶舱动态面板
+# ================================================================
+
+def parse_suggested_panels(briefing: dict) -> list:
+    """
+    解析军师简报中的 `_suggested_panels` 字段，返回面板配置列表。
+    
+    输入: briefing dict，包含 _suggested_panels 字段
+    输出: [{"type": "metric", "title": "...", "value": ..., "delta": ...}, ...]
+    """
+    panels = []
+    suggested = briefing.get("_suggested_panels", [])
+    for panel_config in suggested:
+        if isinstance(panel_config, dict):
+            panels.append(panel_config)
+    return panels
+
+
+def render_dynamic_panels():
+    """渲染动态面板（从 st.session_state.dynamic_panels 读取）"""
+    dynamic_panels = st.session_state.get("dynamic_panels", [])
+    if not dynamic_panels:
+        return
+    
+    st.markdown("### 📊 动态面板")
+    cols = st.columns(len(dynamic_panels))
+    for i, panel in enumerate(dynamic_panels):
+        with cols[i % len(cols)]:
+            panel_type = panel.get("type", "metric")
+            title = panel.get("title", "未命名")
+            value = panel.get("value", 0)
+            delta = panel.get("delta")
+            
+            if panel_type == "metric":
+                if delta is not None:
+                    st.metric(title, value, delta)
+                else:
+                    st.metric(title, value)
+            elif panel_type == "line_chart":
+                import pandas as pd
+                import numpy as np
+                data = panel.get("data", [])
+                if data:
+                    df = pd.DataFrame(data)
+                    st.line_chart(df)
+            elif panel_type == "bar_chart":
+                import pandas as pd
+                data = panel.get("data", [])
+                if data:
+                    df = pd.DataFrame(data)
+                    st.bar_chart(df)
+            else:
+                st.write(f"**{title}**: {value}")
+    st.divider()
+
+
+def clear_dynamic_panels():
+    """任务完成后清空临时面板"""
+    st.session_state.dynamic_panels = []
+    st.session_state.suggested_panels = []
+
+
+def update_dynamic_panels_from_briefing(briefing: dict):
+    """
+    从军师简报更新动态面板。
+    在军师分析完成后调用。
+    """
+    suggested = parse_suggested_panels(briefing)
+    if suggested:
+        st.session_state.suggested_panels = suggested
+        st.session_state.dynamic_panels = suggested
+        add_log(f"📊 动态面板已更新: {len(suggested)} 个面板", level="info")
 
 
 # ================================================================
@@ -1192,6 +1271,9 @@ def render_commander_dashboard():
             """, unsafe_allow_html=True)
 
         st.markdown('<div style="height:12px;"></div>', unsafe_allow_html=True)
+
+        # V4.0 P1: 渲染动态面板
+        render_dynamic_panels()
 
         # --- 预算消耗长条卡片 ---
         pct = usage_ratio * 100

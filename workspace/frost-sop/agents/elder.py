@@ -266,11 +266,180 @@ def audit_family(context: dict) -> dict:
     return _log_audit_result(context, report, stats)
 
 
+# ================================================================
+# V4.0 P2: 体检监控增强
+# ================================================================
+
+def audit_health(context: dict) -> dict:
+    """
+    体检监控：长老健康检查增强。
+    包含：方向漂移检测、宪法规则效果追踪。
+    
+    输入 context 键：
+        _asset_store: Store —— 资产 Store
+        _constitution_store: Store —— 宪法 Store
+        _health_check_type: str —— 检查类型（routine / drift / rule_effect）
+    
+    输出 context 键：
+        _health_report: dict —— 健康检查报告
+        _drift_detected: bool —— 是否检测到方向漂移
+        _rule_effects: dict —— 宪法规则效果分析
+    """
+    asset_store = context.get("_asset_store")
+    constitution_store = context.get("_constitution_store")
+    check_type = context.get("_health_check_type", "routine")
+    
+    health_report = {
+        "checked_at": datetime.now().isoformat(),
+        "check_type": check_type,
+        "status": "healthy",
+        "findings": [],
+    }
+    
+    # 1. 常规健康检查
+    if asset_store:
+        # 检查任务成功率
+        tasks = []
+        for key in asset_store.list_keys():
+            if key.startswith("task:"):
+                task_data = asset_store.load(key)
+                if task_data:
+                    tasks.append(task_data)
+        
+        if tasks:
+            recent = tasks[:20]  # 最近20个任务
+            success = sum(1 for t in recent if t.get("status") in ("completed", "success"))
+            success_rate = success / len(recent)
+            
+            health_report["recent_tasks"] = len(recent)
+            health_report["success_rate"] = success_rate
+            
+            if success_rate < 0.5:
+                health_report["status"] = "warning"
+                health_report["findings"].append(f"最近 {len(recent)} 个任务成功率仅 {success_rate:.0%}")
+    
+    # 2. 方向漂移检测（军师方向漂移检测）
+    if check_type in ("drift", "full"):
+        drift_detected = _detect_direction_drift(context)
+        health_report["drift_detected"] = drift_detected
+        context["_drift_detected"] = drift_detected
+        
+        if drift_detected:
+            health_report["status"] = "warning"
+            health_report["findings"].append("检测到分析方向漂移，建议审查军师参数")
+    
+    # 3. 宪法规则效果追踪
+    if check_type in ("rule_effect", "full"):
+        rule_effects = _track_constitution_rule_effects(context)
+        health_report["rule_effects"] = rule_effects
+        context["_rule_effects"] = rule_effects
+        
+        # 检查是否有规则效果异常
+        for rule_id, effect in rule_effects.items():
+            if effect.get("trigger_count", 0) > 10 and effect.get("failure_rate", 0) > 0.3:
+                health_report["status"] = "warning"
+                health_report["findings"].append(
+                    f"规则 {rule_id} 触发 {effect['trigger_count']} 次，失败率 {effect['failure_rate']:.0%}"
+                )
+    
+    context["_health_report"] = health_report
+    context["_reason"] = f"健康检查完成（{check_type}）：{health_report['status']}"
+    return context
+
+
+def _detect_direction_drift(context: dict) -> bool:
+    """
+    检测军师分析方向是否漂移。
+    方法：对比最近3次分析结果的主题一致性。
+    """
+    asset_store = context.get("_asset_store")
+    if not asset_store:
+        return False
+    
+    # 读取最近3次军师分析简报
+    briefings = []
+    for key in asset_store.list_keys():
+        if key.startswith("briefing:"):
+            briefing = asset_store.load(key)
+            if briefing:
+                briefings.append(briefing)
+    
+    if len(briefings) < 3:
+        return False  # 数据不足
+    
+    # 简化：检查是否有连续不同的建议主题
+    recent = briefings[-3:]
+    topics = [b.get("main_topic", "") for b in recent]
+    
+    # 如果3次主题都不同，认为是漂移
+    if len(set(topics)) == 3:
+        return True
+    
+    return False
+
+
+def _track_constitution_rule_effects(context: dict) -> dict:
+    """
+    追踪宪法规则效果。
+    返回：{rule_id: {trigger_count, success_count, failure_rate}}
+    """
+    constitution_store = context.get("_constitution_store")
+    asset_store = context.get("_asset_store")
+    
+    if not constitution_store or not asset_store:
+        return {}
+    
+    # 读取宪法规则
+    rules = constitution_store.load("constitution:rules") or []
+    
+    # 统计每个规则的触发效果
+    effects = {}
+    for rule in rules:
+        rule_id = rule.get("id", "unknown")
+        effects[rule_id] = {
+            "trigger_count": 0,
+            "success_count": 0,
+            "failure_count": 0,
+            "failure_rate": 0.0,
+        }
+    
+    # 扫描任务历史，统计规则效果
+    for key in asset_store.list_keys():
+        if key.startswith("task:"):
+            task_data = asset_store.load(key)
+            if not task_data:
+                continue
+            
+            # 检查任务是否触发了宪法规则
+            triggered_rules = task_data.get("triggered_rules", [])
+            for rule_id in triggered_rules:
+                if rule_id in effects:
+                    effects[rule_id]["trigger_count"] += 1
+                    if task_data.get("status") in ("completed", "success"):
+                        effects[rule_id]["success_count"] += 1
+                    else:
+                        effects[rule_id]["failure_count"] += 1
+    
+    # 计算失败率
+    for rule_id in effects:
+        total = effects[rule_id]["trigger_count"]
+        if total > 0:
+            effects[rule_id]["failure_rate"] = effects[rule_id]["failure_count"] / total
+    
+    return effects
+
+
+# ================================================================
+# 长老 Agent 工厂
+# ================================================================
+
 def create_elder(name: str = "elder", asset_store=None,
         constitution_store=None) -> Agent:
     """创建长老Agent"""
     skills = {
         "audit_family": Skill("audit_family", audit_family),
+        # V4.0 P2: 体检监控
+        "audit_health": Skill("audit_health", audit_health),
     }
     return Agent(
         name=name,
@@ -282,6 +451,9 @@ def create_elder(name: str = "elder", asset_store=None,
 
 
 audit_family_skill = Skill("audit_family", audit_family)
+
+# V4.0 P2: 体检监控
+audit_health_skill = Skill("audit_health", audit_health)
 
 
 # ---------------------------------------------------------------------------
