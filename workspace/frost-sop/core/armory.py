@@ -156,6 +156,9 @@ class WeaponMetadata:
     card: Optional[SkillCard] = None  # 如果携带技能卡，记录详细信息
     skill_node_id: Optional[str] = None  # 关联的技能图节点ID
 
+    # V5.0 P1：能力画像（能力元数据层）
+    capability_profile: Optional[Any] = None  # CapabilityProfile 实例（避免循环导入用 Any）
+
     # 扩展：适配器（运行时使用）
     _skill_instance: Optional[Skill] = field(default=None, repr=False)  # 运行时Skill实例
     _sop_instance: Optional[SOP] = field(default=None, repr=False)      # 运行时SOP实例
@@ -595,6 +598,13 @@ class ArmoryRegistry:
     def count(self) -> int:
         """V5.0：武器总数"""
         return len(self._weapons)
+
+    def find_similar(self, weapon_id: str, top_k: int = 5,
+                     min_similarity: float = 0.1) -> List["WeaponMetadata"]:
+        """V5.0 P1：查找与指定武器能力相似的其他武器"""
+        from core.capability_meta import CapabilityComparator
+        results = CapabilityComparator.find_similar(self, weapon_id, top_k, min_similarity)
+        return [w for w, _ in results]
 
 
 # ────────────────────────────────────────────────────────────────────────────
