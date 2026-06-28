@@ -430,6 +430,281 @@ def _track_constitution_rule_effects(context: dict) -> dict:
 
 
 # ================================================================
+# V4.0 P2: 治理系统数据驱动修订
+# ================================================================
+
+def track_rule_effects(context: dict) -> dict:
+    """
+    追踪宪法规则效果（增强版）。
+    
+    每个宪法规则关联：
+    - trigger_count: 触发次数
+    - success_count: 成功次数
+    - failure_count: 失败次数
+    - failure_rate: 失败率
+    - complaint_count: 投诉次数（用户反馈）
+    
+    输入 context 键：
+        _constitution_store: Store —— 宪法 Store
+        _asset_store: Store —— 资产 Store
+    
+    输出 context 键：
+        _rule_effects: dict —— 规则效果统计
+        _rules_need_revision: list —— 需要修订的规则ID列表
+    """
+    constitution_store = context.get("_constitution_store")
+    asset_store = context.get("_asset_store")
+    
+    if not constitution_store or not asset_store:
+        context["_rule_effects"] = {}
+        context["_rules_need_revision"] = []
+        return context
+    
+    # 读取宪法规则（增强：包含 complaint_count）
+    rules = constitution_store.load("constitution:rules") or []
+    
+    # 初始化规则效果统计
+    effects = {}
+    for rule in rules:
+        rule_id = rule.get("id", "unknown")
+        effects[rule_id] = {
+            "rule_id": rule_id,
+            "rule_text": rule.get("text", ""),
+            "trigger_count": rule.get("trigger_count", 0),
+            "success_count": rule.get("success_count", 0),
+            "failure_count": rule.get("failure_count", 0),
+            "complaint_count": rule.get("complaint_count", 0),
+            "failure_rate": 0.0,
+            "complaint_rate": 0.0,
+        }
+    
+    # 扫描任务历史，统计规则效果
+    for key in asset_store.list_keys():
+        if key.startswith("task:"):
+            task_data = asset_store.load(key)
+            if not task_data:
+                continue
+            
+            # 检查任务是否触发了宪法规则
+            triggered_rules = task_data.get("triggered_rules", [])
+            for rule_id in triggered_rules:
+                if rule_id in effects:
+                    effects[rule_id]["trigger_count"] += 1
+                    if task_data.get("status") in ("completed", "success"):
+                        effects[rule_id]["success_count"] += 1
+                    else:
+                        effects[rule_id]["failure_count"] += 1
+    
+    # 扫描投诉记录（从 lesson: 键读取）
+    for key in asset_store.list_keys():
+        if key.startswith("lesson:"):
+            lesson_data = asset_store.load(key)
+            if not lesson_data:
+                continue
+            
+            # 检查是否与宪法规则相关
+            related_rule = lesson_data.get("related_rule", "")
+            if related_rule and related_rule in effects:
+                effects[related_rule]["complaint_count"] += 1
+    
+    # 计算失败率和投诉率
+    for rule_id in effects:
+        total = effects[rule_id]["trigger_count"]
+        if total > 0:
+            effects[rule_id]["failure_rate"] = effects[rule_id]["failure_count"] / total
+            effects[rule_id]["complaint_rate"] = effects[rule_id]["complaint_count"] / total
+    
+    # 识别需要修订的规则（失败率 > 30% 或 投诉率 > 20%）
+    rules_need_revision = []
+    for rule_id, effect in effects.items():
+        if effect["trigger_count"] >= 5:  # 至少触发5次才统计
+            if effect["failure_rate"] > 0.3 or effect["complaint_rate"] > 0.2:
+                rules_need_revision.append(rule_id)
+    
+    # 更新到 constitution store（持久化统计）
+    try:
+        for rule_id, effect in effects.items():
+            rule_key = f"constitution:rule_effect:{rule_id}"
+            constitution_store.save(rule_key, effect)
+    except Exception as e:
+        logger.warning("[Governance] 持久化规则效果失败: %s", e)
+    
+    context["_rule_effects"] = effects
+    context["_rules_need_revision"] = rules_need_revision
+    return context
+
+
+def generate_revision_suggestions(context: dict) -> dict:
+    """
+    生成规则修订建议。
+    
+    当规则导致 > 30% 相关任务失败时，长老自动生成修订建议。
+    
+    输入 context 键：
+        _rule_effects: dict —— 规则效果统计（来自 track_rule_effects）
+        _constitution_store: Store —— 宪法 Store
+    
+    输出 context 键：
+        _revision_suggestions: list —— 修订建议列表
+            [{
+                "rule_id": "rule_xxx",
+                "rule_text": "原规则文本",
+                "problem": "问题描述",
+                "suggestion": "修订建议",
+                "risk_level": "low" | "medium" | "high",
+                "auto_apply": bool,  # 是否自动生效
+            }]
+    """
+    rule_effects = context.get("_rule_effects", {})
+    constitution_store = context.get("_constitution_store")
+    
+    suggestions = []
+    
+    for rule_id, effect in rule_effects.items():
+        if rule_id not in context.get("_rules_need_revision", []):
+            continue  # 不需要修订
+        
+        # 生成修订建议
+        problem = ""
+        suggestion = ""
+        risk_level = "medium"
+        
+        if effect["failure_rate"] > 0.5:
+            problem = f"规则失败率过高（{effect['failure_rate']:.0%}）"
+            suggestion = f"建议放宽规则约束，或拆分为多个子规则"
+            risk_level = "high"
+        elif effect["failure_rate"] > 0.3:
+            problem = f"规则失败率偏高（{effect['failure_rate']:.0%}）"
+            suggestion = f"建议优化规则表述，减少歧义"
+            risk_level = "medium"
+        
+        if effect["complaint_rate"] > 0.2:
+            problem += f"；投诉率偏高（{effect['complaint_rate']:.0%}）"
+            suggestion += f"；建议收集用户反馈，调整规则优先级"
+            if risk_level == "low":
+                risk_level = "medium"
+        
+        if problem:
+            # 判断是否需要君主审批
+            auto_apply = False
+            if risk_level == "low":
+                auto_apply = True
+            elif risk_level == "medium":
+                # 低风险调整自动生效（如预算预警比例从80%→85%）
+                if "预算" in effect["rule_text"] or "预警" in effect["rule_text"]:
+                    auto_apply = True
+            
+            suggestions.append({
+                "rule_id": rule_id,
+                "rule_text": effect["rule_text"],
+                "problem": problem,
+                "suggestion": suggestion,
+                "failure_rate": effect["failure_rate"],
+                "complaint_rate": effect["complaint_rate"],
+                "risk_level": risk_level,
+                "auto_apply": auto_apply,
+                "created_at": datetime.now().isoformat(),
+            })
+    
+    # 按风险等级排序（high → medium → low）
+    risk_order = {"high": 0, "medium": 1, "low": 2}
+    suggestions.sort(key=lambda x: risk_order.get(x["risk_level"], 1))
+    
+    context["_revision_suggestions"] = suggestions
+    return context
+
+
+def apply_revision(context: dict) -> dict:
+    """
+    应用规则修订。
+    
+    分级修订权限：
+    - 低风险调整（如预算预警比例从80%→85%）自动生效
+    - 高风险调整（如新增合规约束）需要君主审批
+    
+    输入 context 键：
+        _revision_suggestions: list —— 修订建议列表
+        _monarch_approved: list —— 君主已批准的建议ID列表
+        _constitution_store: Store —— 宪法 Store
+    
+    输出 context 键：
+        _applied_revisions: list —— 已应用的修订
+        _pending_approvals: list —— 等待审批的修订
+    """
+    suggestions = context.get("_revision_suggestions", [])
+    monarch_approved = context.get("_monarch_approved", [])
+    constitution_store = context.get("_constitution_store")
+    
+    applied = []
+    pending = []
+    
+    for suggestion in suggestions:
+        if suggestion["auto_apply"]:
+            # 自动生效
+            applied.append({
+                "rule_id": suggestion["rule_id"],
+                "suggestion": suggestion["suggestion"],
+                "applied_at": datetime.now().isoformat(),
+                "applied_by": "auto",
+            })
+            
+            # 更新宪法规则
+            if constitution_store:
+                try:
+                    rules = constitution_store.load("constitution:rules") or []
+                    for rule in rules:
+                        if rule.get("id") == suggestion["rule_id"]:
+                            rule["text"] = suggestion["suggestion"]
+                            rule["last_revised_at"] = datetime.now().isoformat()
+                            rule["revision_history"] = rule.get("revision_history", [])
+                            rule["revision_history"].append({
+                                "from": suggestion["rule_text"],
+                                "to": suggestion["suggestion"],
+                                "reason": suggestion["problem"],
+                                "applied_at": datetime.now().isoformat(),
+                            })
+                            break
+                    constitution_store.save("constitution:rules", rules)
+                except Exception as e:
+                    logger.warning("[Governance] 应用规则修订失败: %s", e)
+        
+        elif suggestion["rule_id"] in monarch_approved:
+            # 君主已批准
+            applied.append({
+                "rule_id": suggestion["rule_id"],
+                "suggestion": suggestion["suggestion"],
+                "applied_at": datetime.now().isoformat(),
+                "applied_by": "monarch",
+            })
+            
+            # 更新宪法规则（同上）
+            if constitution_store:
+                try:
+                    rules = constitution_store.load("constitution:rules") or []
+                    for rule in rules:
+                        if rule.get("id") == suggestion["rule_id"]:
+                            rule["text"] = suggestion["suggestion"]
+                            rule["last_revised_at"] = datetime.now().isoformat()
+                            break
+                    constitution_store.save("constitution:rules", rules)
+                except Exception as e:
+                    logger.warning("[Governance] 应用规则修订失败: %s", e)
+        
+        else:
+            # 等待审批
+            pending.append({
+                "rule_id": suggestion["rule_id"],
+                "suggestion": suggestion["suggestion"],
+                "risk_level": suggestion["risk_level"],
+                "created_at": suggestion["created_at"],
+            })
+    
+    context["_applied_revisions"] = applied
+    context["_pending_approvals"] = pending
+    return context
+
+
+# ================================================================
 # 长老 Agent 工厂
 # ================================================================
 
@@ -440,6 +715,10 @@ def create_elder(name: str = "elder", asset_store=None,
         "audit_family": Skill("audit_family", audit_family),
         # V4.0 P2: 体检监控
         "audit_health": Skill("audit_health", audit_health),
+        # V4.0 P2: 治理系统数据驱动修订
+        "track_rule_effects": Skill("track_rule_effects", track_rule_effects),
+        "generate_revision_suggestions": Skill("generate_revision_suggestions", generate_revision_suggestions),
+        "apply_revision": Skill("apply_revision", apply_revision),
     }
     return Agent(
         name=name,
@@ -454,6 +733,11 @@ audit_family_skill = Skill("audit_family", audit_family)
 
 # V4.0 P2: 体检监控
 audit_health_skill = Skill("audit_health", audit_health)
+
+# V4.0 P2: 治理系统数据驱动修订
+track_rule_effects_skill = Skill("track_rule_effects", track_rule_effects)
+generate_revision_suggestions_skill = Skill("generate_revision_suggestions", generate_revision_suggestions)
+apply_revision_skill = Skill("apply_revision", apply_revision)
 
 
 # ---------------------------------------------------------------------------
