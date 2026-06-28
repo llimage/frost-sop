@@ -60,7 +60,6 @@ class _MockStreamlit:
 
 
 # 安装 mock
-import unittest.mock as mock
 
 # 导入被测试函数之前的准备
 # 先不实际导入 app，而是直接测试 audit_family 的输出

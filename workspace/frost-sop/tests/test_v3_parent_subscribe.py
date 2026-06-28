@@ -22,7 +22,6 @@ from core.event_bus import (
     AsyncEventBus, Event, EventType, get_async_event_bus
 )
 from agents.parent import create_parent
-from stores.constitution import create_constitution_store
 from stores.asset import create_asset_store
 from core.store import Store
 

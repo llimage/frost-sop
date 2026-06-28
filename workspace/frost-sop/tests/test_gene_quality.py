@@ -5,8 +5,7 @@ AC-1: 验证498个模板的字段完整性
 """
 import sys
 import os
-import json
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -43,7 +42,8 @@ def check_template_fields(template: Dict[str, Any], template_name: str) -> Dict[
         if field not in template:
             missing_fields.append(field)
         elif not isinstance(template[field], expected_type):
-            errors.append(f"{field}类型错误: 期望{expected_type.__name__}, 实际{type(template[field]).__name__}")
+            errors.append(
+                f"{field}类型错误: 期望{expected_type.__name__}, 实际{type(template[field]).__name__}")
         elif expected_type == str and not template[field].strip():
             errors.append(f"{field}为空字符串")
         elif expected_type == list and len(template[field]) == 0:

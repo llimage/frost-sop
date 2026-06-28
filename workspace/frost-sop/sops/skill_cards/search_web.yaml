@@ -1,0 +1,81 @@
+# FROST-SOP V4.0 技能卡: search_web
+# 搜索互联网获取最新信息
+
+intent: "搜索互联网获取最新信息、文档、新闻或技术资料"
+applicable_when: |
+  需要获取实时信息、最新技术文档、行业动态、竞争对手分析、
+  开源项目最新进展等超出模型知识截止日期的信息时使用。
+not_applicable_when: |
+  信息已在模型训练数据中且不需要实时性（如基础知识、经典算法）。
+  查询内部私有数据时应使用内部知识库搜索。
+
+inputs:
+  - name: query
+    type: string
+    required: true
+    description: "搜索查询关键词或问题"
+    example: "Python 3.14 asyncio 新特性"
+  - name: max_results
+    type: int
+    required: false
+    description: "最大返回结果数，默认10"
+    example: "5"
+  - name: source_filter
+    type: string
+    required: false
+    description: "来源过滤，如 github.com, docs.python.org"
+    example: "docs.python.org"
+  - name: date_range
+    type: string
+    required: false
+    description: "日期范围过滤，如 past_week, past_month, past_year"
+    example: "past_month"
+
+outputs:
+  - name: results
+    type: list
+    required: true
+    description: "搜索结果列表，每项包含 title, url, snippet, date"
+  - name: total_count
+    type: int
+    required: false
+    description: "搜索结果总数"
+
+preconditions:
+  - "搜索API密钥已配置"
+  - "网络连接正常"
+
+postconditions:
+  - "返回值包含results列表"
+
+completion_criteria:
+  - "返回了至少1条搜索结果"
+  - "结果与查询相关且来源可靠"
+
+failure_signals:
+  - "搜索API不可达"
+  - "返回0条结果"
+  - "结果包含大量广告或垃圾内容"
+  - "搜索超时"
+
+requires_capabilities:
+  - "web_search_api"
+  - "content_fetch"
+
+bindings:
+  - platform: "web_search"
+    prompt_template: |
+      搜索查询：{query}
+      搜索来源：{source_filter}
+      时间范围：{date_range}
+      最大结果数：{max_results}
+    input_mapping:
+      q: "query"
+      num: "max_results"
+    output_mapping:
+      results: "organic"
+      total_count: "search_information.total_results"
+    known_limitations:
+      - "部分网站可能屏蔽爬虫"
+      - "搜索结果可能包含过时信息"
+    workaround: "结合 call_llm 对搜索结果进行二次分析和时效性判断"

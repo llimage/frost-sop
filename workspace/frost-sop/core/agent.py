@@ -13,7 +13,6 @@ V2.0 变更：
 """
 
 from core.store import Store
-from core.skill import Skill
 import copy
 import asyncio
 import logging

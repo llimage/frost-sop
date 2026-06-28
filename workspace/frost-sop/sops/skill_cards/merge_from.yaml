@@ -1,0 +1,87 @@
+# FROST-SOP V4.0 技能卡: merge_from
+# 收割子Agent产出并合并到父Agent
+
+intent: "从子Agent收割产出物，合并到父Agent的输出中，完成SOP阶段的聚合"
+applicable_when: |
+  子Agent完成其SOP阶段后，父Agent需要收集其产出进行合并；
+  多个子Agent并行执行完成后需要汇总结果的场景。
+not_applicable_when: |
+  子Agent尚未完成（is_complete=False）、产出物格式不匹配、
+  合并不需要的中间产物（应使用中间缓存）。
+
+inputs:
+  - name: child_agent_ids
+    type: list
+    required: true
+    description: "要收割的子Agent ID列表"
+    example: '["agent_fe_dev", "agent_be_dev"]'
+  - name: merge_strategy
+    type: string
+    required: false
+    description: "合并策略：concat（连接）/ merge_dict（合并字典）/ first_valid（第一个有效）/ custom（自定义）"
+    example: "merge_dict"
+  - name: output_schema
+    type: dict
+    required: false
+    description: "期望的输出格式schema，用于验证合并结果"
+  - name: conflict_resolution
+    type: string
+    required: false
+    description: "冲突解决策略：latest（最新覆盖）/ priority（优先级）/ manual（手动）"
+    example: "priority"
+
+outputs:
+  - name: merged_output
+    type: dict
+    required: true
+    description: "合并后的最终产出"
+  - name: merge_log
+    type: list
+    required: false
+    description: "合并过程日志，记录来源、冲突、解决方式"
+  - name: discarded_items
+    type: list
+    required: false
+    description: "被丢弃的产出项及原因"
+
+preconditions:
+  - "所有子Agent状态为completed或terminated"
+  - "合并策略已明确指定"
+
+postconditions:
+  - "merged_output包含所有子Agent的有效产出"
+  - "冲突已按指定策略解决"
+
+completion_criteria:
+  - "所有子Agent的产出已被检查和处理"
+  - "merge_log记录了所有决策依据"
+
+failure_signals:
+  - "存在未完成的子Agent"
+  - "产出物格式与output_schema不匹配"
+  - "冲突无法按指定策略解决"
+  - "合并后结果为空"
+
+requires_capabilities:
+  - "data_merging"
+  - "schema_validation"
+  - "conflict_resolution"
+
+bindings:
+  - platform: "frost_core"
+    prompt_template: |
+      收割子Agent产出：
+      子Agent列表：{child_agent_ids}
+      合并策略：{merge_strategy}
+      冲突解决：{conflict_resolution}
+    input_mapping:
+      agent_ids: "child_agent_ids"
+      strategy: "merge_strategy"
+      schema: "output_schema"
+    output_mapping:
+      result: "merged_output"
+      log: "merge_log"
+    known_limitations:
+      - "仅支持字典和列表类型的合并"
+      - "跨父Agent的合并需要额外编排"
+    workaround: "复杂合并逻辑可委托给专门的merge子Agent处理"

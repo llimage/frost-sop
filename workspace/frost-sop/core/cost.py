@@ -6,18 +6,15 @@ core/cost.py - 成本追踪模块
 提供 CostTracker 类，负责成本追踪和预算检查。
 """
 
-import os
 import json
-from datetime import datetime, date
-from typing import Dict, Any, Optional
-from pathlib import Path
+from datetime import date
+from typing import Dict, Any
 
-from core.db import get_db, DBManager
+from core.db import get_db
 
 
 class BudgetExceededError(Exception):
     """预算超支异常"""
-    pass
 
 
 class CostTracker:
@@ -42,30 +39,34 @@ class CostTracker:
         self.alert_ratio = alert_ratio
         self._db = get_db()
 
-    def track_cost(self, agent_id: str, tokens: int, model: str = "default") -> float:
+    def track_cost(self, agent_id: str, tokens: int, model: str = "default",
+                   task_id: str = None, input_tokens: int = None,
+                   output_tokens: int = None) -> float:
         """
         追踪成本
 
         Args:
             agent_id: Agent ID
-            tokens: 使用的 Token 数
+            tokens: 使用的 Token 总数
             model: 模型名称
+            task_id: 关联的任务ID（可选）
+            input_tokens: 输入Token数（可选，默认等于tokens）
+            output_tokens: 输出Token数（可选，默认0）
 
         Returns:
             本次调用的估算成本（元）
         """
         # 估算成本（简化版：假设 1K tokens = ¥0.001）
-        # 实际应该根据模型的不同而不同
         cost_per_1k_tokens = 0.001
         estimated_cost = (tokens / 1000) * cost_per_1k_tokens
 
         # 写入成本日志
         self._db.insert("cost_log", {
-            "task_id": None,  # 可以在调用时传入
+            "task_id": task_id,
             "agent_id": agent_id,
             "model": model,
-            "input_tokens": tokens,
-            "output_tokens": 0,
+            "input_tokens": input_tokens if input_tokens is not None else tokens,
+            "output_tokens": output_tokens if output_tokens is not None else 0,
             "total_tokens": tokens,
             "estimated_cost": estimated_cost
         })
@@ -129,9 +130,7 @@ class CostTracker:
             raise BudgetExceededError(
                 f"预算已用完！本月已使用 ¥{budget_info['total_cost']:.2f} / ¥{budget_info['monthly_budget']:.2f}"
             )
-
-        # 追踪成本
-        self.track_cost(agent_id, tokens, model)
+        # 仅检查预算，不在此处追踪成本（成本追踪在实际LLM调用后进行，避免重复计数）
 
     def update_budget_config(self, monthly_budget: float = None, alert_ratio: float = None):
         """

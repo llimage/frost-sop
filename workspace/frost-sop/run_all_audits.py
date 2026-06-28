@@ -122,8 +122,10 @@ def collect_audit_results():
             
             # 统计安全问题
             if results["security"].get("issues_summary"):
-                results["summary"]["high_issues"] += results["security"]["issues_summary"].get("bandit_high", 0)
-                results["summary"]["medium_issues"] += results["security"]["issues_summary"].get("bandit_medium", 0)
+                results["summary"]["high_issues"] += results["security"]["issues_summary"].get(
+                    "bandit_high", 0)
+                results["summary"]["medium_issues"] += results["security"]["issues_summary"].get(
+                    "bandit_medium", 0)
     except FileNotFoundError:
         print("⚠️  缺少: 安全审计报告 (audit_results/security_audit_report.json)")
     

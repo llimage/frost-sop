@@ -1,0 +1,111 @@
+# FROST-SOP V4.0 技能卡: call_llm
+# 调用大语言模型进行推理生成
+
+intent: "调用大语言模型（LLM）执行推理、生成、分析等认知任务"
+applicable_when: |
+  需要AI进行文本生成、代码生成、分析推理、分类判断、总结提炼、
+  翻译转换、意图识别等认知密集型任务时使用。
+not_applicable_when: |
+  简单的字符串处理、确定性计算、数据库CRUD操作不需要此技能。
+  成本敏感且任务简单时可考虑回退到规则引擎。
+
+inputs:
+  - name: prompt
+    type: string
+    required: true
+    description: "发送给LLM的提示词，包含完整的上下文和指令"
+    example: "请分析以下代码的安全漏洞：\n{code_snippet}"
+  - name: model
+    type: string
+    required: false
+    description: "模型名称，默认使用配置中的默认模型"
+    example: "deepseek-chat"
+  - name: system_prompt
+    type: string
+    required: false
+    description: "系统级提示词，定义AI的角色和行为约束"
+    example: "你是一个资深的Python安全审计专家"
+  - name: temperature
+    type: float
+    required: false
+    description: "生成温度，控制随机性（0-2），默认0.7"
+    example: "0.3"
+  - name: max_tokens
+    type: int
+    required: false
+    description: "最大生成Token数"
+    example: "4096"
+
+outputs:
+  - name: response
+    type: string
+    required: true
+    description: "LLM返回的完整响应文本"
+  - name: usage
+    type: dict
+    required: false
+    description: "Token消耗信息（prompt_tokens, completion_tokens, total_tokens）"
+  - name: finish_reason
+    type: string
+    required: false
+    description: "完成原因：stop, length, content_filter等"
+
+preconditions:
+  - "API密钥已配置（环境变量或配置文件）"
+  - "网络连接正常（使用在线API时）"
+  - "prompt不为空"
+
+postconditions:
+  - "返回值包含response字段"
+  - "成本追踪已写入cost_log"
+
+completion_criteria:
+  - "LLM返回了有效的response"
+  - "finish_reason为stop（正常完成）"
+
+failure_signals:
+  - "API返回非200状态码"
+  - "响应超时（超过配置阈值）"
+  - "返回空response"
+  - "finish_reason为content_filter（被内容审查拦截）"
+  - "Token消耗超过预算上限"
+
+requires_capabilities:
+  - "openai_compatible_api"
+  - "api_key_management"
+  - "cost_tracking"
+
+bindings:
+  - platform: "deepseek"
+    prompt_template: |
+      {system_prompt}
+
+      用户请求：
+      {prompt}
+    input_mapping:
+      model: "model"
+      temperature: "temperature"
+      max_tokens: "max_tokens"
+    output_mapping:
+      content: "choices[0].message.content"
+      usage: "usage"
+      finish_reason: "choices[0].finish_reason"
+    known_limitations:
+      - "DeepSeek API 不支持 function calling（当前版本）"
+      - "速率限制：每分钟60次请求"
+    workaround: "避免在循环中密集调用，使用批量推理减少请求次数"
+  - platform: "openai"
+    prompt_template: |
+      System: {system_prompt}
+      User: {prompt}
+    input_mapping:
+      model: "model"
+      temperature: "temperature"
+      max_tokens: "max_tokens"
+    output_mapping:
+      content: "choices[0].message.content"
+      usage: "usage"
+      finish_reason: "choices[0].finish_reason"
+    known_limitations:
+      - "需要境外网络访问"
+    workaround: "使用Azure OpenAI或国内代理"

@@ -72,7 +72,8 @@ def test_elder_01_data_integrity():
 
     # 验证
     assert stats.get("total_tasks") == 5, f"total_tasks 应为5，实际为 {stats.get('total_tasks')}"
-    assert stats.get("successful_tasks") == 3, f"successful_tasks 应为3，实际为 {stats.get('successful_tasks')}"
+    assert stats.get(
+        "successful_tasks") == 3, f"successful_tasks 应为3，实际为 {stats.get('successful_tasks')}"
     assert stats.get("failed_tasks") == 2, f"failed_tasks 应为2，实际为 {stats.get('failed_tasks')}"
     assert stats.get("successful_tasks") + stats.get("failed_tasks") == 5, "successful+failed 应等于5"
     assert stats.get("total_lessons") == 3, f"total_lessons 应为3，实际为 {stats.get('total_lessons')}"
@@ -260,7 +261,8 @@ def test_elder_06_no_asset_store():
 
     # 验证：应返回错误报告，而不是崩溃
     assert report is not None, "无Asset Store时应返回报告，不应返回None"
-    assert report.get("status") == "error", f"无Asset Store时 status 应为 'error'，实际为 {report.get('status')}"
+    assert report.get(
+        "status") == "error", f"无Asset Store时 status 应为 'error'，实际为 {report.get('status')}"
     assert "无资产" in report.get("reason", ""), f"reason 应提及无资产Store，实际为: {report.get('reason')}"
 
     print("✅ PASS")

@@ -12,7 +12,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tests.test_f6_mock_llm import patch_openai
 from core.sop import SOP
 from stores.asset import create_asset_store
-from stores.constitution import create_constitution_store
 from agents.parent import create_parent
 from core.store import Store
 
@@ -191,7 +190,8 @@ def run_all_e2e_tests():
         print()
 
     print("=" * 60)
-    print(f"E2E测试完成: {passed}/{total} 通过 (跳过{sum(1 for r in results if r['passed'] == 'skipped')}个)")
+    print(
+        f"E2E测试完成: {passed}/{total} 通过 (跳过{sum(1 for r in results if r['passed'] == 'skipped')}个)")
     print("=" * 60)
     return passed, total, results
 

@@ -15,11 +15,10 @@ import os
 import sys
 import json
 import uuid
-import time
 from datetime import datetime
 from typing import Optional, List
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import asyncio
@@ -29,9 +28,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from api.models import (
     ProjectResponse, TaskCreateRequest, TaskResponse, TaskStageResponse,
-    TaskExecuteResponse, AgentResponse, CostLogResponse, CostSummaryResponse,
-    ChatRequest, ChatResponse, SkillResponse, SkillVersionResponse,
-    ScheduleCreateRequest, ScheduleResponse, ErrorResponse,
+    TaskExecuteResponse, AgentResponse, CostSummaryResponse, ChatRequest,
+    ChatResponse, SkillResponse, ScheduleCreateRequest, ScheduleResponse,
 )
 from core.db import get_db
 

@@ -8,9 +8,7 @@ import os
 sys.stdout.reconfigure(encoding='utf-8')
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from stores.constitution import create_constitution_store
 from stores.asset import create_asset_store
-from agents.ancestor import create_ancestor
 from agents.parent import create_parent
 from core.store import Store
 from skills.assemble import assemble_agent
@@ -52,7 +50,8 @@ def test_assemble_agent_from_gene_library():
     # 验证基因库命中
     sources = config.get("skill_sources", {})
     gene_hits = [s for s in sources.values() if s == "gene_library"]
-    print(f"✅ 组装成功: {agent.name}，{len(config['skills'])}个Skill（基因库命中:{len(gene_hits)} 合成:{len(config['skills'])-len(gene_hits)}）")
+    print(
+        f"✅ 组装成功: {agent.name}，{len(config['skills'])}个Skill（基因库命中:{len(gene_hits)} 合成:{len(config['skills'])-len(gene_hits)}）")
 
 
 

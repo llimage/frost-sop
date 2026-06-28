@@ -10,8 +10,6 @@ F9 创始人工具 - 单元测试 & 集成测试
 """
 import os
 import sys
-import json
-import time
 from datetime import datetime, timedelta
 
 # 设置测试环境
@@ -19,7 +17,6 @@ os.environ["FROST_TESTING"] = "1"
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.db import get_db
-from core.notifier import send_windows_notification
 
 
 class TestF9EnergyLog:

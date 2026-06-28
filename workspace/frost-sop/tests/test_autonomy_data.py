@@ -5,9 +5,8 @@ AC-5: 验证长老审计报告和交棒评估的数据是否真实来自资产St
 """
 import sys
 import os
-import json
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -79,23 +78,29 @@ def verify_audit_report(report: Dict[str, Any], expected_num_tasks: int) -> Dict
     # 检查1：total_tasks是否等于预置数量
     total_tasks = report.get("total_tasks", 0)
     if total_tasks == expected_num_tasks:
-        checks.append({"name": "total_tasks匹配", "passed": True, "detail": f"报告中的total_tasks={total_tasks}, 预置数量={expected_num_tasks}"})
+        checks.append({"name": "total_tasks匹配", "passed": True,
+                      "detail": f"报告中的total_tasks={total_tasks}, 预置数量={expected_num_tasks}"})
     else:
-        checks.append({"name": "total_tasks匹配", "passed": False, "detail": f"报告中的total_tasks={total_tasks}, 预置数量={expected_num_tasks}"})
+        checks.append({"name": "total_tasks匹配", "passed": False,
+                      "detail": f"报告中的total_tasks={total_tasks}, 预置数量={expected_num_tasks}"})
     
     # 检查2：successful_tasks是否等于3（前3个任务成功）
     successful_tasks = report.get("successful_tasks", 0)
     if successful_tasks == 3:
-        checks.append({"name": "successful_tasks匹配", "passed": True, "detail": f"报告中的successful_tasks={successful_tasks}, 预期=3"})
+        checks.append({"name": "successful_tasks匹配", "passed": True,
+                      "detail": f"报告中的successful_tasks={successful_tasks}, 预期=3"})
     else:
-        checks.append({"name": "successful_tasks匹配", "passed": False, "detail": f"报告中的successful_tasks={successful_tasks}, 预期=3"})
+        checks.append({"name": "successful_tasks匹配", "passed": False,
+                      "detail": f"报告中的successful_tasks={successful_tasks}, 预期=3"})
     
     # 检查3：failed_tasks是否等于2（后2个任务失败）
     failed_tasks = report.get("failed_tasks", 0)
     if failed_tasks == 2:
-        checks.append({"name": "failed_tasks匹配", "passed": True, "detail": f"报告中的failed_tasks={failed_tasks}, 预期=2"})
+        checks.append({"name": "failed_tasks匹配", "passed": True,
+                      "detail": f"报告中的failed_tasks={failed_tasks}, 预期=2"})
     else:
-        checks.append({"name": "failed_tasks匹配", "passed": False, "detail": f"报告中的failed_tasks={failed_tasks}, 预期=2"})
+        checks.append({"name": "failed_tasks匹配", "passed": False,
+                      "detail": f"报告中的failed_tasks={failed_tasks}, 预期=2"})
     
     # 检查4：findings是否非空（审计报告应该包含发现）
     findings = report.get("findings", [])
@@ -125,17 +130,21 @@ def verify_succession_proposal(proposal: Dict[str, Any], expected_num_tasks: int
     # 检查1：total_tasks_analyzed是否等于预置数量
     total_tasks = proposal.get("total_tasks_analyzed", 0)
     if total_tasks == expected_num_tasks:
-        checks.append({"name": "total_tasks_analyzed匹配", "passed": True, "detail": f"评估中的total_tasks_analyzed={total_tasks}, 预置数量={expected_num_tasks}"})
+        checks.append({"name": "total_tasks_analyzed匹配", "passed": True,
+                      "detail": f"评估中的total_tasks_analyzed={total_tasks}, 预置数量={expected_num_tasks}"})
     else:
-        checks.append({"name": "total_tasks_analyzed匹配", "passed": False, "detail": f"评估中的total_tasks_analyzed={total_tasks}, 预置数量={expected_num_tasks}"})
+        checks.append({"name": "total_tasks_analyzed匹配", "passed": False,
+                      "detail": f"评估中的total_tasks_analyzed={total_tasks}, 预置数量={expected_num_tasks}"})
     
     # 检查2：proposal是否包含必要字段
     required_fields = ["recommend", "reason", "failure_rate", "total_tasks_analyzed"]
     missing_fields = [f for f in required_fields if f not in proposal]
     if not missing_fields:
-        checks.append({"name": "proposal字段完整", "passed": True, "detail": f"包含字段: {required_fields}"})
+        checks.append({"name": "proposal字段完整", "passed": True,
+                      "detail": f"包含字段: {required_fields}"})
     else:
-        checks.append({"name": "proposal字段完整", "passed": False, "detail": f"缺少字段: {missing_fields}"})
+        checks.append({"name": "proposal字段完整", "passed": False,
+                      "detail": f"缺少字段: {missing_fields}"})
     
     passed = all(check["passed"] for check in checks)
     

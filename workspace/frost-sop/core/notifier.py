@@ -4,8 +4,6 @@ F8 新增：Windows 桌面通知模块
 当决策点超过指定时间未响应时，触发桌面通知提醒用户。
 """
 
-import sys
-import time
 
 
 def send_windows_notification(title: str, message: str, duration: int = 5):

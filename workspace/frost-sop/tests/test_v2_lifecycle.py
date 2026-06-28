@@ -17,7 +17,6 @@ os.environ['FROST_TESTING'] = '1'
 
 from core.agent import Agent
 from core.skill import Skill
-from core.store import Store
 
 
 def make_noop_skill(name="noop"):
@@ -105,8 +104,6 @@ class TestAgentLifecycle:
         """执行后 agent_status 表有 destroyed 记录"""
         # 需要隔离 DB（使用内存或测试 DB）
         import tempfile
-        import importlib
-        import sys
 
         # 使用临时数据库避免污染主库
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:

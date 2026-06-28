@@ -6,8 +6,6 @@ core/memory.py - 向量记忆管理模块
 提供 MemoryStore 类，负责向量记忆的存储和检索。
 """
 
-import os
-import json
 import logging
 from typing import Dict, Any, Optional, List
 from pathlib import Path

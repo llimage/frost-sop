@@ -3,7 +3,6 @@ F12 E2E 浏览器自动化诊断测试
 目标：发现所有 UI 断链，诚实记录。不做任何代码修复。
 策略：逐元素验证，不跳过、不假设、不替代码找理由。
 """
-import subprocess
 import sys
 import os
 import time
@@ -103,7 +102,8 @@ def run_e2e_tests():
 
         # 收集 console errors
         console_errors = []
-        page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
+        page.on("console", lambda msg: console_errors.append(
+            msg.text) if msg.type == "error" else None)
 
         try:
             # Step 1: 打开首页
@@ -157,7 +157,8 @@ def run_e2e_tests():
                     error = None
                     if not clickable:
                         error = "未找到按钮或按钮不可点击"
-                    results.add_element_test("项目概览区", key, etype, clickable, has_resp, correct, error)
+                    results.add_element_test("项目概览区", key, etype, clickable,
+                                             has_resp, correct, error)
                     status = "✓" if clickable else "✗"
                     print(f"  {status} {label} ({key}): clickable={clickable}")
                 except Exception as ex:
@@ -180,7 +181,8 @@ def run_e2e_tests():
                                          None if clickable else "输入框不可用")
                 print(f"  {'✓' if clickable else '✗'} CEO输入框: clickable={clickable}")
             except Exception as ex:
-                results.add_element_test("CEO对话面板", "ceo_input", "input", False, None, None, str(ex))
+                results.add_element_test("CEO对话面板", "ceo_input", "input",
+                                         False, None, None, str(ex))
                 print(f"  ✗ CEO输入框: {ex}")
 
             # 发送按钮
@@ -192,7 +194,8 @@ def run_e2e_tests():
                                          None if clickable else "发送按钮不可用")
                 print(f"  {'✓' if clickable else '✗'} 发送按钮: clickable={clickable}")
             except Exception as ex:
-                results.add_element_test("CEO对话面板", "btn_ceo_send", "button", False, None, None, str(ex))
+                results.add_element_test("CEO对话面板", "btn_ceo_send",
+                                         "button", False, None, None, str(ex))
                 print(f"  ✗ 发送按钮: {ex}")
 
             # 三个快捷指令
@@ -255,7 +258,8 @@ def run_e2e_tests():
                                                  False, None, None, str(ex))
                         print(f"  ✗ Agent: {agent_name}: {ex}")
             except Exception as ex:
-                results.add_element_test("Agent团队", "agent_grid", "grid", False, None, None, str(ex))
+                results.add_element_test("Agent团队", "agent_grid", "grid",
+                                         False, None, None, str(ex))
                 print(f"  ✗ Agent团队: {ex}")
 
             # A6. 执行任务按钮
@@ -309,7 +313,8 @@ def run_e2e_tests():
                                          None if clickable else "记录此刻按钮不可用")
                 print(f"  {'✓' if clickable else '✗'} 记录此刻: clickable={clickable}")
             except Exception as ex:
-                results.add_element_test("能量记录器", "record_energy", "button", False, None, None, str(ex))
+                results.add_element_test("能量记录器", "record_energy",
+                                         "button", False, None, None, str(ex))
                 print(f"  ✗ 记录此刻: {ex}")
 
             # A9. 侧边栏元素
@@ -340,7 +345,8 @@ def run_e2e_tests():
                                          None if clickable else "添加日程按钮不可用")
                 print(f"  {'✓' if clickable else '✗'} 添加日程: clickable={clickable}")
             except Exception as ex:
-                results.add_element_test("日程管理", "add_schedule_btn", "button", False, None, None, str(ex))
+                results.add_element_test("日程管理", "add_schedule_btn",
+                                         "button", False, None, None, str(ex))
                 print(f"  ✗ 添加日程: {ex}")
 
             # ========================================================
@@ -518,7 +524,8 @@ def print_failures(results_obj):
     failures = [f for f in results_obj.user_flows if not f["passed"]]
     if failures:
         for f in failures:
-            print(f"  ✗ {f['flow_name']}: {f.get('error_msg', '未知错误')} (步骤: {f.get('error_step', 'N/A')})")
+            print(
+                f"  ✗ {f['flow_name']}: {f.get('error_msg', '未知错误')} (步骤: {f.get('error_step', 'N/A')})")
     else:
         print("  (无用户路径失败)")
 

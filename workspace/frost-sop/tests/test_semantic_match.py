@@ -5,8 +5,6 @@ AC-2: 验证语义匹配准确性（3个测试用例）
 """
 import sys
 import os
-import json
-from typing import Dict, List, Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

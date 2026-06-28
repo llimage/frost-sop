@@ -346,7 +346,8 @@ class EventBus:
         try:
             from core.db import get_db
             db = get_db()
-            safe_data = self._sanitize_data(event.data) if isinstance(event.data, dict) else event.data
+            safe_data = self._sanitize_data(event.data) if isinstance(
+                event.data, dict) else event.data
             db.insert("event_log", {
                 "event_id": event.event_id,
                 "event_type": event.event_type,
@@ -609,7 +610,8 @@ class AsyncEventBus:
         try:
             from core.db import get_db
             db = get_db()
-            safe_data = self._sanitize_data(event.data) if isinstance(event.data, dict) else event.data
+            safe_data = self._sanitize_data(event.data) if isinstance(
+                event.data, dict) else event.data
             db.insert("event_log", {
                 "event_id": event.event_id,
                 "event_type": event.event_type,

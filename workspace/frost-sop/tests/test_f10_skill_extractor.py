@@ -415,7 +415,8 @@ class TestF10Integration:
             assert col_name in columns, f"skills 表缺少列: {col_name}"
 
         # 检查 skill_versions 表新增的列
-        columns = {col["name"] for col in cursor.execute("PRAGMA table_info(skill_versions)").fetchall()}
+        columns = {col["name"] for col in cursor.execute(
+            "PRAGMA table_info(skill_versions)").fetchall()}
         assert "file_path" in columns, "skill_versions 表缺少列: file_path"
 
 

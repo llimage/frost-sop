@@ -82,7 +82,8 @@ def validate_sop(context: dict) -> dict:
     rules = context.get('_compliance_rules', {})
 
     if sop is None:
-        context['_validation_result'] = {"valid": False, "errors": [{"message": "No SOP to validate"}]}
+        context['_validation_result'] = {"valid": False,
+            "errors": [{"message": "No SOP to validate"}]}
         return context
 
     validator = SOPValidator()
@@ -184,7 +185,7 @@ def execute_stage(context: dict) -> dict:
     """
 
     from skills.assemble import assemble_agent
-    from core.decision_manager import DecisionManager, get_decision_manager
+    from core.decision_manager import get_decision_manager
 
     stage = context.get("_current_stage", {})
     parent_agent = context.get("_parent_agent")
@@ -323,7 +324,8 @@ def execute_stage(context: dict) -> dict:
             sop_steps=agent_config.get("sop_steps", ["call_llm_for_output"]),
             initial_context=initial_context
         )
-        result_text = result_context.get("_generated_content", result_context.get("_result", result_context.get("_llm_response", "执行完成")))
+        result_text = result_context.get("_generated_content", result_context.get(
+            "_result", result_context.get("_llm_response", "执行完成")))
         status = "completed"
     except Exception as e:
         result_text = f"执行失败: {str(e)}"

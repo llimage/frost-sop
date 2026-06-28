@@ -12,7 +12,7 @@ import re
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
-from core.db import get_db, get_db_connection
+from core.db import get_db
 
 
 class SkillExtractor:

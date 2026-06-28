@@ -15,7 +15,6 @@ import shutil
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from stores.asset import create_asset_store, FileStore
-from stores.constitution import create_constitution_store
 from core.store import HierarchicalStore, Store
 
 
@@ -149,7 +148,6 @@ def test_per03_constitution_readonly():
 
         # 为了简化，直接测试 ConstitutionStore 的持久化和规则恢复
         # 实际 ConstitutionStore 使用 HierarchicalStore，持久化时需要保存 readonly 配置
-        from stores.constitution import create_constitution_store
 
         # 用文件后端创建 constitution store
         const_file = os.path.join(tmpdir, "const.json")

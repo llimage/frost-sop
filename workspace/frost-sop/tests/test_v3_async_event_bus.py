@@ -17,14 +17,13 @@ FROST-SOP V3.0 — AsyncEventBus 单元测试
 import os
 import asyncio
 import pytest
-import tempfile
 
 # 测试环境设置
 os.environ['FROST_TESTING'] = '1'
 
 from core.event_bus import (
     EventBus, AsyncEventBus, Event, EventType,
-    get_event_bus, get_async_event_bus
+    get_async_event_bus
 )
 
 

@@ -6,7 +6,6 @@ not hardwired into Agent. This preserves the fractal purity of the architecture.
 
 import os
 import json
-from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -275,7 +274,10 @@ def _call_online_llm(context: dict) -> dict:
         cost_tracker.track_cost(
             agent_id=context.get("_agent_id", "unknown"),
             tokens=usage.total_tokens,
-            model=model
+            model=model,
+            task_id=context.get("_task_id"),
+            input_tokens=usage.prompt_tokens,
+            output_tokens=usage.completion_tokens,
         )
     except Exception:
         # 成本追踪失败不影响主流程（容错）
@@ -316,7 +318,8 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
         prompt = context.get("_prompt", "")
         total_tokens = len(prompt) // 4 + 100
         context["_llm_response"] = _mock_response_for_prompt(prompt)
-        context["_llm_tokens"] = {"prompt": len(prompt) // 4, "completion": 100, "total": total_tokens}
+        context["_llm_tokens"] = {"prompt": len(
+            prompt) // 4, "completion": 100, "total": total_tokens}
         context["_llm_model"] = context.get("_model", "deepseek-chat")
         context["_reason"] = "[TEST_MODE] LLM调用已跳过，使用mock响应"
         context["_llm_backend"] = "mock"

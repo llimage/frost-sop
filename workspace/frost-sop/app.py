@@ -8,8 +8,7 @@ PHILOSOPHY: 表现层与核心层完全解耦。
 import streamlit as st
 import sys
 import os
-import time
-from datetime import datetime, date
+from datetime import datetime
 import json
 
 # 确保项目根目录在路径中
@@ -30,7 +29,6 @@ from core.workbench import (
     get_project_defaults,
     get_project_by_mode,
     get_recommended_task,
-    get_business_radar_data,
     get_today_review,
     generate_daily_narrative,
     save_daily_review,
@@ -485,7 +483,8 @@ def render_decision_dialog():
 
         decision_id = pending["id"]
         question = pending["question"]
-        options = json.loads(pending["options_json"]) if isinstance(pending["options_json"], str) else pending["options_json"]
+        options = json.loads(pending["options_json"]) if isinstance(
+            pending["options_json"], str) else pending["options_json"]
         created_at = pending.get("created_at")
 
         # —— 清理残留决策：超过 24 小时的 pending 决策自动取消 ——
@@ -608,7 +607,8 @@ def get_agent_team():
 
     # 从 session_state 和日志中推断活跃 agent
     running_count = sum(1 for t in st.session_state.tasks.values() if t.get("status") == "running")
-    completed_count = sum(1 for t in st.session_state.tasks.values() if t.get("status") == "completed")
+    completed_count = sum(1 for t in st.session_state.tasks.values()
+                          if t.get("status") == "completed")
 
     # 构建 agent 列表（从 runtime + db 数据）
     agents = []
@@ -643,11 +643,16 @@ def get_agent_team():
 
     # 基础 agent（始终存在）
     base_agents = [
-        {"name": "成本·CFO", "role": "预算追踪 / 成本分析 / 异常预警", "status": "standby", "model": "GPT-4o-mini", "cost": "~¥0.02/次", "depends_on": None},
-        {"name": "Skill·基因库", "role": "Skill 提取 / 验证激活 / 版本管理", "status": "standby", "model": "Claude 3 Haiku", "cost": "~¥0.05/次", "depends_on": None},
-        {"name": "宪法·守护者", "role": "合规审计 / 规则执行 / 安全校验", "status": "standby", "model": "Claude 3 Haiku", "cost": "~¥0.03/次", "depends_on": None},
-        {"name": "错题·复盘师", "role": "失败分析 / 经验提取 / 知识沉淀", "status": "standby", "model": "GPT-4o-mini", "cost": "~¥0.02/次", "depends_on": None},
-        {"name": "日程·管家", "role": "日程提醒 / 时间规划 / 能量记录", "status": "standby", "model": "Local", "cost": "免费", "depends_on": None},
+        {"name": "成本·CFO", "role": "预算追踪 / 成本分析 / 异常预警", "status": "standby",
+            "model": "GPT-4o-mini", "cost": "~¥0.02/次", "depends_on": None},
+        {"name": "Skill·基因库", "role": "Skill 提取 / 验证激活 / 版本管理", "status": "standby",
+            "model": "Claude 3 Haiku", "cost": "~¥0.05/次", "depends_on": None},
+        {"name": "宪法·守护者", "role": "合规审计 / 规则执行 / 安全校验", "status": "standby",
+            "model": "Claude 3 Haiku", "cost": "~¥0.03/次", "depends_on": None},
+        {"name": "错题·复盘师", "role": "失败分析 / 经验提取 / 知识沉淀", "status": "standby",
+            "model": "GPT-4o-mini", "cost": "~¥0.02/次", "depends_on": None},
+        {"name": "日程·管家", "role": "日程提醒 / 时间规划 / 能量记录", "status": "standby",
+            "model": "Local", "cost": "免费", "depends_on": None},
     ]
     agents.extend(base_agents)
     return agents, running_count, completed_count
@@ -889,13 +894,15 @@ def _render_outputs_view():
 
     # 分页
     page_size = 30
-    page = st.number_input("页码", min_value=1, max_value=max(1, (len(filtered) - 1) // page_size + 1), value=1, key="output_page")
+    page = st.number_input("页码", min_value=1, max_value=max(
+        1, (len(filtered) - 1) // page_size + 1), value=1, key="output_page")
     start = (page - 1) * page_size
     page_files = filtered[start:start + page_size]
 
     for relpath, mtime, size, fpath in page_files:
         mtime_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
-        size_str = f"{size:,}B" if size < 1024 else f"{size / 1024:.1f}KB" if size < 1024 * 1024 else f"{size / 1024 / 1024:.1f}MB"
+        size_str = f"{size:,}B" if size < 1024 else f"{size / 1024:.1f}KB" if size < 1024 * \
+            1024 else f"{size / 1024 / 1024:.1f}MB"
         col1, col2, col3 = st.columns([5, 2, 1])
         with col1:
             st.caption(f"📄 {relpath}")
@@ -1115,7 +1122,8 @@ def render_commander_dashboard():
         with col_a:
             if st.button("▶ 开始工作", key="btn_saas_start", type="primary", use_container_width=True):
                 st.session_state.wb_view = "project_detail"
-                st.session_state.wb_active_project = task.get("project_id", st.session_state.wb_mode)
+                st.session_state.wb_active_project = task.get(
+                    "project_id", st.session_state.wb_mode)
                 add_log(f"🎯 开始任务: {task['task_name']}")
                 st.rerun()
         with col_b:
@@ -1235,8 +1243,10 @@ def render_commander_dashboard():
 
         for ag in agents[:8]:
             s = ag["status"]
-            status_label = {"running": "运行中", "completed": "已完成", "waiting": "等待中", "standby": "待命中"}.get(s, s)
-            status_icon = {"running": "🟢", "completed": "✅", "waiting": "🟡", "standby": "⚪"}.get(s, "⚪")
+            status_label = {"running": "运行中", "completed": "已完成",
+                "waiting": "等待中", "standby": "待命中"}.get(s, s)
+            status_icon = {"running": "🟢", "completed": "✅",
+                "waiting": "🟡", "standby": "⚪"}.get(s, "⚪")
             skills = agent_skill_map.get(ag["name"], ["通用任务"])
 
             with st.expander(f"{status_icon} {ag['name']} — {status_label}", expanded=(s == "running")):
@@ -1290,7 +1300,8 @@ def render_commander_dashboard():
             log_html = '<div class="saas-log-window">'
             for log in reversed(log_lines):
                 lvl = log.get("level", "info")
-                lvl_class = f"saas-log-{lvl}" if lvl in ("info", "success", "warn", "error") else "saas-log-info"
+                lvl_class = f"saas-log-{lvl}" if lvl in ("info",
+                                                         "success", "warn", "error") else "saas-log-info"
                 log_html += f'<div class="saas-log-line"><span class="saas-log-time">[{log["time"]}]</span> <span class="{lvl_class}">{log["message"][:100]}</span></div>'
             log_html += '</div>'
         else:
@@ -1517,7 +1528,8 @@ def render_project_detail():
     st.subheader("📂 最近产出")
     output_dir = "output"
     if os.path.exists(output_dir):
-        files = sorted(os.listdir(output_dir), key=lambda f: os.path.getmtime(os.path.join(output_dir, f)), reverse=True)[:10]
+        files = sorted(os.listdir(output_dir), key=lambda f: os.path.getmtime(
+            os.path.join(output_dir, f)), reverse=True)[:10]
         if files:
             for f in files:
                 st.caption(f"📄 {f}")
@@ -1690,7 +1702,8 @@ def render_command_panel():
                 )
                 active_skills = cursor.fetchall()
                 available_skills = [
-                    {"id": s["id"], "name": s["name"], "task_type": s["task_type"] or s["skill_type"]}
+                    {"id": s["id"], "name": s["name"],
+                        "task_type": s["task_type"] or s["skill_type"]}
                     for s in active_skills
                 ]
             except Exception:
@@ -1997,7 +2010,8 @@ def render_energy_logger():
         if st.session_state.energy_emotion:
             try:
                 db = get_db()
-                db.add_energy_log(level=energy_level, emotion=st.session_state.energy_emotion, note=energy_note)
+                db.add_energy_log(level=energy_level,
+                                  emotion=st.session_state.energy_emotion, note=energy_note)
                 st.toast("✅ 能量状态已记录")
                 add_log(f"⚡ 能量记录: {energy_level}% ({st.session_state.energy_emotion})")
                 st.session_state.energy_emotion = ""
@@ -2097,7 +2111,8 @@ def render_health_dashboard():
     with st.spinner("长老正在审计家族健康度..."):
         try:
             elder = create_elder("health_elder", asset_store=asset_store)
-            context = {"_asset_store": asset_store, "_constitution_store": st.session_state.get("constitution_store")}
+            context = {"_asset_store": asset_store,
+                "_constitution_store": st.session_state.get("constitution_store")}
             result = elder.run(["audit_family"], context)
             report = result.get("_audit_report", {})
         except Exception as e:
@@ -2199,7 +2214,8 @@ def create_task_internal(title: str, description: str = ""):
     }
     try:
         db = get_db()
-        db.save_task({"id": task_id, "title": title, "description": description, "status": "pending"})
+        db.save_task({"id": task_id, "title": title,
+                     "description": description, "status": "pending"})
     except Exception:
         pass
     save_tasks_to_store()
@@ -2299,7 +2315,8 @@ def main():
         with col2:
             st.metric("Token消耗", f"{st.session_state.total_tokens:,}")
         with col3:
-            running = sum(1 for t in st.session_state.tasks.values() if t.get("status") == "running")
+            running = sum(1 for t in st.session_state.tasks.values()
+                          if t.get("status") == "running")
             st.metric("运行中", running)
 
         # 任务产出

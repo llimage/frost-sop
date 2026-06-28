@@ -6,7 +6,6 @@ AC-3: 验证3个预置雇佣兵的确定性函数输出
 import sys
 import os
 import re
-from typing import Dict, List, Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -210,7 +209,8 @@ def test_keyword_extraction():
                 # 检查关键词数量
                 if len(output) < test_case["min_keywords"]:
                     passed = False
-                    failure_reasons.append(f"关键词数量不足: 期望至少{test_case['min_keywords']}个, 实际{len(output)}个")
+                    failure_reasons.append(
+                        f"关键词数量不足: 期望至少{test_case['min_keywords']}个, 实际{len(output)}个")
                 
                 # 检查期望的关键词（部分匹配即可）
                 if test_case["expected_keywords"]:

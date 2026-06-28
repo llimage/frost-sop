@@ -11,7 +11,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tests.test_f6_mock_llm import patch_openai
 from core.sop import SOP
 from stores.asset import create_asset_store
-from stores.constitution import create_constitution_store
 from agents.parent import create_parent
 from agents.elder import create_elder
 from core.store import Store
@@ -158,8 +157,10 @@ def test_dq04_financial_terms():
 def test_dq05_task_isolation():
     print("  DQ-05 数据完整性 (多SOP任务记录隔离) ... ", end="")
     asset_store = create_asset_store(backend="memory")
-    asset_store.save("task:dq05-dev", {"task_id": "dq05-dev", "sop": "DEV-001", "status": "completed"})
-    asset_store.save("task:dq05-ops", {"task_id": "dq05-ops", "sop": "OPS-001", "status": "completed"})
+    asset_store.save("task:dq05-dev", {"task_id": "dq05-dev",
+                     "sop": "DEV-001", "status": "completed"})
+    asset_store.save("task:dq05-ops", {"task_id": "dq05-ops",
+                     "sop": "OPS-001", "status": "completed"})
 
     dev_task = asset_store.load("task:dq05-dev")
     ops_task = asset_store.load("task:dq05-ops")

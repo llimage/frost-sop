@@ -153,7 +153,7 @@ def test_chromadb_add_and_search(temp_chromadb):
 def test_cost_tracker_initialization():
     """测试成本跟踪器初始化"""
     try:
-        from core.cost import CostTracker, get_cost_tracker
+        from core.cost import get_cost_tracker
         
         # 获取成本跟踪器
         tracker = get_cost_tracker()

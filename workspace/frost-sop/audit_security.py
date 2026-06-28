@@ -76,7 +76,8 @@ def audit_dependency_vulnerabilities():
             print("[AUDIT] ⚠️  跳过 pip-audit 检查")
         else:
             # 使用 python -m pip_audit 方式调用
-            cmd = [sys.executable, '-m', 'pip_audit', '-r', 'requirements.txt', '--format', 'json', '--output', 'audit_results/pip_audit_vulnerabilities.json']
+            cmd = [sys.executable, '-m', 'pip_audit', '-r', 'requirements.txt', '--format',
+                'json', '--output', 'audit_results/pip_audit_vulnerabilities.json']
             run_command(cmd)
     
     return True
@@ -106,7 +107,8 @@ def audit_static_security():
         with open('audit_results/bandit_security_issues.json', 'r', encoding='utf-8') as f:
             data = json.load(f)
             issue_count = len(data.get('results', []))
-            high_severity = len([i for i in data.get('results', []) if i.get('issue_severity') == 'HIGH'])
+            high_severity = len([i for i in data.get('results', [])
+                                if i.get('issue_severity') == 'HIGH'])
             
             print(f"[AUDIT] Bandit 发现 {issue_count} 个安全问题 (高危: {high_severity})")
             
@@ -134,7 +136,8 @@ def audit_sensitive_info():
     
     # 3.2 审计基线
     print("\n[AUDIT] 3.2 审计敏感信息基线...")
-    cmd_audit = [sys.executable, '-m', 'detect_secrets', 'audit', 'audit_results/detect_secrets_baseline.json']
+    cmd_audit = [sys.executable, '-m', 'detect_secrets',
+        'audit', 'audit_results/detect_secrets_baseline.json']
     result_audit = run_command(cmd_audit)
     
     if result_audit.returncode != 0:
@@ -167,7 +170,8 @@ def audit_license_compliance():
         with open('audit_results/license_compliance.json', 'r', encoding='utf-8') as f:
             licenses = json.load(f)
             risky_licenses = ['GPL', 'AGPL', 'LGPL']
-            risky_deps = [dep for dep in licenses if any(rl in dep.get('License', '') for rl in risky_licenses)]
+            risky_deps = [dep for dep in licenses if any(
+                rl in dep.get('License', '') for rl in risky_licenses)]
             
             if risky_deps:
                 print(f"[AUDIT] ⚠️  发现 {len(risky_deps)} 个高风险协议依赖:")
@@ -248,8 +252,10 @@ def generate_security_report():
     try:
         with open('audit_results/bandit_security_issues.json', 'r') as f:
             bandit_data = json.load(f)
-            high_issues = [i for i in bandit_data.get('results', []) if i.get('issue_severity') == 'HIGH']
-            medium_issues = [i for i in bandit_data.get('results', []) if i.get('issue_severity') == 'MEDIUM']
+            high_issues = [i for i in bandit_data.get(
+                'results', []) if i.get('issue_severity') == 'HIGH']
+            medium_issues = [i for i in bandit_data.get(
+                'results', []) if i.get('issue_severity') == 'MEDIUM']
             
             report["issues_summary"]["bandit_high"] = len(high_issues)
             report["issues_summary"]["bandit_medium"] = len(medium_issues)

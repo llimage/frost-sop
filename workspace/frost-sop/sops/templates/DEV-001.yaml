@@ -5,18 +5,28 @@ stages:
   - name: "需求分析"
     agent: "product_manager"
     skills: ["analyze_requirements"]
+    requirement: "分析功能需求，明确验收标准和约束条件"
+    output_type: "document"
   - name: "技术设计"
     agent: "architect"
     skills: ["design_architecture"]
+    requirement: "设计技术方案，包括架构、接口、数据模型"
+    output_type: "document"
   - name: "代码实现"
     agent: "developer"
     skills: ["generate_code"]
+    requirement: "按设计方案编写代码，确保可运行和可测试"
+    output_type: "code"
   - name: "测试验证"
     agent: "tester"
     skills: ["run_tests"]
+    requirement: "运行测试套件，验证功能和回归"
+    output_type: "document"
   - name: "审查交付"
     agent: "auditor"
     skills: ["audit_code"]
+    requirement: "审查代码质量，审计合规性，完成交付"
+    output_type: "document"
 required_stages:
   - "审查交付"
 forbidden_skills:

@@ -7,8 +7,6 @@ core/db.py - 数据库管理模块
 """
 
 import sqlite3
-import json
-import os
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from pathlib import Path
@@ -404,7 +402,8 @@ class DBManager:
             "emotion": "TEXT DEFAULT ''",
             "user_note": "TEXT DEFAULT ''",
         }
-        existing = {col["name"] for col in cursor.execute("PRAGMA table_info(energy_log)").fetchall()}
+        existing = {col["name"]
+            for col in cursor.execute("PRAGMA table_info(energy_log)").fetchall()}
         for col_name, col_def in needed.items():
             if col_name not in existing:
                 try:
@@ -449,7 +448,8 @@ class DBManager:
 
     def _migrate_skill_versions_table(self, cursor):
         """F10: 为 skill_versions 表添加 file_path 列"""
-        existing = {col["name"] for col in cursor.execute("PRAGMA table_info(skill_versions)").fetchall()}
+        existing = {col["name"] for col in cursor.execute(
+            "PRAGMA table_info(skill_versions)").fetchall()}
         if "file_path" not in existing:
             try:
                 cursor.execute("ALTER TABLE skill_versions ADD COLUMN file_path TEXT DEFAULT ''")
@@ -468,7 +468,8 @@ class DBManager:
             "created_at": "TIMESTAMP",
             "responded_at": "TIMESTAMP",
         }
-        existing = {col["name"] for col in cursor.execute("PRAGMA table_info(decision_points)").fetchall()}
+        existing = {col["name"] for col in cursor.execute(
+            "PRAGMA table_info(decision_points)").fetchall()}
         for col_name, col_def in needed.items():
             if col_name not in existing:
                 try:

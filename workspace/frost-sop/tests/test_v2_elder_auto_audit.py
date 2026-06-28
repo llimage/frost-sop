@@ -10,16 +10,12 @@ V2.0 阶段三验收测试：长老审计自动化
 """
 
 import os
-import pytest
 import threading
-import time
 import tempfile
 
 os.environ['FROST_TESTING'] = '1'
 
 from core.store import Store
-from core.agent import Agent
-from core.skill import Skill
 
 
 class TestElderAutoAudit:

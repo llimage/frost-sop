@@ -50,7 +50,7 @@ def audit_coverage():
     
     # 检查 pytest-cov 是否已安装
     try:
-        import pytest_cov
+        pass
     except ImportError:
         if not install_tool('pytest-cov'):
             print("[AUDIT] ⚠️  跳过覆盖率审计")

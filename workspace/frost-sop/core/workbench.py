@@ -10,7 +10,6 @@ PHILOSOPHY: 工作台是新界面+旧数据，不新建表，复用现有 F6-F10
 """
 
 import json
-import os
 from datetime import datetime, date
 from typing import Dict, Any, Optional, List
 
@@ -106,7 +105,8 @@ def ensure_workbench_migrations():
     cursor = conn.cursor()
 
     # 获取 projects 表现有列
-    existing_cols = {col["name"] for col in cursor.execute("PRAGMA table_info(projects)").fetchall()}
+    existing_cols = {col["name"]
+        for col in cursor.execute("PRAGMA table_info(projects)").fetchall()}
 
     needed_cols = {
         "sop_template": "TEXT DEFAULT ''",

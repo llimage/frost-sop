@@ -1,0 +1,88 @@
+# FROST-SOP V4.0 技能卡: spawn
+# 创建子Agent（孙辈）
+
+intent: "根据任务需求创建并配置子Agent（孙辈），赋予其特定的能力和SOP"
+applicable_when: |
+  SOP执行需要分解为粒度更细的子任务、需要并行执行多个独立任务、
+  需要不同专业领域的Agent协同工作时使用。
+not_applicable_when: |
+  单线程可完成的简单任务、逻辑上必须串行执行的步骤、
+  嵌套层级即将超过安全限制时。
+
+inputs:
+  - name: agent_requirement
+    type: string
+    required: true
+    description: "子Agent的需求描述，包括角色、任务和能力要求"
+    example: "需要一个Python后端开发Agent，负责实现数据库模型层"
+  - name: parent_sop_id
+    type: string
+    required: false
+    description: "父级SOP ID，用于继承上下文"
+    example: "DEV-001"
+  - name: max_depth
+    type: int
+    required: false
+    description: "最大嵌套深度，默认2"
+    example: "2"
+  - name: timeout_seconds
+    type: int
+    required: false
+    description: "子Agent超时时间（秒），默认600"
+    example: "300"
+
+outputs:
+  - name: child_agent_id
+    type: string
+    required: true
+    description: "创建的子Agent唯一标识"
+  - name: child_config
+    type: dict
+    required: true
+    description: "子Agent的完整配置（skills, SOP, capabilities）"
+  - name: spawn_event
+    type: string
+    required: false
+    description: "创建事件日志"
+
+preconditions:
+  - "父Agent具有spawn权限"
+  - "未超过系统最大Agent数限制"
+  - "未超过最大嵌套深度"
+
+postconditions:
+  - "子Agent已注册到事件总线"
+  - "子Agent配置已持久化"
+
+completion_criteria:
+  - "子Agent配置生成成功并包含所有必填字段"
+  - "子Agent已注册为事件订阅者"
+
+failure_signals:
+  - "超出最大Agent数限制"
+  - "超出最大嵌套深度"
+  - "LLM生成的配置无效（缺少必填字段）"
+  - "子Agent注册失败"
+
+requires_capabilities:
+  - "agent_assembly"
+  - "event_bus_registration"
+  - "configuration_generation"
+
+bindings:
+  - platform: "frost_core"
+    prompt_template: |
+      创建一个子Agent：
+      需求：{agent_requirement}
+      父SOP：{parent_sop_id}
+      最大深度：{max_depth}
+      超时时间：{timeout_seconds}s
+    input_mapping:
+      requirement: "agent_requirement"
+    output_mapping:
+      agent_id: "child_agent_id"
+      config: "child_config"
+    known_limitations:
+      - "单次spawn只能创建一个子Agent"
+      - "子Agent无法访问父Agent的瞬时状态"
+    workaround: "使用shared_context通过Store传递必要状态信息"

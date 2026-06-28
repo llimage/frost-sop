@@ -68,7 +68,8 @@ def run_regression_tests():
             else:
                 print(f"  ❌ {tf} (returncode={result.returncode})")
                 failed += 1
-                results.append({"file": tf, "status": "failed", "output": result.stdout[-200:] if result.stdout else ""})
+                results.append({"file": tf, "status": "failed",
+                               "output": result.stdout[-200:] if result.stdout else ""})
         except subprocess.TimeoutExpired:
             print(f"  ⏰️ {tf} (超时)")
             failed += 1
@@ -234,7 +235,8 @@ def main():
     print("")
 
     # 写入报告文件
-    report_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "F6_TEST_REPORT.md")
+    report_path = os.path.join(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))), "F6_TEST_REPORT.md")
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(report)
 

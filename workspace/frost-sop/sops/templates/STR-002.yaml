@@ -5,15 +5,23 @@ stages:
   - name: "读取历史数据"
     agent: "analyst"
     skills: ["load_task_history"]
+    requirement: "从资产Store读取历史任务执行数据和成本日志"
+    output_type: "document"
   - name: "分析执行数据"
     agent: "analyst"
     skills: ["analyze_trends"]
+    requirement: "分析执行效率、成功率、成本趋势，识别瓶颈"
+    output_type: "document"
   - name: "生成优化建议"
     agent: "optimizer"
     skills: ["generate_suggestions"]
+    requirement: "根据分析结果生成可执行的优化建议和SOP改进方案"
+    output_type: "document"
   - name: "创始人确认"
     agent: "secretary"
     skills: ["present_for_approval"]
+    requirement: "将优化建议以报告形式呈现，等待创始人审批"
+    output_type: "document"
 required_stages:
   - "创始人确认"
 forbidden_skills:

@@ -10,7 +10,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from stores.asset import create_asset_store
 from agents.parent import create_parent
 from core.store import Store
-from core.sop import SOP
 
 
 # 预置任务数据（与规格书一致）

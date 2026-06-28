@@ -16,7 +16,7 @@ import pytest
 os.environ['FROST_TESTING'] = '1'
 
 from core.event_bus import (
-    AsyncEventBus, Event, EventType, get_async_event_bus
+    AsyncEventBus, EventType, get_async_event_bus
 )
 
 

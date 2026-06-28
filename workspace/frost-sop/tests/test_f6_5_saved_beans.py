@@ -5,7 +5,6 @@ F6.5 撒豆成兵 - 功能测试脚本
 
 import os
 import sys
-import json
 
 # 添加项目根目录到路径
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

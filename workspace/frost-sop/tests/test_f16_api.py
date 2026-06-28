@@ -48,7 +48,8 @@ r = test(
     "4. POST /api/tasks",
     method="POST",
     path="/tasks",
-    body={"description": "F16 API测试任务", "sop_id": "DEV-001", "project_id": "default", "use_real_llm": False}
+    body={"description": "F16 API测试任务", "sop_id": "DEV-001",
+        "project_id": "default", "use_real_llm": False}
 )
 task_id = r.get("task_id") if r else None
 if r:

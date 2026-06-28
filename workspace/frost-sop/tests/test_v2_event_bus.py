@@ -13,9 +13,7 @@ V2.0 子阶段 4.1 + 4.2 验收测试：EventBus 核心 + 事件类型定义
 """
 
 import os
-import pytest
 import threading
-import time
 import tempfile
 
 os.environ['FROST_TESTING'] = '1'
@@ -268,7 +266,8 @@ class TestEventBusCore:
             db_module._db_manager = test_db
 
             bus = EventBus()
-            event = Event(EventType.TASK_COMPLETED, source="test_main", data={"task_id": "t_persist"})
+            event = Event(EventType.TASK_COMPLETED, source="test_main",
+                          data={"task_id": "t_persist"})
             bus.publish(event)
 
             # 检查 event_log 表

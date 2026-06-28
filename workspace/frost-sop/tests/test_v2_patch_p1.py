@@ -6,12 +6,9 @@ V2.1 修补验证：P1-6/7/8/9 新增测试
 - P1-9: agents 表 UPSERT
 """
 
-import pytest
 import json
-import threading
-from unittest.mock import patch, MagicMock
 
-from core.event_bus import EventBus, Event, EventType, get_event_bus
+from core.event_bus import Event, EventType, get_event_bus
 from core.agent import Agent
 from core.skill import Skill
 from core.store import Store

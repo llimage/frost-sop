@@ -11,9 +11,6 @@ F8 验收测试：决策点前端恢复 + 超时提醒
 import sys
 import os
 import json
-import time
-import pytest
-from datetime import datetime, timedelta
 
 # 确保项目根目录在路径中
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -109,7 +106,8 @@ class TestDecisionManager:
         # 检查决策记录是否更新
         conn = self.db.get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT status, user_decision, user_note FROM decision_points WHERE id = ?", (decision_id,))
+        cursor.execute(
+            "SELECT status, user_decision, user_note FROM decision_points WHERE id = ?", (decision_id,))
         row = cursor.fetchone()
         # 不关闭连接 — DB 是单例模式
         

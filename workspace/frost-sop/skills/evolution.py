@@ -45,7 +45,8 @@ def analyze_trends(context: dict) -> dict:
         return context
 
     total = len(tasks)
-    successful = sum(1 for t in tasks if isinstance(t, dict) and t.get("status") in ("completed", "success"))
+    successful = sum(1 for t in tasks if isinstance(t, dict)
+                     and t.get("status") in ("completed", "success"))
     failed = total - successful
     success_rate = successful / max(total, 1)
 
@@ -86,7 +87,8 @@ def analyze_trends(context: dict) -> dict:
         if stats["failed"] > 0:
             sop_failure_rate = stats["failed"] / max(stats["total"], 1)
             if sop_failure_rate >= 0.3:
-                insights.append(f"SOP '{sop_name}' 失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议优化")
+                insights.append(
+                    f"SOP '{sop_name}' 失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议优化")
 
     # 洞察3：主要错误类型
     if error_types:

@@ -3,7 +3,6 @@ FROST-SOP V1.0 - Family AI Command Platform
 Main entry point for the FROST-SOP system.
 """
 
-import sys
 import json
 import uuid
 import asyncio
@@ -201,7 +200,8 @@ def main(task_input=None, sop_id=None):
     sop_to_internalize = None
     if search_results:
         external_result = search_results[0]
-        print(f"   使用外部搜索结果: 来源={external_result['source']}, SOP={external_result.get('name', external_result.get('sop_id'))}")
+        print(
+            f"   使用外部搜索结果: 来源={external_result['source']}, SOP={external_result.get('name', external_result.get('sop_id'))}")
         sop_to_internalize = external_result.get("content", {})
 
     if not sop_to_internalize or not sop_to_internalize.get("stages"):
@@ -479,11 +479,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="FROST-SOP CLI")
     parser.add_argument("--task", type=str, default=None, help="Task description")
     parser.add_argument("--sop", type=str, default=None, help="SOP template ID (e.g. DEV-001)")
-    parser.add_argument("--async-mode", action="store_true", help="Use V3.0 async event-driven mode")
+    parser.add_argument("--async-mode", action="store_true",
+                        help="Use V3.0 async event-driven mode")
     parser.add_argument("--timeout", type=int, default=600, help="Timeout in seconds (async mode)")
     args = parser.parse_args()
 
     if args.async_mode:
+        # V3.1: 配置异步模式日志handler，使日志输出到控制台
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[logging.StreamHandler()]
+        )
         # V3.0 异步事件驱动模式
         # CLI 入口负责重置 AsyncEventBus，确保干净状态
         from core.event_bus import AsyncEventBus

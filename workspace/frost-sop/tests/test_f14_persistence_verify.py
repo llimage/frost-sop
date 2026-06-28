@@ -45,7 +45,8 @@ def get_pre_counts():
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    tables = ["projects", "tasks", "task_stages", "sop_executions", "agents", "agent_status", "cost_log"]
+    tables = ["projects", "tasks", "task_stages",
+        "sop_executions", "agents", "agent_status", "cost_log"]
     counts = {}
     for t in tables:
         try:

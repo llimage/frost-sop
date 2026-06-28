@@ -9,7 +9,6 @@ V2.0: 保持原有同步调用方式（被 main() 直接调用）
 
 import logging
 from core.agent import Agent
-from core.skill import Skill
 from skills.orchestration import spawn_skill, emit_skill, validate_sop_skill
 from skills.llm import call_llm_skill
 
@@ -96,7 +95,8 @@ def _subscribe_ancestor_to_events(ancestor: Agent) -> bool:
             ))
             logger.info("[V3.0] ancestor 发布 TASK_DECOMPOSED: %s", task_id)
 
-        bus.subscribe_async(EventType.TASK_CREATED if hasattr(EventType, 'TASK_CREATED') else "task_created", on_task_created)
+        bus.subscribe_async(EventType.TASK_CREATED if hasattr(
+            EventType, 'TASK_CREATED') else "task_created", on_task_created)
         logger.info("[V3.0] ancestor 已订阅 TASK_CREATED 事件")
         return True
 
