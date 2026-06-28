@@ -19,6 +19,9 @@ from core.db import get_db
 
 logger = logging.getLogger(__name__)
 
+# V3.2b: DeadManSwitch 导入
+from core.dead_mans_switch import setup_dead_man_switch, DeadManSwitch
+
 
 def main(task_input=None, sop_id=None):
     """Main execution flow."""
@@ -490,6 +493,28 @@ if __name__ == "__main__":
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[logging.StreamHandler()]
     )
+
+    # V3.2b: 死人开关初始化 + EventBus 订阅
+    dead_man_switch = setup_dead_man_switch(timeout_minutes=30)
+    logger.info("[DeadManSwitch] 死人开关已初始化，超时阈值 30 分钟")
+
+    # V3.2b: 启动后台线程，每60秒检查一次死人开关
+    import threading
+    import time
+
+    def _check_dead_man_switch():
+        """后台线程：每60秒检查死人开关"""
+        while True:
+            time.sleep(60)
+            alert = dead_man_switch.check()
+            if alert:
+                msg = f"\n🚨 [DeadManSwitch] {alert['message']}"
+                print(msg)
+                logger.critical(msg)
+
+    _dms_thread = threading.Thread(target=_check_dead_man_switch, daemon=True)
+    _dms_thread.start()
+    logger.info("[DeadManSwitch] 后台监控线程已启动（每60秒检查）")
 
     if args.async_mode:
         # V3.0 异步事件驱动模式

@@ -10,6 +10,7 @@ V3.1: audit_family 拆分为 _scan_store / _compute_statistics /
 """
 
 import logging
+from datetime import datetime
 from core.agent import Agent
 from core.skill import Skill
 
@@ -124,16 +125,109 @@ def _log_audit_result(context: dict, report: dict, stats: dict) -> dict:
     return context
 
 
+def check_ancestor_alive(context: dict) -> dict:
+    """
+    V3.2b: Dead Man's Watch — 检查祖辈是否存活。
+
+    不依赖祖辈自我报告，直接读取 Store 中的活动记录。
+    在 audit_family 中作为第一步调用。
+
+    输入 context 键：
+        _store: Store —— 资产 Store（读取祖先活动记录）
+        _heartbeat_timeout_minutes: int —— 心跳超时分钟数（默认15）
+
+    输出 context 键：
+        _dead_mans_watch_report: dict —— 存活检查报告
+            {
+                "status": "HEALTHY" | "WARNING",
+                "report": "描述文本",
+                "last_heartbeat_minutes_ago": float | None,
+                "last_design_minutes_ago": float | None,
+            }
+    """
+    store = context.get("_store") or context.get("_asset_store")
+    timeout_minutes = context.get("_heartbeat_timeout_minutes", 15)
+    now = datetime.now()
+
+    report_data = {
+        "status": "HEALTHY",
+        "report": "",
+        "last_heartbeat_minutes_ago": None,
+        "last_design_minutes_ago": None,
+    }
+
+    if store is None:
+        report_data["status"] = "WARNING"
+        report_data["report"] = "家族警告：无法读取 Store，Dead Man's Watch 无法执行。"
+        context["_dead_mans_watch_report"] = report_data
+        return context
+
+    # 读取祖辈活动记录
+    try:
+        last_heartbeat = store.load("ancestor:last_heartbeat")
+        last_task_design = store.load("ancestor:last_task_design_time")
+    except Exception as e:
+        logger.error("[DeadManWatch] 读取 Store 失败: %s", e)
+        report_data["status"] = "WARNING"
+        report_data["report"] = f"家族警告：读取祖先活动记录失败: {e}"
+        context["_dead_mans_watch_report"] = report_data
+        return context
+
+    if last_heartbeat is None and last_task_design is None:
+        report_data["status"] = "WARNING"
+        report_data["report"] = "家族警告：无法读取祖辈活动记录，Store 可能故障。"
+        context["_dead_mans_watch_report"] = report_data
+        logger.warning("[DeadManWatch] %s", report_data["report"])
+        return context
+
+    # 计算空闲时间
+    heartbeat_idle = None
+    design_idle = None
+
+    if last_heartbeat is not None:
+        if isinstance(last_heartbeat, datetime):
+            heartbeat_idle = (now - last_heartbeat).total_seconds() / 60
+            report_data["last_heartbeat_minutes_ago"] = heartbeat_idle
+
+    if last_task_design is not None:
+        if isinstance(last_task_design, datetime):
+            design_idle = (now - last_task_design).total_seconds() / 60
+            report_data["last_design_minutes_ago"] = design_idle
+
+    max_idle = max(
+        heartbeat_idle if heartbeat_idle is not None else 0,
+        design_idle if design_idle is not None else 0,
+    )
+
+    if max_idle > timeout_minutes:
+        report_data["status"] = "WARNING"
+        report_data["report"] = (
+            f"家族警告：祖辈心跳超时，最近一次活动记录于 {max_idle:.0f} 分钟前。"
+        )
+        logger.warning("[DeadManWatch] %s", report_data["report"])
+    else:
+        hb_msg = f"心跳 {heartbeat_idle:.0f} 分钟前" if heartbeat_idle is not None else "心跳记录缺失"
+        ds_msg = f"任务拆解 {design_idle:.0f} 分钟前" if design_idle is not None else "任务拆解记录缺失"
+        report_data["report"] = f"家族运转正常。祖辈{hb_msg}，{ds_msg}。"
+        logger.info("[DeadManWatch] %s", report_data["report"])
+
+    context["_dead_mans_watch_report"] = report_data
+    return context
+
+
 def audit_family(context: dict) -> dict:
     """
     长老审计家族健康度。
 
+    V3.2b: 增加 Dead Man's Watch（存活检查）作为第一步。
+
     输入 context 键：
         _asset_store: Store —— 资产Store
         _constitution_store: Store —— 宪法Store
+        _store: Store —— 通用 Store（供 check_ancestor_alive 读取）
 
     输出 context 键：
-        _audit_report: dict —— 审计报告
+        _audit_report: dict —— 审计报告（含 _dead_mans_watch_report）
     """
 
     asset_store = context.get("_asset_store")
@@ -142,6 +236,12 @@ def audit_family(context: dict) -> dict:
     if not asset_store:
         context["_audit_report"] = {"status": "error", "reason": "无资产Store"}
         return context
+
+    # V3.2b: Dead Man's Watch — 第一步：检查祖辈是否存活
+    context_with_store = dict(context)
+    context_with_store["_store"] = asset_store  # check_ancestor_alive 读取 _store
+    context_with_store = check_ancestor_alive(context_with_store)
+    dead_mans_report = context_with_store.get("_dead_mans_watch_report", {})
 
     # 1. 扫描资产Store
     raw = _scan_store(asset_store)
@@ -154,6 +254,13 @@ def audit_family(context: dict) -> dict:
     if constitution_store:
         budget = constitution_store.load("const.budget_monthly")
     report = _generate_report(stats, raw["tasks"], raw["lessons"], budget)
+
+    # V3.2b: 将 Dead Man's Watch 结果并入审计报告
+    if dead_mans_report:
+        report["dead_mans_watch"] = dead_mans_report
+        if dead_mans_report.get("status") == "WARNING":
+            report["status"] = "warning"
+            report["findings"].append(dead_mans_report.get("report", ""))
 
     # 4. 写入审计日志
     return _log_audit_result(context, report, stats)
