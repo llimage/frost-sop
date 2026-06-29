@@ -7,7 +7,7 @@
     "execution_time_seconds": 45,
     "final_output": "done",
     "execution_log": "",
-    "created_at": "2026-06-05T09:30:00",
+    "created_at": "2026-06-29T09:30:00",
     "product_line_id": "default",
     "task_type": "checklist",
     "referenced_knowledge": []
@@ -20,30 +20,23 @@
     "execution_time_seconds": 0,
     "final_output": "",
     "execution_log": "",
-    "created_at": "2026-06-05T10:00:00",
+    "created_at": "2026-06-29T10:00:00",
     "product_line_id": "default",
     "task_type": "checklist",
     "referenced_knowledge": []
   },
   {
-    "task_id": "20260605-193525-8bqw",
-    "created_at": "2026-06-05T19:35:25",
-    "topic": "测试referenced_knowledge_V080",
-    "model": "test",
+    "task_id": "20260629-030059-kqaf",
+    "created_at": "2026-06-29T03:00:59",
+    "topic": "rt_test",
+    "model": "m",
     "status": "completed",
-    "execution_time_seconds": 1.0,
-    "execution_mode": "orchestrated",
+    "execution_time_seconds": 5,
+    "execution_mode": "sequential",
     "product_line_id": "default",
     "task_type": "normal",
-    "final_output": "测试输出",
+    "final_output": "",
     "execution_log": "",
-    "referenced_knowledge": [
-      {
-        "doc_id": "doc_001",
-        "doc_name": "测试文档",
-        "chunk_id": "c0",
-        "score": 0.85
-      }
-    ]
+    "referenced_knowledge": []
   }
 ]

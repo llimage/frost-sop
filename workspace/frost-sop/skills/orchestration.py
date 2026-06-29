@@ -3,11 +3,19 @@ PHILOSOPHY:
 Orchestration Skills manage agent lifecycle (spawn/emit/validate/merge).
 """
 
+import logging
+from datetime import datetime
+import asyncio
+from typing import Dict, Any, Optional
+
 from core.skill import Skill
 from core.agent import Agent
 from core.store import Store
-from datetime import datetime
-import asyncio
+
+logger = logging.getLogger(__name__)
+
+# V5.0：使用 DecisionFlow 状态机替代 decision_manager
+from core.panel_decision import get_decision_flow, DecisionStatus
 
 
 def spawn(context: dict) -> dict:
@@ -173,9 +181,15 @@ def internalize_sop(context: dict) -> dict:
 
 def _check_decision_point(context: dict, stage: dict) -> bool:
     """
-    检查当前阶段是否需要暂停等待君主决策。
-    如果需要暂停，在context中设置决策点信息，返回True。
-    否则返回False，继续执行。
+    检查当前阶段是否需要暂停等待 Human Agent 决策。
+
+    如果需要暂停：
+    1. 通过 DecisionFlow 状态机创建决策记录（替代 decision_manager）
+    2. 在 context 中设置决策点信息
+    3. 生成 DECISION 类型面板，存入 context["_decision_panel"]
+
+    返回 True 表示已暂停，调用方应 return context。
+    返回 False 表示无需暂停，继续执行。
     """
     stage_name = stage.get("name", "未知阶段")
     decision_keywords = ["确认", "审核", "审批", "决策", "confirm", "approve", "review"]
@@ -187,25 +201,189 @@ def _check_decision_point(context: dict, stage: dict) -> bool:
     if requires_decision:
         task_id = context.get("_task_id", "unknown")
         if task_id == "unknown":
-            print(f"  ⚠️ 跳过决策点（无有效 task_id）: {stage_name}")
+            logger.warning(
+                "跳过决策点（无有效 task_id）: %s", stage_name
+            )
         else:
-            from core.decision_manager import get_decision_manager
-            decision_manager = get_decision_manager()
+            # S-002 修复：使用 DecisionFlow 状态机替代 decision_manager
+            flow = get_decision_flow()
             stage_id = stage.get("id", stage_name)
             question = stage.get("description", f"是否需要执行 {stage_name}？")
             options = stage.get("decision_options", ["确认", "驳回", "修改"])
-            decision_id = decision_manager.pause_decision(
+
+            record = flow.create_decision(
                 task_id=task_id,
                 stage_id=stage_id,
-                question=question,
-                options=options
+                stage_name=stage_name,
+                context_before={
+                    "stage": stage,
+                    "question": question,
+                    "options": options,
+                    "outputs": stage.get("outputs", []),
+                    "quality_score": context.get("_quality_score", {}),
+                },
             )
+            # create_decision 返回 DecisionRecord，decision_id 是字符串
+            decision_id = record.decision_id
+
             context["_decision_id"] = decision_id
             context["_paused_for_decision"] = True
             context["_decision_question"] = question
             context["_decision_options"] = options
 
+            logger.info(
+                "[V5.0] DecisionFlow 决策已创建: %s (status=%s)",
+                decision_id, record.status.value,
+            )
+
+            # V5.0：生成 DECISION 面板
+            try:
+                from core.panel_generator import PanelGenerator
+
+                # 构造任务字典（供 PanelGenerator 使用）
+                task_for_panel = {
+                    "task_id": task_id,
+                    "title": context.get("_task_title", stage_name),
+                    "status": "waiting",
+                    "stages": [stage] if isinstance(stage, dict) else list(stage),
+                    "current_stage_index": 0,
+                    "current_stage": stage,
+                }
+
+                generator = PanelGenerator()
+                decision_panel = generator.generate(task_for_panel)
+                context["_decision_panel"] = decision_panel
+                logger.info(
+                    "[V5.0] 决策面板已生成: %s", decision_panel.panel_id
+                )
+            except Exception as e:
+                logger.warning(
+                    "[V5.0] 决策面板生成失败（不影响暂停）: %s", e
+                )
+
     return context.get("_paused_for_decision", False)
+
+
+def _wait_for_decision_and_continue(context: dict, blocking: bool = True) -> dict:
+    """
+    CLI 模式：渲染决策面板，等待用户输入，提交决策，然后继续执行。
+
+    修改 context 并返回更新后的 context。
+    如果决策为"驳回"，设置 context["_rejected"] = True。
+    如果决策为"修改"，设置 context["_needs_revision"] = True。
+
+    参数:
+        context: 执行上下文
+        blocking: 是否阻塞等待用户输入（CLI=True, Streamlit=False）
+                  当 blocking=False 时，只设置 context["_awaiting_decision"]=True
+                  并返回，不等待用户输入。由调用方（如 Streamlit 应用）负责渲染
+                  决策面板并调用 _submit_decision_from_ui() 提交决策。
+    """
+    import logging
+    import sys
+    logger = logging.getLogger(__name__)
+
+    panel = context.get("_decision_panel")
+    if not panel:
+        logger.warning("_wait_for_decision_and_continue: 没有决策面板")
+        context["_paused_for_decision"] = False
+        context["_awaiting_decision"] = False
+        return context
+
+    decision_id = context.get("_decision_id")
+    if not decision_id:
+        logger.warning("_wait_for_decision_and_continue: 没有 decision_id")
+        context["_paused_for_decision"] = False
+        context["_awaiting_decision"] = False
+        return context
+
+    # 非阻塞模式（用于 Streamlit 等 UI 环境）
+    if not blocking:
+        logger.info("_wait_for_decision_and_continue: 非阻塞模式，等待 UI 决策")
+        context["_awaiting_decision"] = True
+        # 保留 _decision_panel 和 _decision_id 供 UI 渲染
+        return context
+
+    # 阻塞模式（CLI）
+    # 1. 渲染决策面板
+    from renderers.cli_renderer import CliRenderer
+    renderer = CliRenderer()
+    renderer.render(panel)
+
+    # 2. 等待用户输入
+    options = context.get("_decision_options", ["确认", "驳回", "修改"])
+
+    print()
+    if not sys.stdin.isatty():
+        # 非 CLI 环境（如测试），使用默认决策
+        logger.warning("_wait_for_decision_and_continue: 非 CLI 环境，使用默认决策")
+        choice = options[0]  # 默认确认
+    else:
+        while True:
+            try:
+                choice = input(f"请输入决策（{"，".join(options)}）：").strip()
+                if choice in options:
+                    break
+                else:
+                    print(f"无效输入，请重新输入（{"，".join(options)}）")
+            except EOFError:
+                logger.warning("_wait_for_decision_and_continue: EOF，使用默认决策")
+                choice = options[0]
+                break
+
+    # 3. 提交决策到 DecisionFlow
+    return _submit_decision_and_update_context(context, decision_id, choice, "CLI 用户输入")
+
+
+def _submit_decision_and_update_context(context: dict, decision_id: str, choice: str, reason_prefix: str = "") -> dict:
+    """
+    提交决策并更新 context（供 CLI 和 UI 模式共用）。
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    from core.panel_decision import get_decision_flow
+
+    flow = get_decision_flow()
+    try:
+        record = flow.submit_decision(
+            decision_id=decision_id,
+            decision=choice,
+            reason=f"{reason_prefix}：{choice}",
+            human_agent_id="cli_user" if reason_prefix == "CLI 用户输入" else "ui_user",
+        )
+        logger.info(
+            "决策已提交: decision_id=%s, decision=%s, status=%s",
+            decision_id, choice, record.status.value,
+        )
+    except Exception as e:
+        logger.error("提交决策失败: %s", e)
+        context["_paused_for_decision"] = False
+        context["_awaiting_decision"] = False
+        return context
+
+    # 更新 context
+    context["_decision_result"] = {
+        "decision_id": decision_id,
+        "decision": choice,
+        "reason": f"{reason_prefix}：{choice}",
+        "status": record.status.value,
+    }
+    context["_paused_for_decision"] = False
+    context["_awaiting_decision"] = False
+
+    # 根据决策结果设置标志
+    if choice == "驳回":
+        context["_rejected"] = True
+        logger.info("决策：驳回，跳过当前阶段")
+    elif choice == "修改":
+        context["_needs_revision"] = True
+        logger.info("决策：修改，需要重新执行当前阶段")
+    else:
+        # 确认，继续执行
+        logger.info("决策：确认，继续执行当前阶段")
+
+    return context
 
 
 def _assemble_child(context: dict, stage: dict):
@@ -283,7 +461,7 @@ def _assemble_child(context: dict, stage: dict):
                 })
         except Exception as e:
             import traceback
-            print(f"    ⚠️ [F14] Agent持久化失败: {type(e).__name__}: {e}")
+            logger.warning("[F14] Agent持久化失败: %s: %s", type(e).__name__, e)
             traceback.print_exc()
 
     if child is None:
@@ -337,7 +515,7 @@ def _execute_child(child, context: dict, stage: dict) -> dict:
             "last_heartbeat": datetime.now().isoformat(),
         })
     except Exception as e:
-        print(f"    ⚠️ [V2.0] 孙辈销毁状态更新失败 ({child.name}): {e}")
+        logger.warning("[V2.0] 孙辈销毁状态更新失败 (%s): %s", child.name, e)
 
     return result_context
 
@@ -406,7 +584,27 @@ def execute_stage(context: dict) -> dict:
 
     # 1. 决策点检查
     if _check_decision_point(context, stage):
-        return context  # 暂停执行，等待君主决策
+        # 不立即返回！等待决策完成，然后继续执行
+        # 支持非阻塞模式（如 Streamlit UI）
+        blocking = not context.get("_non_blocking_decision", False)
+        context = _wait_for_decision_and_continue(context, blocking=blocking)
+        # 非阻塞模式：如果正在等待决策，返回 context 让调用方渲染决策面板
+        if context.get("_awaiting_decision"):
+            return context
+        # 检查决策结果
+        if context.get("_rejected"):
+            # 被驳回，不执行当前阶段
+            if "_stage_results" not in context:
+                context["_stage_results"] = []
+            context["_stage_results"].append({
+                "stage": stage_name,
+                "status": "rejected",
+                "reason": "用户驳回"
+            })
+            context["_current_stage_result"] = {"status": "rejected", "reason": "用户驳回"}
+            return context
+        # 如果 needs_revision，暂时先执行（后续可扩展）
+        # 否则（确认），继续执行
 
     # 2. 组装子Agent
     child = _assemble_child(context, stage)
@@ -476,7 +674,7 @@ def _trigger_elder_audit(task_id: str, asset_store=None, constitution_store=None
             "details": f"task_id={task_id} | {reason} | report={str(audit_report)[:500]}",
             "level": "info",
         })
-        print(f"  ✅ [V2.0-长老审计] 完成 task_id={task_id}: {reason}")
+        logger.info("[V2.0-长老审计] 完成 task_id=%s: %s", task_id, reason)
 
     except Exception as e:
         # 长老审计失败仅记录日志，不影响任务完成状态
@@ -491,7 +689,7 @@ def _trigger_elder_audit(task_id: str, asset_store=None, constitution_store=None
             })
         except Exception:
             pass
-        print(f"  ⚠️ [V2.0-长老审计] 失败（不影响任务状态）: {e}")
+        logger.warning("[V2.0-长老审计] 失败（不影响任务状态）: %s", e)
 
 
 def finalize_task(context: dict) -> dict:
@@ -534,7 +732,7 @@ def finalize_task(context: dict) -> dict:
     context["_elder_audit_thread"] = audit_thread   # 供测试等待使用
     context["_reason"] = f"finalize_task: 长老审计后台线程已启动，task_id={task_id}"
 
-    print(f"  🔮 [V2.0-长老审计] 后台审计已启动，task_id={task_id}")
+    logger.info("[V2.0-长老审计] 后台审计已启动，task_id=%s", task_id)
     return context
 
 

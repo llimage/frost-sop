@@ -105,6 +105,16 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
+
+      {/* Panel 演示链接 */}
+      <div className="border-t border-[#E2E8F0] p-4">
+        <a
+          href="/panels"
+          className="flex items-center gap-2 text-sm text-[#64748B] hover:text-[#3B82F6] transition-colors"
+        >
+          🔮 V5.0 Panel 演示
+        </a>
+      </div>
     </aside>
   );
 }

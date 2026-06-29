@@ -48,8 +48,9 @@ class TestDecisionManager:
             )
         conn.commit()
         
-        # 清理已有测试决策数据
-        cursor.execute("DELETE FROM decision_points WHERE task_id LIKE 'test_%'")
+        # 清理已有测试决策数据（按精确 task_id 删除，防止其他测试泄漏的数据干扰）
+        for tid in ['test_task_001', 'test_task_002', 'test_task_003']:
+            cursor.execute("DELETE FROM decision_points WHERE task_id = ?", (tid,))
         conn.commit()
     
     def teardown_method(self):
@@ -57,7 +58,8 @@ class TestDecisionManager:
         if hasattr(self, 'db'):
             conn = self.db.get_connection()
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM decision_points WHERE task_id LIKE 'test_%'")
+            for tid in ['test_task_001', 'test_task_002', 'test_task_003']:
+                cursor.execute("DELETE FROM decision_points WHERE task_id = ?", (tid,))
             cursor.execute("DELETE FROM audit_log WHERE agent_id = 'test_agent'")
             conn.commit()
             # 关键修复：绝不 conn.close() — DB 是单例模式

@@ -4,7 +4,13 @@ PHILOSOPHY: 表现层与核心层完全解耦。
 工作台是新界面+旧数据，不破坏现有架构。
 
 版本: F11 (Project Workbench)
+
+⚠️ 已废弃：UI 已迁移到 Next.js (frontend/)
+    请使用: cd frontend && npm run dev
+     FastAPI: cd workspace/frost-sop && python -m uvicorn api.main:app --port 8000
 """
+import warnings
+warnings.warn("app.py is deprecated. Use Next.js (frontend/) instead.", DeprecationWarning)
 import streamlit as st
 import sys
 import os

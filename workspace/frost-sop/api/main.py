@@ -30,6 +30,7 @@ from api.models import (
     ProjectResponse, TaskCreateRequest, TaskResponse, TaskStageResponse,
     TaskExecuteResponse, AgentResponse, CostSummaryResponse, ChatRequest,
     ChatResponse, SkillResponse, ScheduleCreateRequest, ScheduleResponse,
+    PanelGenerateRequest, DecisionSubmitRequest, DecisionResponse,
 )
 from core.db import get_db
 
@@ -561,3 +562,149 @@ def health():
         "db_tables": len([c for c in counts.values() if c >= 0]),
         "timestamp": datetime.now().isoformat(),
     }
+
+
+# ── Helper — Panel JSON 序列化 ──────────────────────────────
+
+def _enum_to_str(v):
+    """递归把 Enum / dataclass 转换成可 JSON 序列化的结构。"""
+    from enum import Enum as EnumType
+    if isinstance(v, EnumType):
+        return v.value
+    if hasattr(v, "__dataclass_fields__"):
+        return {k: _enum_to_str(getattr(v, k)) for k in v.__dataclass_fields__}
+    if isinstance(v, dict):
+        return {k: _enum_to_str(vv) for k, vv in v.items()}
+    if isinstance(v, (list, tuple)):
+        return type(v)(_enum_to_str(i) for i in v)
+    return v
+
+
+def panel_to_json(panel) -> dict:
+    """把 PanelDefinition 转换成纯字典（所有 Enum → str）。"""
+    d = panel.to_dict()
+    return _enum_to_str(d)
+
+
+# ── 13. POST /api/panels/generate — 生成 Panel JSON ─────
+@app.post("/api/panels/generate")
+def generate_panel(req: PanelGenerateRequest):
+    """
+    根据任务和 SOP 生成 Panel 定义，返回 JSON。
+    前端拿到 JSON 后用 PanelRenderer.tsx 渲染。
+    """
+    db = get_db()
+
+    # 1. 读取任务
+    task_row = db.select_one("tasks", "id", req.task_id)
+    if not task_row:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=f"Task {req.task_id} not found")
+    task = _row_to_dict(task_row)
+
+    # 2. 读取 SOP（自动关联或手动指定）
+    sop_id = req.sop_id
+    if not sop_id:
+        exec_row = db.execute_sql(
+            "SELECT sop_template_id FROM sop_executions WHERE task_id = ? ORDER BY id DESC LIMIT 1",
+            [req.task_id]
+        )
+        if exec_row:
+            raw = exec_row[0]["sop_template_id"]
+            sop_id = raw.replace("sop_template:", "") if raw else None
+
+    sop = None
+    if sop_id:
+        try:
+            from core.sop import SOP
+            sop = SOP.load_from_yaml(f"sops/templates/{sop_id}.yaml")
+        except Exception:
+            pass
+
+    # 3. 读取 stages
+    stage_rows = db.select_all("task_stages", "task_id = ? ORDER BY stage_order ASC", [req.task_id])
+    task["stages"] = _rows_to_list(stage_rows)
+
+    # 4. 生成 Panel
+    from core.panel_generator import PanelGenerator
+    generator = PanelGenerator()
+    panel = generator.generate(task, sop)
+
+    return panel_to_json(panel)
+
+
+# ── 14. POST /api/decisions/submit — 提交决策 ───────────
+@app.post("/api/decisions/submit", response_model=DecisionResponse)
+def submit_decision(req: DecisionSubmitRequest):
+    """
+    Human Agent 通过前端提交决策。
+    写入 decision_points 表，触发 DecisionFlow 状态推进。
+    """
+    from core.panel_decision import get_decision_flow
+    from fastapi import HTTPException
+
+    flow = get_decision_flow()
+    try:
+        record = flow.submit_decision(
+            decision_id=req.decision_id,
+            decision=req.decision,
+            reason=req.reason or f"Web用户提交：{req.decision}",
+            human_agent_id=req.human_agent_id,
+        )
+        return DecisionResponse(
+            decision_id=req.decision_id,
+            task_id=record.task_id,
+            status=record.status.value,
+            decision=req.decision,
+            reason=req.reason,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ── 15. GET /api/decisions/{decision_id} ───────────────────
+@app.get("/api/decisions/{decision_id}")
+def get_decision(decision_id: str):
+    """获取单个决策的状态。"""
+    from core.panel_decision import get_decision_flow
+    from fastapi import HTTPException
+
+    flow = get_decision_flow()
+    record = flow.get_decision(decision_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Decision not found")
+    return {
+        "decision_id": record.decision_id,
+        "task_id": record.task_id,
+        "stage_name": record.stage_name,
+        "status": record.status.value,
+        "decision": record.decision,
+        "reason": record.reason,
+        "created_at": record.created_at,
+        "updated_at": record.updated_at,
+    }
+
+
+# ── 16. GET /api/decisions — 列出 pending 决策 ───────────
+@app.get("/api/decisions")
+def list_pending_decisions(
+    task_id: Optional[str] = Query(None),
+):
+    """
+    列出等待 Human Agent 决策的 pending 记录。
+    前端轮询此接口渲染决策面板。
+    """
+    db = get_db()
+    conn = db.get_connection()
+    cursor = conn.cursor()
+
+    sql = "SELECT * FROM decision_points WHERE status = 'pending'"
+    params = []
+    if task_id:
+        sql += " AND task_id = ?"
+        params.append(task_id)
+    sql += " ORDER BY created_at ASC"
+
+    cursor.execute(sql, params)
+    rows = cursor.fetchall()
+    return [dict(r) for r in rows]

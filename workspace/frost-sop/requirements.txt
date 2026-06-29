@@ -27,3 +27,4 @@ pytest-cov>=5.0.0
 
 # Offline LLM (local inference with GGUF models)
 llama-cpp-python
+rich>=13.0.0

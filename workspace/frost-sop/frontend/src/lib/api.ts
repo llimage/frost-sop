@@ -76,3 +76,32 @@ export async function createSchedule(data: {
     body: JSON.stringify(data),
   });
 }
+
+// ── Panels (V5.0) ──────────────────────────────
+export async function fetchPanel(taskId: string, sopId?: string) {
+  return fetchAPI<any>("/api/panels/generate", {
+    method: "POST",
+    body: JSON.stringify({ task_id: taskId, sop_id: sopId }),
+  });
+}
+
+export async function submitDecision(data: {
+  decision_id: string;
+  decision: string;
+  reason?: string;
+  human_agent_id?: string;
+}) {
+  return fetchAPI<any>("/api/decisions/submit", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getDecision(decisionId: string) {
+  return fetchAPI<any>(`/api/decisions/${decisionId}`);
+}
+
+export async function getPendingDecisions(taskId?: string) {
+  const query = taskId ? `?task_id=${taskId}` : "";
+  return fetchAPI<any[]>(`/api/decisions${query}`);
+}

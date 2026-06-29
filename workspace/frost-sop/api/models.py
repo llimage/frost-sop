@@ -146,6 +146,27 @@ class ScheduleResponse(BaseModel):
     created_at: Optional[str] = None
 
 
+# ── Panel (V5.0) ──
+class PanelGenerateRequest(BaseModel):
+    task_id: str = Field(..., description="任务ID")
+    sop_id: Optional[str] = Field(None, description="SOP模板ID（可选，自动从任务关联）")
+
+
+class DecisionSubmitRequest(BaseModel):
+    decision_id: str = Field(..., description="决策ID")
+    decision: str = Field(..., description="决策结果：确认/驳回/修改")
+    reason: str = Field(default="", description="决策理由")
+    human_agent_id: str = Field(default="web_user", description="Human Agent ID")
+
+
+class DecisionResponse(BaseModel):
+    decision_id: str
+    task_id: str
+    status: str
+    decision: Optional[str] = None
+    reason: Optional[str] = None
+
+
 # ── Generic ──
 class ErrorResponse(BaseModel):
     error: str
