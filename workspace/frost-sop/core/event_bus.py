@@ -19,6 +19,7 @@ V2.0 子阶段 4.1 + 4.2:
 - 所有公共 API 线程安全
 """
 
+import asyncio
 import json
 import logging
 import threading
@@ -153,6 +154,7 @@ class EventBus:
         self._max_log_size: int = 500
         # 订阅/发布操作锁
         self._rw_lock: threading.Lock = threading.Lock()
+        self._db_write_lock: threading.Lock = threading.Lock()
         self._initialized = True
 
     # ----------------------------------------------------------
@@ -346,7 +348,7 @@ class EventBus:
         """递归过滤敏感键，替换为 '***REDACTED***'。"""
         if not isinstance(data, dict):
             return data
-        sanitized = {}
+        sanitized: dict[Any, Any] = {}
         for k, v in data.items():
             if k.lower() in self._SENSITIVE_KEYS:
                 sanitized[k] = "***REDACTED***"
@@ -360,27 +362,39 @@ class EventBus:
         """
         将事件持久化到 event_log 表。
         失败时仅打印警告，不抛出异常。
-        """
-        try:
-            from core.db import get_db
 
-            db = get_db()
-            safe_data = (
-                self._sanitize_data(event.data) if isinstance(event.data, dict) else event.data
-            )
-            db.insert(
-                "event_log",
-                {
-                    "event_id": event.event_id,
-                    "event_type": event.event_type,
-                    "source": event.source,
-                    "data": json.dumps(safe_data, ensure_ascii=False),
-                    "timestamp": event.timestamp.isoformat(),
-                },
-            )
-        except Exception as e:
-            # 持久化失败不影响事件分发
-            logger.error("事件持久化失败 (%s): %s", event.event_type, e)
+        线程安全：使用 _db_write_lock 序列化 DB 写操作，
+        防止多线程并发写入导致 "database is locked"。
+        """
+        import time
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                from core.db import get_db
+
+                db = get_db()
+                safe_data = (
+                    self._sanitize_data(event.data) if isinstance(event.data, dict) else event.data
+                )
+                with self._db_write_lock:
+                    db.insert(
+                        "event_log",
+                        {
+                            "event_id": event.event_id,
+                            "event_type": event.event_type,
+                            "source": event.source,
+                            "data": json.dumps(safe_data, ensure_ascii=False),
+                            "timestamp": event.timestamp.isoformat(),
+                        },
+                    )
+                return  # 成功，退出重试循环
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    time.sleep(0.001 * (attempt + 1))  # 1ms, 2ms 退避（DB层已有写锁保护）
+                    continue
+                # 持久化失败不影响事件分发
+                logger.error("事件持久化失败 (%s): %s", event.event_type, e)
 
     @classmethod
     def reset(cls) -> None:
@@ -410,8 +424,6 @@ def get_event_bus() -> EventBus:
 # ============================================================
 # V3.0: AsyncEventBus — 异步事件总线（独立实现，不继承 EventBus）
 # ============================================================
-
-import asyncio
 
 
 class AsyncEventBus:
@@ -632,7 +644,7 @@ class AsyncEventBus:
         """递归过滤敏感键"""
         if not isinstance(data, dict):
             return data
-        sanitized = {}
+        sanitized: dict[Any, Any] = {}
         for k, v in data.items():
             if k.lower() in self._SENSITIVE_KEYS:
                 sanitized[k] = "***REDACTED***"

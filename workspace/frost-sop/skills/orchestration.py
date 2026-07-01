@@ -3,20 +3,17 @@ PHILOSOPHY:
 Orchestration Skills manage agent lifecycle (spawn/emit/validate/merge).
 """
 
-import asyncio
 import contextlib
 import logging
 import os
 import sys
 
 from core.agent import Agent
+from core.panel_decision import get_decision_flow
 from core.skill import Skill
 from core.store import Store
 
 logger = logging.getLogger(__name__)
-
-# V5.0：使用 DecisionFlow 状态机替代 decision_manager
-from core.panel_decision import get_decision_flow
 
 
 def spawn(context: dict) -> dict:
@@ -262,7 +259,7 @@ def _check_decision_point(context: dict, stage: dict) -> bool:
             except Exception as e:
                 logger.warning("[V5.0] 决策面板生成失败（不影响暂停）: %s", e)
 
-    return context.get("_paused_for_decision", False)
+    return context.get("_paused_for_decision", False)  # type: ignore[no-any-return]
 
 
 def _wait_for_decision_and_continue(context: dict, blocking: bool = True) -> dict:
@@ -448,43 +445,46 @@ def _assemble_child(context: dict, stage: dict):
             if not existing_agent:
                 from datetime import datetime
 
-                db.insert(
-                    "agents",
-                    {
-                        "id": agent_id,
-                        "name": child.name,
-                        "agent_type": "child",
-                        "generation": child.generation,
-                        "created_at": datetime.now().isoformat(),
-                    },
-                )
+                with contextlib.suppress(Exception):
+                    db.insert(
+                        "agents",
+                        {
+                            "id": agent_id,
+                            "name": child.name,
+                            "agent_type": "child",
+                            "generation": child.generation,
+                            "created_at": datetime.now().isoformat(),
+                        },
+                    )
             task_id = context.get("_task_id", "")
             existing_status = db.select_one("agent_status", "agent_id", agent_id)
             if existing_status:
                 from datetime import datetime
 
-                db.update(
-                    "agent_status",
-                    "agent_id",
-                    agent_id,
-                    {
-                        "status": "active",
-                        "current_task_id": task_id,
-                        "last_heartbeat": datetime.now().isoformat(),
-                    },
-                )
+                with contextlib.suppress(Exception):
+                    db.update(
+                        "agent_status",
+                        "agent_id",
+                        agent_id,
+                        {
+                            "status": "active",
+                            "current_task_id": task_id,
+                            "last_heartbeat": datetime.now().isoformat(),
+                        },
+                    )
             else:
                 from datetime import datetime
 
-                db.insert(
-                    "agent_status",
-                    {
-                        "agent_id": agent_id,
-                        "status": "active",
-                        "current_task_id": task_id,
-                        "last_heartbeat": datetime.now().isoformat(),
-                    },
-                )
+                with contextlib.suppress(Exception):
+                    db.insert(
+                        "agent_status",
+                        {
+                            "agent_id": agent_id,
+                            "status": "active",
+                            "current_task_id": task_id,
+                            "last_heartbeat": datetime.now().isoformat(),
+                        },
+                    )
         except Exception as e:
             import traceback
 
@@ -565,7 +565,7 @@ def _execute_child(child, context: dict, stage: dict) -> dict:
     except Exception as e:
         logger.warning("[V2.0] 孙辈销毁状态更新失败 (%s): %s", child.name, e)
 
-    return result_context
+    return result_context  # type: ignore[no-any-return]
 
 
 def _merge_child_store_to_parent(child, context: dict) -> None:

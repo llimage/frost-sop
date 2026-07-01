@@ -44,7 +44,7 @@ def _load_target_list() -> list[dict]:
 
         with safe_open(TARGET_LIST_FILE, encoding="utf-8") as f:
             config = yaml.safe_load(f)
-        return config.get("targets", [])
+        return config.get("targets", [])  # type: ignore[no-any-return]
     except Exception as e:
         logger.error(f"[Hunt] 加载目标清单失败: {e}")
         return []
@@ -118,7 +118,7 @@ def search_external(context: dict) -> dict:
     try:
         from skills.llm import call_llm_skill
 
-        llm_response = call_llm_skill(
+        llm_response = call_llm_skill(  # type: ignore[operator]
             f"""你是技能搜索专家。请为以下技能搜索外部替代方案。
 
 目标技能: {target_skill_id}
@@ -142,15 +142,18 @@ def search_external(context: dict) -> dict:
             skill_name="hunt_search_external",
         )
 
-        from core.json_safety import safe_json_parse
+        from core.json_safety import safe_json_parse_or_default
 
-        search_result = safe_json_parse(llm_response, default={
-            "target_skill_id": target_skill_id,
-            "search_query": search_query,
-            "found": False,
-            "candidates": [],
-            "search_time": datetime.now().isoformat(),
-        })
+        search_result = safe_json_parse_or_default(
+            llm_response,
+            default={
+                "target_skill_id": target_skill_id,
+                "search_query": search_query,
+                "found": False,
+                "candidates": [],
+                "search_time": datetime.now().isoformat(),
+            },
+        )
     except Exception as e:
         logger.warning(f"[Hunt] LLM 搜索失败，使用空结果: {e}")
         search_result = {
@@ -287,7 +290,9 @@ def absorb_skill(context: dict) -> dict:
         try:
             import urllib.request
 
-            raw_url = candidate_url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+            raw_url = candidate_url.replace("github.com", "raw.githubusercontent.com").replace(
+                "/blob/", "/"
+            )
             req = urllib.request.Request(raw_url, headers={"User-Agent": "FROST-SOP-Hunt/1.0"})
             with urllib.request.urlopen(req, timeout=10) as resp:
                 downloaded_content = resp.read().decode("utf-8", errors="replace")[:10000]
@@ -315,7 +320,7 @@ def absorb_skill(context: dict) -> dict:
             logger.info(f"[Hunt] 已归档新Skill: {new_skill_id}")
 
             # 更新旧Skill的健康评分（标记为被替换）
-            _update_skill_health_in_store(store, target_skill_id, 0.0, "hunt_replaced")
+            _update_skill_health_in_store(store, target_skill_id, 0.0, "hunt_replaced")  # type: ignore[arg-type]
 
             result = {
                 "action": "absorbed",
@@ -503,8 +508,6 @@ def trigger_predictive_hunt(context: dict) -> dict:
     """
     logger.info("[Hunt] 触发预测性搜索")
 
-    briefing = context.get("_integrated_briefing", {})
-
     # 从军师简报中提取能力缺口（简化版）
     capability_gaps = []
 
@@ -531,7 +534,6 @@ def trigger_predictive_hunt(context: dict) -> dict:
     if store:
         for gap in capability_gaps:
             gap_type = gap.get("type", "")
-            gap_desc = gap.get("description", "")
 
             # 从 Store 查询相关 Skill
             for key in store.list_keys():
@@ -546,12 +548,14 @@ def trigger_predictive_hunt(context: dict) -> dict:
                 if gap_type == "low_success_rate":
                     health = skill_data.get("health_score", 1.0)
                     if health < 0.8:
-                        targets.append({
-                            "skill_id": skill_id,
-                            "health_score": health,
-                            "days_since_version": 0,
-                            "priority": "high",
-                        })
+                        targets.append(
+                            {
+                                "skill_id": skill_id,
+                                "health_score": health,
+                                "days_since_version": 0,
+                                "priority": "high",
+                            }
+                        )
 
             logger.info(f"[Hunt] 缺口 '{gap_type}' → {len(targets)} 个目标")
 

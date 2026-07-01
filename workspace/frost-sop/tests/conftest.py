@@ -12,11 +12,12 @@ FROST-SOP 统一测试 Fixtures
 - sample_task_config: 示例任务配置
 """
 
-import os
-import sys
-import shutil
-import tempfile
 import asyncio
+import contextlib
+import os
+import shutil
+import sys
+import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -38,6 +39,7 @@ os.environ.setdefault("FROST_TESTING", "1")
 # DB Singleton Reset Helper
 # ──────────────────────────────────────────────────────────────
 
+
 def reset_db_singleton(db_path: str | None = None):
     """
     Reset all DBManager singleton state for test isolation.
@@ -51,6 +53,11 @@ def reset_db_singleton(db_path: str | None = None):
     """
     import core.db as db_mod
 
+    # Close existing connection if any
+    if db_mod._db_manager is not None:
+        with contextlib.suppress(Exception):
+            db_mod._db_manager.close()
+
     db_mod.DBManager._instance = None
     db_mod.DBManager._connection = None
     db_mod._db_manager = None
@@ -58,9 +65,50 @@ def reset_db_singleton(db_path: str | None = None):
         db_mod._DB_PATH = db_path
 
 
+def reset_all_singletons():
+    """
+    Reset ALL module-level singletons for complete test isolation.
+
+    Call this as an autouse fixture to guarantee no state leaks between tests.
+    Resets: DBManager, ArmoryRegistry, EventBus, AsyncEventBus, DecisionFlow.
+    """
+    # 1. DBManager singleton
+    import core.db as db_mod
+
+    if db_mod._db_manager is not None:
+        with contextlib.suppress(Exception):
+            db_mod._db_manager.close()
+    db_mod.DBManager._instance = None
+    db_mod.DBManager._connection = None
+    db_mod._db_manager = None
+
+    # 2. ArmoryRegistry singleton
+    import core.armory as armory_mod
+
+    armory_mod._armory_registry = None
+
+    # 3. EventBus singleton
+    try:
+        from core.event_bus import AsyncEventBus, EventBus
+
+        EventBus._instance = None
+        AsyncEventBus._instance = None
+    except ImportError:
+        pass
+
+    # 4. DecisionFlow singleton
+    try:
+        import core.panel_decision as pd_mod
+
+        pd_mod._decision_flow_instance = None
+    except (ImportError, AttributeError):
+        pass
+
+
 # ──────────────────────────────────────────────────────────────
 # pytest Configuration
 # ──────────────────────────────────────────────────────────────
+
 
 def pytest_configure(config):
     """Register custom markers and configure test environment."""
@@ -104,18 +152,41 @@ def pytest_collection_modifyitems(config, items):
 
 
 # ──────────────────────────────────────────────────────────────
+# Autouse: Singleton Isolation
+# ──────────────────────────────────────────────────────────────
+
+
+@pytest.fixture(autouse=True)
+def _isolate_singletons():
+    """Reset all module-level singletons before AND after each test.
+
+    This is the critical test isolation mechanism:
+    - DBManager singleton locks to a DB path; if a temp dir is cleaned up,
+      the next test gets a stale connection → sqlite3.OperationalError.
+    - ArmoryRegistry singleton holds a Store reference that may be stale.
+    - EventBus singleton accumulates subscribers across tests.
+
+    By resetting before each test, every test starts with a clean slate.
+    By resetting after each test, we clean up any connections opened during
+    the test, preventing file-locking on Windows.
+    """
+    reset_all_singletons()
+    yield
+    reset_all_singletons()
+
+
+# ──────────────────────────────────────────────────────────────
 # Database Fixtures
 # ──────────────────────────────────────────────────────────────
+
 
 @pytest.fixture(scope="function")
 def temp_dir():
     """Create a temporary directory for file-based tests. Auto-cleanup."""
     d = tempfile.mkdtemp(prefix="frost_test_")
     yield Path(d)
-    try:
-        shutil.rmtree(d)
-    except (PermissionError, OSError):
-        pass  # Windows file locking
+    with contextlib.suppress(PermissionError, OSError):
+        shutil.rmtree(d)  # Windows file locking
 
 
 @pytest.fixture(scope="function")
@@ -143,10 +214,8 @@ def clean_db(temp_db):
     yield db
 
     # Cleanup
-    try:
+    with contextlib.suppress(Exception):
         db.close()
-    except Exception:
-        pass
 
     if old_path:
         os.environ["FROST_DB_PATH"] = old_path
@@ -158,10 +227,12 @@ def clean_db(temp_db):
 # Store Fixtures
 # ──────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="function")
 def memory_store():
     """Create an in-memory Store for fast unit tests."""
     from core.store import Store
+
     return Store(backend="memory")
 
 
@@ -216,6 +287,7 @@ def _generate_mock_content(prompt: str) -> str:
         if keyword in prompt:
             if isinstance(content, dict):
                 import json
+
                 return json.dumps(content, ensure_ascii=False)
             return content
     return '{"status": "ok", "message": "mock response"}'
@@ -342,10 +414,12 @@ def sample_task_config():
 # Event Bus Fixtures
 # ──────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="function")
 def clean_event_bus():
     """Create a fresh EventBus instance (v2.0)."""
     from core.event_bus import EventBus
+
     EventBus.reset()
     return EventBus()
 
@@ -354,6 +428,7 @@ def clean_event_bus():
 def clean_async_event_bus():
     """Create a fresh AsyncEventBus instance (v3.0)."""
     from core.event_bus import AsyncEventBus
+
     AsyncEventBus.reset()
     return AsyncEventBus()
 
@@ -361,6 +436,7 @@ def clean_async_event_bus():
 # ──────────────────────────────────────────────────────────────
 # Async Helpers
 # ──────────────────────────────────────────────────────────────
+
 
 @pytest.fixture(scope="session")
 def event_loop():

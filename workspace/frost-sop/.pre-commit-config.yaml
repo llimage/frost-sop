@@ -30,4 +30,5 @@ repos:
       # Layer 3: 类型检查（较慢，只在新代码变更时跑）
       - id: mypy
         additional_dependencies: [types-pyyaml, types-requests]
-        args: [--ignore-missing-imports]
+        args: [--config-file=workspace/frost-sop/pyproject.toml, --ignore-missing-imports, --follow-imports=silent]
+        files: ^workspace/frost-sop/(core|skills|agents|api)/

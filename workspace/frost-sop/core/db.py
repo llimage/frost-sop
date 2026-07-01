@@ -6,8 +6,10 @@ core/db.py - 数据库管理模块
 提供 DBManager 单例类，负责连接管理和表初始化。
 """
 
+import contextlib
 import re
 import sqlite3
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -93,6 +95,9 @@ class DBManager:
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA journal_mode=WAL")
         self._connection.execute("PRAGMA foreign_keys=ON")
+        self._connection.execute("PRAGMA busy_timeout=5000")  # 并发写等待5秒而非立即失败
+
+        self._write_lock = threading.Lock()  # 串行化所有写操作，防止 "database is locked"
 
         self.init_tables()
 
@@ -102,6 +107,9 @@ class DBManager:
             self._connection = sqlite3.connect(self.db_path)
             self._connection.row_factory = sqlite3.Row
             self._connection.execute("PRAGMA journal_mode=WAL")
+            self._connection.execute("PRAGMA busy_timeout=5000")
+            if not hasattr(self, "_write_lock"):
+                self._write_lock = threading.Lock()
         return self._connection  # type: ignore[return-value]
 
     def close(self):
@@ -446,24 +454,17 @@ class DBManager:
             needed_columns: {列名: 列定义} 字典
         """
         existing = {
-            col["name"]
-            for col in cursor.execute(f"PRAGMA table_info({table_name})").fetchall()
+            col["name"] for col in cursor.execute(f"PRAGMA table_info({table_name})").fetchall()
         }
         for col_name, col_def in needed_columns.items():
             if col_name not in existing:
                 # S-003 修复：列名/列定义安全验证
                 if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", col_name):
                     continue
-                if not re.match(
-                    r"^[A-Z]+\s*(DEFAULT\s+[^;\-]*|)$", col_def, re.IGNORECASE
-                ):
+                if not re.match(r"^[A-Z]+\s*(DEFAULT\s+[^;\-]*|)$", col_def, re.IGNORECASE):
                     continue
-                try:
-                    cursor.execute(
-                        f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def}"
-                    )
-                except Exception:
-                    pass  # 列可能已存在
+                with contextlib.suppress(Exception):
+                    cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def}")
 
     def _migrate_energy_log_table(self, cursor):
         """F9: 为 energy_log 表添加创始人需要的列"""
@@ -577,10 +578,8 @@ class DBManager:
         ]
 
         for idx_name, table, column in indexes:
-            try:
+            with contextlib.suppress(Exception):
                 cursor.execute(f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table}({column})")
-            except Exception:
-                pass  # 索引可能已存在或不兼容
 
     # ============================================================
     # 通用 CRUD 操作
@@ -613,8 +612,9 @@ class DBManager:
         values = list(data.values())
 
         sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
-        cursor.execute(sql, values)
-        conn.commit()
+        with self._write_lock:
+            cursor.execute(sql, values)
+            conn.commit()
 
         return cursor.lastrowid
 
@@ -646,8 +646,9 @@ class DBManager:
         values = list(data.values()) + [id_value]
 
         sql = f"UPDATE {table} SET {set_clause} WHERE {id_column} = ?"
-        cursor.execute(sql, values)
-        conn.commit()
+        with self._write_lock:
+            cursor.execute(sql, values)
+            conn.commit()
 
         return cursor.rowcount
 
@@ -674,8 +675,9 @@ class DBManager:
         cursor = conn.cursor()
 
         sql = f"DELETE FROM {table} WHERE {id_column} = ?"
-        cursor.execute(sql, [id_value])
-        conn.commit()
+        with self._write_lock:
+            cursor.execute(sql, [id_value])
+            conn.commit()
 
         return cursor.rowcount
 
