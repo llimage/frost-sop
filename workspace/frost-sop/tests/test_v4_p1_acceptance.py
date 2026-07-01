@@ -146,29 +146,11 @@ class TestAC7DynamicDashboard:
 
     def test_render_dynamic_panels_function_exists(self):
         """测试 render_dynamic_panels 函数在 app.py 中定义"""
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "app", "app.py")
-        # 不实际加载（会触发 Streamlit 初始化），只检查文件包含函数定义
-        with open("app.py", "r", encoding="utf-8") as f:
-            content = f.read()
-        assert "def render_dynamic_panels" in content
-        assert "def parse_suggested_panels" in content
-        assert "def clear_dynamic_panels" in content
-        assert "def update_dynamic_panels_from_briefing" in content
+        pytest.skip("app.py (F11 Streamlit) has been removed in P0 security fix")
 
     def test_dynamic_panel_session_state(self):
         """测试动态面板 session_state 初始化"""
-        import streamlit as st
-        if not hasattr(st, "session_state"):
-            pytest.skip("Streamlit session_state 不可用")
-        # 检查 app.py 中是否初始化了 panel_templates
-        with open("app.py", "r", encoding="utf-8") as f:
-            content = f.read()
-        # 验证初始化代码存在
-        assert "panel_templates" in content
-        assert "dynamic_panels" in content
-        assert "suggested_panels" in content
+        pytest.skip("app.py (F11 Streamlit) has been removed in P0 security fix")
 
 
 class TestAC8InheritanceSystem:

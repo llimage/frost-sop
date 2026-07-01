@@ -7,9 +7,25 @@ core/db.py - 数据库管理模块
 """
 
 import sqlite3
+import re
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from pathlib import Path
+
+# S-001/S-002 修复：表名白名单（与 init_tables 的 CREATE TABLE 一致）
+ALLOWED_TABLES = {
+    "config", "projects", "tasks", "task_stages", "agents",
+    "agent_status", "sop_templates", "sop_executions", "audit_log",
+    "cost_log", "schedule", "energy_log", "knowledge", "knowledge_tags",
+    "skills", "skill_versions", "tool_calls", "decision_points",
+    "kv_store", "event_log",
+}
+
+# S-001 修复：WHERE 子句危险关键字（用于非参数化部分的检测）
+_WHERE_DANGEROUS_KEYWORDS = [
+    ";", "--", "/*", "*/", "UNION", "DROP", "DELETE", "INSERT",
+    "UPDATE", "ALTER", "CREATE", "EXEC", "EXECUTE", "TRUNCATE",
+]
 
 
 class DBManager:
@@ -406,6 +422,11 @@ class DBManager:
             for col in cursor.execute("PRAGMA table_info(energy_log)").fetchall()}
         for col_name, col_def in needed.items():
             if col_name not in existing:
+                # S-003 修复：列名/列定义安全验证
+                if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col_name):
+                    continue
+                if not re.match(r'^[A-Z]+\s*(DEFAULT\s+[^;\-]*|)$', col_def, re.IGNORECASE):
+                    continue
                 try:
                     cursor.execute(f"ALTER TABLE energy_log ADD COLUMN {col_name} {col_def}")
                 except Exception:
@@ -425,6 +446,11 @@ class DBManager:
         existing = {col["name"] for col in cursor.execute("PRAGMA table_info(schedule)").fetchall()}
         for col_name, col_def in needed.items():
             if col_name not in existing:
+                # S-003 修复：列名/列定义安全验证
+                if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col_name):
+                    continue
+                if not re.match(r'^[A-Z]+\s*(DEFAULT\s+[^;\-]*|)$', col_def, re.IGNORECASE):
+                    continue
                 try:
                     cursor.execute(f"ALTER TABLE schedule ADD COLUMN {col_name} {col_def}")
                 except Exception:
@@ -441,6 +467,11 @@ class DBManager:
         existing = {col["name"] for col in cursor.execute("PRAGMA table_info(skills)").fetchall()}
         for col_name, col_def in needed.items():
             if col_name not in existing:
+                # S-003 修复：列名/列定义安全验证
+                if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col_name):
+                    continue
+                if not re.match(r'^[A-Z]+\s*(DEFAULT\s+[^;\-]*|)$', col_def, re.IGNORECASE):
+                    continue
                 try:
                     cursor.execute(f"ALTER TABLE skills ADD COLUMN {col_name} {col_def}")
                 except Exception:
@@ -472,6 +503,11 @@ class DBManager:
             "PRAGMA table_info(decision_points)").fetchall()}
         for col_name, col_def in needed.items():
             if col_name not in existing:
+                # S-003 修复：列名/列定义安全验证
+                if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col_name):
+                    continue
+                if not re.match(r'^[A-Z]+\s*(DEFAULT\s+[^;\-]*|)$', col_def, re.IGNORECASE):
+                    continue
                 try:
                     cursor.execute(f"ALTER TABLE decision_points ADD COLUMN {col_name} {col_def}")
                 except Exception:
@@ -492,6 +528,14 @@ class DBManager:
         Returns:
             插入的记录ID（如果是自增ID）
         """
+        # S-002 修复：表名白名单验证
+        if table not in ALLOWED_TABLES:
+            raise ValueError(f"Security: Invalid table name '{table}'")
+        # S-002 修复：列名安全验证（只允许字母、数字、下划线）
+        for col in data.keys():
+            if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col):
+                raise ValueError(f"Security: Invalid column name '{col}'")
+
         conn = self.get_connection()
         cursor = conn.cursor()
 
@@ -518,6 +562,14 @@ class DBManager:
         Returns:
             受影响的行数
         """
+        # S-002 修复：表名白名单验证
+        if table not in ALLOWED_TABLES:
+            raise ValueError(f"Security: Invalid table name '{table}'")
+        # S-002 修复：列名安全验证
+        for col in list(data.keys()) + [id_column]:
+            if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col):
+                raise ValueError(f"Security: Invalid column name '{col}'")
+
         conn = self.get_connection()
         cursor = conn.cursor()
 
@@ -542,6 +594,13 @@ class DBManager:
         Returns:
             受影响的行数
         """
+        # S-002 修复：表名白名单验证
+        if table not in ALLOWED_TABLES:
+            raise ValueError(f"Security: Invalid table name '{table}'")
+        # S-002 修复：列名安全验证
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', id_column):
+            raise ValueError(f"Security: Invalid column name '{id_column}'")
+
         conn = self.get_connection()
         cursor = conn.cursor()
 
@@ -563,6 +622,13 @@ class DBManager:
         Returns:
             记录字典，如果不存在则返回None
         """
+        # S-002 修复：表名白名单验证
+        if table not in ALLOWED_TABLES:
+            raise ValueError(f"Security: Invalid table name '{table}'")
+        # S-002 修复：列名安全验证
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', id_column):
+            raise ValueError(f"Security: Invalid column name '{id_column}'")
+
         conn = self.get_connection()
         cursor = conn.cursor()
 
@@ -580,12 +646,22 @@ class DBManager:
 
         Args:
             table: 表名
-            where: WHERE 子句（可选）
+            where: WHERE 子句（可选，只允许参数化查询）
             params: WHERE 子句的参数（可选）
 
         Returns:
             记录字典列表
         """
+        # S-001 修复：表名白名单验证
+        if table not in ALLOWED_TABLES:
+            raise ValueError(f"Security: Invalid table name '{table}'")
+        # S-001 修复：WHERE 子句安全验证
+        if where:
+            where_upper = where.upper()
+            for keyword in _WHERE_DANGEROUS_KEYWORDS:
+                if keyword in where_upper:
+                    raise ValueError(f"Security: Dangerous keyword '{keyword}' in WHERE clause")
+
         conn = self.get_connection()
         cursor = conn.cursor()
 
@@ -604,6 +680,8 @@ class DBManager:
     def execute_sql(self, sql: str, params: List[Any] = None) -> Any:
         """
         执行自定义SQL
+
+        警告：此方法接受任意SQL，仅供内部使用，不得将外部输入直接拼入 sql 参数。
 
         Args:
             sql: SQL语句

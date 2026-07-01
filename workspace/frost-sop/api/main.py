@@ -40,13 +40,22 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS — allow Next.js dev server
+# CORS — S-004 修复：限制为特定域名
+cors_origins = os.environ.get(
+    "FROST_CORS_ORIGINS",
+    "http://localhost:3000,http://localhost:8501,http://localhost:8080",
+).split(",")
+if os.environ.get("FROST_ENV") == "production":
+    cors_origins = [o for o in cors_origins if o != "*"]
+    if not cors_origins:
+        cors_origins = ["http://localhost:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
 )
 
 
@@ -131,9 +140,9 @@ def create_and_run_task(req: TaskCreateRequest):
         "updated_at": datetime.now().isoformat(),
     })
 
-    # 加载 SOP 模板并记录
+    # 加载 SOP 模板并记录（使用请求中的 sop_id）
     from core.sop import SOP
-    sop = SOP.load_from_yaml("sops/templates/DEV-001.yaml")
+    sop = SOP.load_from_yaml(f"sops/templates/{req.sop_id}.yaml")
 
     sop_template_id = f"sop_template:{sop.sop_id}"
     existing_sop = db.select_one("sop_templates", "id", sop_template_id)

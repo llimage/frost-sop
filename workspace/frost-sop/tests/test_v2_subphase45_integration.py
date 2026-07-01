@@ -48,12 +48,7 @@ def test_main_can_init_without_eventbus():
 
 def test_app_imports_elder_subscription():
     """验证 app.py 正确导入了 subscribe_elder_to_events"""
-    try:
-        pass
-    except ImportError:
-        pytest.skip("streamlit not available in test environment")
-    import app
-    assert hasattr(app, 'subscribe_elder_to_events')
+    pytest.skip("app.py (F11 Streamlit) has been removed in P0 security fix")
 
 
 # ---------------------------------------------------------------------------
