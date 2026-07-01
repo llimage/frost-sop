@@ -5,6 +5,7 @@ PHILOSOPHY: 孙辈Agent调用真实工具产出交付物。
 """
 
 import os
+
 from core.skill import Skill
 
 
@@ -88,13 +89,15 @@ def call_llm_for_output(context: dict) -> dict:
 
     prompt = f"{task}\n\n{type_prompts.get(output_type, type_prompts['document'])}"
 
-    llm_context = call_llm_skill.execute({
-        "_prompt": prompt,
-        "_system_prompt": "你是一个专业的AI助手。请根据要求生成内容。",
-        "_temperature": 0.7,
-        "_task_id": context.get("_task_id"),       # F14: propagate for cost_log
-        "_agent_id": context.get("_agent_id"),     # F14: propagate for cost_log
-    })
+    llm_context = call_llm_skill.execute(
+        {
+            "_prompt": prompt,
+            "_system_prompt": "你是一个专业的AI助手。请根据要求生成内容。",
+            "_temperature": 0.7,
+            "_task_id": context.get("_task_id"),  # F14: propagate for cost_log
+            "_agent_id": context.get("_agent_id"),  # F14: propagate for cost_log
+        }
+    )
 
     content = llm_context.get("_llm_response", "")
     context["_generated_content"] = content

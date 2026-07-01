@@ -13,42 +13,45 @@ PHILOSOPHY: 武器有"健康史"——不是一次评分定终身。
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import List, Optional, Dict, Tuple
-from enum import Enum
-from collections import deque
-import math
 
+import math
+from collections import deque
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
 
 # ────────────────────────────────────────────────────────────────────────────
 # 健康趋势
 # ────────────────────────────────────────────────────────────────────────────
 
+
 class HealthTrend(Enum):
     """健康趋势方向"""
-    IMPROVING = "improving"    # 上升
-    STABLE = "stable"           # 稳定
-    DECLINING = "declining"     # 下降
-    VOLATILE = "volatile"       # 波动
-    NEW = "new"                 # 新武器，数据不足
+
+    IMPROVING = "improving"  # 上升
+    STABLE = "stable"  # 稳定
+    DECLINING = "declining"  # 下降
+    VOLATILE = "volatile"  # 波动
+    NEW = "new"  # 新武器，数据不足
 
 
 # ────────────────────────────────────────────────────────────────────────────
 # 健康历史记录
 # ────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class HealthSnapshot:
     """健康评分快照"""
-    timestamp: str                  # ISO 格式时间戳
-    health_score: float             # 健康评分
-    usage_count: int                # 使用次数
-    success_count: int              # 成功次数
-    failure_count: int              # 失败次数
-    weapon_state: str               # 当时武器状态
 
-    def to_dict(self) -> Dict:
+    timestamp: str  # ISO 格式时间戳
+    health_score: float  # 健康评分
+    usage_count: int  # 使用次数
+    success_count: int  # 成功次数
+    failure_count: int  # 失败次数
+    weapon_state: str  # 当时武器状态
+
+    def to_dict(self) -> dict:
         return {
             "timestamp": self.timestamp,
             "health_score": self.health_score,
@@ -72,9 +75,14 @@ class HealthHistory:
     def __init__(self):
         self._snapshots: deque = deque(maxlen=self.MAX_SNAPSHOTS)
 
-    def record(self, health_score: float, usage_count: int = 0,
-               success_count: int = 0, failure_count: int = 0,
-               weapon_state: str = "active") -> None:
+    def record(
+        self,
+        health_score: float,
+        usage_count: int = 0,
+        success_count: int = 0,
+        failure_count: int = 0,
+        weapon_state: str = "active",
+    ) -> None:
         """记录一个健康快照"""
         snapshot = HealthSnapshot(
             timestamp=datetime.now().isoformat(),
@@ -86,11 +94,11 @@ class HealthHistory:
         )
         self._snapshots.append(snapshot)
 
-    def get_all(self) -> List[HealthSnapshot]:
+    def get_all(self) -> list[HealthSnapshot]:
         """获取所有快照"""
         return list(self._snapshots)
 
-    def get_recent(self, n: int = 10) -> List[HealthSnapshot]:
+    def get_recent(self, n: int = 10) -> list[HealthSnapshot]:
         """获取最近N个快照"""
         return list(self._snapshots)[-n:]
 
@@ -137,7 +145,7 @@ class HealthHistory:
             return 0.0
         return sum(s.health_score for s in recent) / len(recent)
 
-    def get_score_range(self, window: int = 10) -> Tuple[float, float]:
+    def get_score_range(self, window: int = 10) -> tuple[float, float]:
         """获取最近N个快照的评分范围 (min, max)"""
         recent = self.get_recent(window)
         if not recent:
@@ -149,7 +157,7 @@ class HealthHistory:
         """快照数量"""
         return len(self._snapshots)
 
-    def to_dict(self) -> List[Dict]:
+    def to_dict(self) -> list[dict]:
         """序列化"""
         return [s.to_dict() for s in self._snapshots]
 
@@ -158,17 +166,19 @@ class HealthHistory:
 # 自然选择引擎
 # ────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class SelectionDecision:
     """自然选择决策"""
+
     weapon_id: str
-    action: str               # "promote" | "deprecate" | "retire" | "keep"
+    action: str  # "promote" | "deprecate" | "retire" | "keep"
     reason: str
     current_score: float
     trend: str
     recommended_state: str = ""
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "weapon_id": self.weapon_id,
             "action": self.action,
@@ -200,7 +210,7 @@ class NaturalSelectionEngine:
     def __init__(self, registry):
         self.registry = registry
 
-    def evaluate(self, weapon_id: str, history: Optional[HealthHistory] = None) -> SelectionDecision:
+    def evaluate(self, weapon_id: str, history: HealthHistory | None = None) -> SelectionDecision:
         """
         评估单个武器，返回自然选择决策。
 
@@ -214,8 +224,11 @@ class NaturalSelectionEngine:
         weapon = self.registry.get(weapon_id)
         if not weapon:
             return SelectionDecision(
-                weapon_id=weapon_id, action="keep", reason="武器不存在",
-                current_score=0, trend="unknown"
+                weapon_id=weapon_id,
+                action="keep",
+                reason="武器不存在",
+                current_score=0,
+                trend="unknown",
             )
 
         current_score = weapon.health_score
@@ -228,43 +241,57 @@ class NaturalSelectionEngine:
         if weapon.is_preset:
             if current_score < self.RETIRE_THRESHOLD:
                 return SelectionDecision(
-                    weapon_id=weapon_id, action="keep", reason="预置武器不自动淘汰",
-                    current_score=current_score, trend=trend.value,
-                    recommended_state=weapon.state.value
+                    weapon_id=weapon_id,
+                    action="keep",
+                    reason="预置武器不自动淘汰",
+                    current_score=current_score,
+                    trend=trend.value,
+                    recommended_state=weapon.state.value,
                 )
             return SelectionDecision(
-                weapon_id=weapon_id, action="keep", reason="预置武器",
-                current_score=current_score, trend=trend.value,
-                recommended_state=weapon.state.value
+                weapon_id=weapon_id,
+                action="keep",
+                reason="预置武器",
+                current_score=current_score,
+                trend=trend.value,
+                recommended_state=weapon.state.value,
             )
 
         # 规则1: 退役
         if current_score < self.RETIRE_THRESHOLD:
             return SelectionDecision(
-                weapon_id=weapon_id, action="retire",
+                weapon_id=weapon_id,
+                action="retire",
                 reason=f"健康评分过低 ({current_score:.1f} < {self.RETIRE_THRESHOLD})",
-                current_score=current_score, trend=trend.value,
-                recommended_state="retired"
+                current_score=current_score,
+                trend=trend.value,
+                recommended_state="retired",
             )
 
         # 规则2: 废弃（低分+下降趋势）
         if current_score < self.DEPRECATE_THRESHOLD and trend == HealthTrend.DECLINING:
             return SelectionDecision(
-                weapon_id=weapon_id, action="deprecate",
+                weapon_id=weapon_id,
+                action="deprecate",
                 reason=f"低评分且趋势下降 ({current_score:.1f}, {trend.value})",
-                current_score=current_score, trend=trend.value,
-                recommended_state="deprecated"
+                current_score=current_score,
+                trend=trend.value,
+                recommended_state="deprecated",
             )
 
         # 规则3: 晋升（高分+上升趋势+已归档）
-        if (current_score > self.PROMOTE_THRESHOLD and
-            trend == HealthTrend.IMPROVING and
-            weapon.state.value == "archived"):
+        if (
+            current_score > self.PROMOTE_THRESHOLD
+            and trend == HealthTrend.IMPROVING
+            and weapon.state.value == "archived"
+        ):
             return SelectionDecision(
-                weapon_id=weapon_id, action="promote",
+                weapon_id=weapon_id,
+                action="promote",
                 reason=f"高评分且趋势上升 ({current_score:.1f}, {trend.value})",
-                current_score=current_score, trend=trend.value,
-                recommended_state="active"
+                current_score=current_score,
+                trend=trend.value,
+                recommended_state="active",
             )
 
         # 规则4: 不活跃废弃
@@ -274,22 +301,29 @@ class NaturalSelectionEngine:
                 days_inactive = (datetime.now() - last_used_date).days
                 if days_inactive >= self.INACTIVITY_DAYS:
                     return SelectionDecision(
-                        weapon_id=weapon_id, action="deprecate",
+                        weapon_id=weapon_id,
+                        action="deprecate",
                         reason=f"连续{days_inactive}天未使用",
-                        current_score=current_score, trend=trend.value,
-                        recommended_state="deprecated"
+                        current_score=current_score,
+                        trend=trend.value,
+                        recommended_state="deprecated",
                     )
             except (ValueError, TypeError):
                 pass
 
         # 规则5: 保持
         return SelectionDecision(
-            weapon_id=weapon_id, action="keep", reason="当前状态良好",
-            current_score=current_score, trend=trend.value,
-            recommended_state=weapon.state.value
+            weapon_id=weapon_id,
+            action="keep",
+            reason="当前状态良好",
+            current_score=current_score,
+            trend=trend.value,
+            recommended_state=weapon.state.value,
         )
 
-    def evaluate_all(self, histories: Optional[Dict[str, HealthHistory]] = None) -> List[SelectionDecision]:
+    def evaluate_all(
+        self, histories: dict[str, HealthHistory] | None = None
+    ) -> list[SelectionDecision]:
         """
         评估所有武器，批量返回决策。
 
@@ -307,17 +341,23 @@ class NaturalSelectionEngine:
             decisions.append(decision)
         return decisions
 
-    def get_retirement_candidates(self, histories: Optional[Dict[str, HealthHistory]] = None) -> List[str]:
+    def get_retirement_candidates(
+        self, histories: dict[str, HealthHistory] | None = None
+    ) -> list[str]:
         """获取需要退役的武器ID列表"""
         decisions = self.evaluate_all(histories)
         return [d.weapon_id for d in decisions if d.action == "retire"]
 
-    def get_deprecation_candidates(self, histories: Optional[Dict[str, HealthHistory]] = None) -> List[str]:
+    def get_deprecation_candidates(
+        self, histories: dict[str, HealthHistory] | None = None
+    ) -> list[str]:
         """获取需要废弃的武器ID列表"""
         decisions = self.evaluate_all(histories)
         return [d.weapon_id for d in decisions if d.action == "deprecate"]
 
-    def get_promotion_candidates(self, histories: Optional[Dict[str, HealthHistory]] = None) -> List[str]:
+    def get_promotion_candidates(
+        self, histories: dict[str, HealthHistory] | None = None
+    ) -> list[str]:
         """获取可晋升的武器ID列表"""
         decisions = self.evaluate_all(histories)
         return [d.weapon_id for d in decisions if d.action == "promote"]
@@ -326,6 +366,7 @@ class NaturalSelectionEngine:
 # ────────────────────────────────────────────────────────────────────────────
 # 健康排名器
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class HealthRanker:
     """
@@ -347,8 +388,13 @@ class HealthRanker:
     }
 
     @classmethod
-    def rank(cls, registry, weapon_type=None, top_k: int = 0,
-             histories: Optional[Dict[str, HealthHistory]] = None) -> List[Dict]:
+    def rank(
+        cls,
+        registry,
+        weapon_type=None,
+        top_k: int = 0,
+        histories: dict[str, HealthHistory] | None = None,
+    ) -> list[dict]:
         """
         对武器库中的武器进行健康排名。
 
@@ -383,33 +429,37 @@ class HealthRanker:
         for rank, weapon in enumerate(weapons, 1):
             history = histories.get(weapon.id)
             trend = history.get_trend() if history else HealthTrend.NEW
-            results.append({
-                "rank": rank,
-                "weapon_id": weapon.id,
-                "weapon_name": weapon.name,
-                "health_score": weapon.health_score,
-                "usage_count": weapon.usage_count,
-                "success_rate": weapon.success_rate,
-                "trend": trend.value,
-            })
+            results.append(
+                {
+                    "rank": rank,
+                    "weapon_id": weapon.id,
+                    "weapon_name": weapon.name,
+                    "health_score": weapon.health_score,
+                    "usage_count": weapon.usage_count,
+                    "success_rate": weapon.success_rate,
+                    "trend": trend.value,
+                }
+            )
 
         return results
 
     @classmethod
-    def get_top_performers(cls, registry, n: int = 5,
-                           histories: Optional[Dict[str, HealthHistory]] = None) -> List[Dict]:
+    def get_top_performers(
+        cls, registry, n: int = 5, histories: dict[str, HealthHistory] | None = None
+    ) -> list[dict]:
         """获取表现最好的N个武器"""
         return cls.rank(registry, top_k=n, histories=histories)
 
     @classmethod
-    def get_underperformers(cls, registry, threshold: float = 30.0,
-                            histories: Optional[Dict[str, HealthHistory]] = None) -> List[Dict]:
+    def get_underperformers(
+        cls, registry, threshold: float = 30.0, histories: dict[str, HealthHistory] | None = None
+    ) -> list[dict]:
         """获取表现不佳的武器（健康评分低于阈值）"""
         all_ranked = cls.rank(registry, histories=histories)
         return [r for r in all_ranked if r["health_score"] < threshold]
 
     @classmethod
-    def get_health_distribution(cls, registry) -> Dict[str, int]:
+    def get_health_distribution(cls, registry) -> dict[str, int]:
         """获取健康评分分布"""
         weapons = registry.list_all()
         distribution = {

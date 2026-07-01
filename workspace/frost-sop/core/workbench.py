@@ -10,11 +10,10 @@ PHILOSOPHY: 工作台是新界面+旧数据，不新建表，复用现有 F6-F10
 """
 
 import json
-from datetime import datetime, date
-from typing import Dict, Any, Optional, List
+from datetime import date, datetime
+from typing import Any
 
 from core.db import get_db
-
 
 # ================================================================
 # 项目配置常量（李明远的三个项目）
@@ -62,17 +61,17 @@ PROJECT_BY_MODE = {p["mode"]: p for p in DEFAULT_PROJECTS}
 PROJECT_BY_ID = {p["id"]: p for p in DEFAULT_PROJECTS}
 
 
-def get_project_defaults() -> List[Dict]:
+def get_project_defaults() -> list[dict]:
     """获取默认项目列表"""
     return DEFAULT_PROJECTS
 
 
-def get_project_by_mode(mode: str) -> Optional[Dict]:
+def get_project_by_mode(mode: str) -> dict | None:
     """按模式获取项目"""
     return PROJECT_BY_MODE.get(mode)
 
 
-def get_project_by_id(pid: str) -> Optional[Dict]:
+def get_project_by_id(pid: str) -> dict | None:
     """按ID获取项目"""
     return PROJECT_BY_ID.get(pid)
 
@@ -83,19 +82,22 @@ def ensure_default_projects():
     for proj in DEFAULT_PROJECTS:
         existing = db.select_one("projects", "id", proj["id"])
         if not existing:
-            db.insert("projects", {
-                "id": proj["id"],
-                "name": proj["name"],
-                "description": proj.get("description", ""),
-                "status": "active",
-                "sop_template": proj.get("sop_template", ""),
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat(),
-                "last_active_at": datetime.now().isoformat(),
-                "energy_level": 100.0,
-                "config_ref": "",
-                "metadata": json.dumps(proj, ensure_ascii=False),
-            })
+            db.insert(
+                "projects",
+                {
+                    "id": proj["id"],
+                    "name": proj["name"],
+                    "description": proj.get("description", ""),
+                    "status": "active",
+                    "sop_template": proj.get("sop_template", ""),
+                    "created_at": datetime.now().isoformat(),
+                    "updated_at": datetime.now().isoformat(),
+                    "last_active_at": datetime.now().isoformat(),
+                    "energy_level": 100.0,
+                    "config_ref": "",
+                    "metadata": json.dumps(proj, ensure_ascii=False),
+                },
+            )
 
 
 def ensure_workbench_migrations():
@@ -105,8 +107,9 @@ def ensure_workbench_migrations():
     cursor = conn.cursor()
 
     # 获取 projects 表现有列
-    existing_cols = {col["name"]
-        for col in cursor.execute("PRAGMA table_info(projects)").fetchall()}
+    existing_cols = {
+        col["name"] for col in cursor.execute("PRAGMA table_info(projects)").fetchall()
+    }
 
     needed_cols = {
         "sop_template": "TEXT DEFAULT ''",
@@ -170,7 +173,7 @@ def ensure_workbench_migrations():
 # ================================================================
 # 能量感知任务推荐
 # ================================================================
-def get_recommended_task(mode: str = "dev") -> Dict[str, Any]:
+def get_recommended_task(mode: str = "dev") -> dict[str, Any]:
     """
     根据当前模式和能量状态，推荐最佳任务。
 
@@ -190,15 +193,16 @@ def get_recommended_task(mode: str = "dev") -> Dict[str, Any]:
     energy_level = energy.get("level", 50) if energy else 50
 
     # 获取该项目的任务列表
-    tasks = db.select_all("tasks", where="project_id = ? AND status != 'completed'",
-                          params=[proj["id"]])
+    tasks = db.select_all(
+        "tasks", where="project_id = ? AND status != 'completed'", params=[proj["id"]]
+    )
 
     # 简化的推荐逻辑：按紧急度和能量匹配排序
     recommended = _build_task_recommendation(proj, tasks, energy_level, mode)
     return recommended
 
 
-def _build_task_recommendation(proj: Dict, tasks: List[Dict], energy_level: int, mode: str) -> Dict:
+def _build_task_recommendation(proj: dict, tasks: list[dict], energy_level: int, mode: str) -> dict:
     """构建任务推荐"""
     # 模拟任务数据
     task_scenarios = {
@@ -270,7 +274,7 @@ def _build_task_recommendation(proj: Dict, tasks: List[Dict], energy_level: int,
     }
 
 
-def _fallback_task(mode: str) -> Dict:
+def _fallback_task(mode: str) -> dict:
     """当没有数据时的回退任务"""
     return {
         "project_id": mode,
@@ -292,7 +296,7 @@ def _fallback_task(mode: str) -> Dict:
 # ================================================================
 # 日终回顾
 # ================================================================
-def get_today_review() -> Optional[Dict]:
+def get_today_review() -> dict | None:
     """获取今日的日终回顾记录"""
     db = get_db()
     today_str = date.today().isoformat()
@@ -310,8 +314,11 @@ def generate_daily_narrative() -> str:
     today_str = date.today().isoformat()
 
     # 获取今日任务完成情况
-    tasks_today = len(db.select_all("tasks",
-                                    where="date(updated_at) = date('now', 'localtime') AND status = 'completed'"))
+    tasks_today = len(
+        db.select_all(
+            "tasks", where="date(updated_at) = date('now', 'localtime') AND status = 'completed'"
+        )
+    )
 
     # 获取今日能量数据
     energy_data = db.execute_sql("""
@@ -394,83 +401,99 @@ def save_daily_review(narrative: str = None, confirmed: bool = False) -> int:
 
     existing = db.select_one("daily_reviews", "review_date", today_str)
     if existing:
-        db.update("daily_reviews", "review_date", today_str, {
+        db.update(
+            "daily_reviews",
+            "review_date",
+            today_str,
+            {
+                "narrative": narrative,
+                "energy_high": max_e,
+                "energy_low": min_e,
+                "energy_avg": avg_e,
+                "confirmed": 1 if confirmed else existing.get("confirmed", 0),
+                "confirmed_at": datetime.now().isoformat()
+                if confirmed
+                else existing.get("confirmed_at"),
+            },
+        )
+        return existing["id"]
+
+    return db.insert(
+        "daily_reviews",
+        {
+            "review_date": today_str,
             "narrative": narrative,
             "energy_high": max_e,
             "energy_low": min_e,
             "energy_avg": avg_e,
-            "confirmed": 1 if confirmed else existing.get("confirmed", 0),
-            "confirmed_at": datetime.now().isoformat() if confirmed else existing.get("confirmed_at"),
-        })
-        return existing["id"]
-
-    return db.insert("daily_reviews", {
-        "review_date": today_str,
-        "narrative": narrative,
-        "energy_high": max_e,
-        "energy_low": min_e,
-        "energy_avg": avg_e,
-        "achievements": "[]",
-        "confirmed": 1 if confirmed else 0,
-        "created_at": datetime.now().isoformat(),
-        "confirmed_at": datetime.now().isoformat() if confirmed else None,
-    })
+            "achievements": "[]",
+            "confirmed": 1 if confirmed else 0,
+            "created_at": datetime.now().isoformat(),
+            "confirmed_at": datetime.now().isoformat() if confirmed else None,
+        },
+    )
 
 
 # ================================================================
 # 项目级配置快照（F6.5 升级）
 # ================================================================
-def save_project_snapshot(project_id: str, task_desc: str, sop_state: Dict,
-                          skills: List[str], snapshot_name: str = None) -> int:
+def save_project_snapshot(
+    project_id: str, task_desc: str, sop_state: dict, skills: list[str], snapshot_name: str = None
+) -> int:
     """保存项目级配置快照"""
     db = get_db()
     if snapshot_name is None:
         snapshot_name = f"自动快照 {datetime.now().strftime('%m/%d %H:%M')}"
 
-    return db.insert("config_snapshots", {
-        "project_id": project_id,
-        "snapshot_name": snapshot_name,
-        "task_description": task_desc,
-        "sop_state": json.dumps(sop_state, ensure_ascii=False),
-        "available_skills": json.dumps(skills, ensure_ascii=False),
-        "created_at": datetime.now().isoformat(),
-    })
+    return db.insert(
+        "config_snapshots",
+        {
+            "project_id": project_id,
+            "snapshot_name": snapshot_name,
+            "task_description": task_desc,
+            "sop_state": json.dumps(sop_state, ensure_ascii=False),
+            "available_skills": json.dumps(skills, ensure_ascii=False),
+            "created_at": datetime.now().isoformat(),
+        },
+    )
 
 
-def load_project_snapshots(project_id: str) -> List[Dict]:
+def load_project_snapshots(project_id: str) -> list[dict]:
     """加载项目所有配置快照"""
     db = get_db()
-    return db.select_all("config_snapshots",
-                         where="project_id = ?",
-                         params=[project_id])
+    return db.select_all("config_snapshots", where="project_id = ?", params=[project_id])
 
 
 # ================================================================
 # 业务雷达数据
 # ================================================================
-def get_business_radar_data() -> List[Dict]:
+def get_business_radar_data() -> list[dict]:
     """获取三条业务线的雷达数据"""
     db = get_db()
     radar = []
 
     for proj in DEFAULT_PROJECTS:
         # 活跃任务数
-        active_tasks = len(db.select_all("tasks",
-                                         where="project_id = ? AND status != 'completed'",
-                                         params=[proj["id"]]))
+        active_tasks = len(
+            db.select_all(
+                "tasks", where="project_id = ? AND status != 'completed'", params=[proj["id"]]
+            )
+        )
 
         # 本月收入（模拟数据）
         revenue = proj.get("revenue_monthly", 0)
 
-        radar.append({
-            "id": proj["id"],
-            "name": proj["name"],
-            "icon": proj["icon"],
-            "color": proj["color"],
-            "active_tasks": active_tasks,
-            "revenue_monthly": revenue,
-            "status": "active" if active_tasks > 0 else "idle",
-            "mode": proj["mode"],
-        })
+        radar.append(
+            {
+                "id": proj["id"],
+                "name": proj["name"],
+                "icon": proj["icon"],
+                "color": proj["color"],
+                "active_tasks": active_tasks,
+                "revenue_monthly": revenue,
+                "status": "active" if active_tasks > 0 else "idle",
+                "mode": proj["mode"],
+            }
+        )
 
     return radar

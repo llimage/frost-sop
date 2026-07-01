@@ -9,12 +9,15 @@ F7 更新：增加 SQLite 持久化支持
 """
 
 import json
+import logging
 import os
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any
 
 # F7 新增：导入 DBManager
-from core.db import get_db, DBManager
+from core.db import DBManager, get_db
+
+logger = logging.getLogger("frost.store")
 
 
 class Store:
@@ -25,14 +28,14 @@ class Store:
     如果提供了 db 参数，则在 save/delete 时同时写入 SQLite。
     """
 
-    def __init__(self, db: DBManager = None):
+    def __init__(self, db: DBManager | None = None):
         """
         初始化存储
 
         Args:
             db: DBManager 实例（可选）。如果提供，则启用 SQLite 持久化。
         """
-        self._memory = {}
+        self._memory: dict[str, Any] = {}
         self._db = db
 
     def save(self, key: str, value):
@@ -70,6 +73,9 @@ class Store:
         - 以 "sop:" 开头的键 → sop_templates 表
         - 其他 → kv_store 表（通用键值存储）
         """
+        if self._db is None:
+            return
+        db = self._db  # type narrowing
         try:
             if key.startswith("task:"):
                 # 任务数据 → tasks 表
@@ -80,59 +86,78 @@ class Store:
                         "title": value.get("title", ""),
                         "description": value.get("description", ""),
                         "status": value.get("status", "pending"),
-                        "result_summary": json.dumps(value, ensure_ascii=False) if value else None
+                        "result_summary": json.dumps(value, ensure_ascii=False) if value else None,
                     }
-                    self._db.save_task(task_data)
+                    db.save_task(task_data)
             elif key.startswith("skill_gene:"):
                 # 技能数据 → skills 表
                 if isinstance(value, dict):
                     skill_id = f"skill_{key}"
-                    existing = self._db.select_one("skills", "id", skill_id)
+                    existing = db.select_one("skills", "id", skill_id)
                     if existing:
-                        self._db.update("skills", "id", skill_id, {
-                            "name": value.get("name", key),
-                            "description": value.get("description", ""),
-                            "skill_type": value.get("type", "functional"),
-                            "content": json.dumps(value, ensure_ascii=False)
-                        })
+                        db.update(
+                            "skills",
+                            "id",
+                            skill_id,
+                            {
+                                "name": value.get("name", key),
+                                "description": value.get("description", ""),
+                                "skill_type": value.get("type", "functional"),
+                                "content": json.dumps(value, ensure_ascii=False),
+                            },
+                        )
                     else:
-                        self._db.insert("skills", {
-                            "id": skill_id,
-                            "name": value.get("name", key),
-                            "description": value.get("description", ""),
-                            "skill_type": value.get("type", "functional"),
-                            "content": json.dumps(value, ensure_ascii=False)
-                        })
+                        db.insert(
+                            "skills",
+                            {
+                                "id": skill_id,
+                                "name": value.get("name", key),
+                                "description": value.get("description", ""),
+                                "skill_type": value.get("type", "functional"),
+                                "content": json.dumps(value, ensure_ascii=False),
+                            },
+                        )
             else:
                 # 其他数据 → kv_store 表
-                existing = self._db.select_one("kv_store", "key", key)
+                existing = db.select_one("kv_store", "key", key)
                 if existing:
-                    self._db.update("kv_store", "key", key, {
-                        "value": json.dumps(value, ensure_ascii=False),
-                        "value_type": type(value).__name__
-                    })
+                    db.update(
+                        "kv_store",
+                        "key",
+                        key,
+                        {
+                            "value": json.dumps(value, ensure_ascii=False),
+                            "value_type": type(value).__name__,
+                        },
+                    )
                 else:
-                    self._db.insert("kv_store", {
-                        "key": key,
-                        "value": json.dumps(value, ensure_ascii=False),
-                        "value_type": type(value).__name__
-                    })
+                    self._db.insert(
+                        "kv_store",
+                        {
+                            "key": key,
+                            "value": json.dumps(value, ensure_ascii=False),
+                            "value_type": type(value).__name__,
+                        },
+                    )
         except Exception as e:
-            print(f"⚠️ SQLite 持久化失败: {key} - {e}")
+            logger.warning("SQLite 持久化失败: key=%s error=%s", key, e)
 
     def _delete_from_sqlite(self, key: str):
         """从 SQLite 删除键值对"""
+        if self._db is None:
+            return
+        db = self._db  # type narrowing
         try:
             if key.startswith("task:"):
                 task_id = key.replace("task:", "")
-                self._db.delete("tasks", "id", task_id)
+                db.delete("tasks", "id", task_id)
             elif key.startswith("skill_gene:"):
                 skill_id = f"skill_{key}"
-                self._db.delete("skills", "id", skill_id)
+                db.delete("skills", "id", skill_id)
             else:
-                self._db.delete("kv_store", "key", key)
+                db.delete("kv_store", "key", key)
         except Exception as e:
-            print(f"⚠️ SQLite 删除失败: {key} - {e}")
+            logger.warning("SQLite 删除失败: key=%s error=%s", key, e)
 
 
 class HierarchicalStore(Store):
@@ -140,8 +165,13 @@ class HierarchicalStore(Store):
     PHILOSOPHY: Inherited memory. Read-only keys from ancestors protect the constitution.
     """
 
-    def __init__(self, own_store: Store = None, parent: 'HierarchicalStore' = None,
-                 readonly_keys: set = None, overrideable_keys: set = None):
+    def __init__(
+        self,
+        own_store: Store | None = None,
+        parent: "HierarchicalStore | None" = None,
+        readonly_keys: set[str] | None = None,
+        overrideable_keys: set[str] | None = None,
+    ):
         super().__init__()
         self.own = own_store if own_store is not None else Store()
         self.parent = parent
@@ -245,7 +275,7 @@ class AssetStore:
         os.makedirs(self.assets_dir, exist_ok=True)
         self._db = get_db()
 
-    def save(self, config: Dict[str, Any], filename: Optional[str] = None) -> str:
+    def save(self, config: dict[str, Any], filename: str | None = None) -> str:
         """
         保存配置到 SQLite (config 表)
 
@@ -259,16 +289,19 @@ class AssetStore:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         key = f"config:{timestamp}"
 
-        self._db.insert("config", {
-            "key": key,
-            "value": json.dumps(config, ensure_ascii=False),
-            "value_type": "json",
-            "description": f"F6.5 撒豆成兵配置 - {config.get('version', 'unknown')}"
-        })
+        self._db.insert(
+            "config",
+            {
+                "key": key,
+                "value": json.dumps(config, ensure_ascii=False),
+                "value_type": "json",
+                "description": f"F6.5 撒豆成兵配置 - {config.get('version', 'unknown')}",
+            },
+        )
 
         return key
 
-    def load(self, key: str) -> Dict[str, Any]:
+    def load(self, key: str) -> dict[str, Any]:
         """
         从 SQLite 加载指定的配置
 
@@ -280,7 +313,7 @@ class AssetStore:
         """
         row = self._db.select_one("config", "key", key)
         if row:
-            return json.loads(row["value"])
+            return json.loads(row["value"])  # type: ignore[no-any-return]
         else:
             raise ValueError(f"配置不存在: {key}")
 
@@ -296,7 +329,7 @@ class AssetStore:
         rows.sort(key=lambda x: x["key"], reverse=True)
         return [row["key"] for row in rows]
 
-    def load_latest(self) -> Optional[Dict[str, Any]]:
+    def load_latest(self) -> dict[str, Any] | None:
         """
         加载最新的配置（用于自动唤醒）
 

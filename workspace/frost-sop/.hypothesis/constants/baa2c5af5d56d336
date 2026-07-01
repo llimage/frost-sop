@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\renderers\cli_renderer.py
+# hypothesis_version: 6.145.0
+
+[100, 500, '#', '.', '[!!]', '[!]', '[?]', '[XXX]', '[bold]家族历史[/bold]', '[bold]状态栏[/bold]', '[dim]当前值:[/dim]', '[dim]（无内容）[/dim]', '[dim]（无图表数据）[/dim]', '[dim]（无数据）[/dim]', '[dim]（无时间线数据）[/dim]', '[i]', '[red]*[/red]', 'bar', 'blue', 'bold', 'chart_type', 'columns', 'cost', 'critical', 'description', 'expand_by_default', 'green', 'high', 'info', 'language', 'level', 'low', 'medium', 'message', 'monokai', 'options', 'progress', 'python', 'red', 'status', 'timestamp', 'unknown', 'white', 'yellow', '█', '代码', '任务列表', '任务名称', '修改', '健康度', '决策', '卡片', '告警', '多行输入', '成本', '时间线', '状态', '确认', '输入', '进度', '驳回']

@@ -5,8 +5,10 @@ PHILOSOPHY: 孙辈Agent不是预定义的，而是由父辈根据任务需求动
 """
 
 import json
-from core.skill import Skill
+
 from core.agent import Agent
+from core.json_safety import safe_json_parse
+from core.skill import Skill
 from core.store import Store
 from skills.llm import call_llm_skill
 from skills.tools import call_llm_for_output_skill
@@ -16,7 +18,8 @@ from skills.tools import call_llm_for_output_skill
 
 def _get_event_bus():
     try:
-        from core.event_bus import get_event_bus, EventType
+        from core.event_bus import EventType, get_event_bus
+
         return get_event_bus(), EventType
     except Exception:
         return None, None
@@ -24,15 +27,16 @@ def _get_event_bus():
 
 def _make_output_skill_func(name, desc, reason_prefix, output_type="document"):
     """Helper: create a skill function that calls call_llm_for_output_skill."""
+
     def skill_func(ctx):
         ctx["_task_description"] = f"{desc}：{ctx.get('stage_name', '')}"
         ctx["_output_type"] = output_type
         ctx["_output_path"] = f"output/{name}.md"
         result_ctx = call_llm_for_output_skill.execute(ctx)
-        ctx["_result"] = result_ctx.get("_generated_content",
-            f"[{name}] {desc}：任务执行完成")
+        ctx["_result"] = result_ctx.get("_generated_content", f"[{name}] {desc}：任务执行完成")
         ctx["_reason"] = f"{reason_prefix}: {name}"
         return ctx
+
     return skill_func
 
 
@@ -61,18 +65,20 @@ def _semantic_match(requirement: str, templates: list) -> list:
 
     template_list = []
     for t in templates[:50]:  # 限制候选数量
-        template_list.append({
-            "name": t.get("name", ""),
-            "description": t.get("description", "")[:100],
-            "category": t.get("category", "unknown"),
-        })
+        template_list.append(
+            {
+                "name": t.get("name", ""),
+                "description": t.get("description", "")[:100],
+                "category": t.get("category", "unknown"),
+            }
+        )
 
-    match_prompt = """你是一个技能匹配专家。请从以下教练模板中选择最匹配任务需求的模板。
+    match_prompt = f"""你是一个技能匹配专家。请从以下教练模板中选择最匹配任务需求的模板。
 
-任务需求：{}
+任务需求：{requirement}
 
 候选模板：
-{}
+{json.dumps(template_list, ensure_ascii=False, indent=2)}
 
 请返回JSON格式：
 {{
@@ -84,22 +90,25 @@ def _semantic_match(requirement: str, templates: list) -> list:
 - 选择1-3个最匹配的模板
 - 优先选择专业领域与任务需求一致的模板
 - 如果没有完全匹配的，选择最接近的
-""".format(requirement, json.dumps(template_list, ensure_ascii=False, indent=2))
+"""
 
-    llm_context = call_llm_skill.execute({
-        "_prompt": match_prompt,
-        "_system_prompt": "你是一个技能匹配专家。请返回有效的JSON。",
-        "_temperature": 0.3,
-    })
+    llm_context = call_llm_skill.execute(
+        {
+            "_prompt": match_prompt,
+            "_system_prompt": "你是一个技能匹配专家。请返回有效的JSON。",
+            "_temperature": 0.3,
+        }
+    )
 
     llm_response = llm_context.get("_llm_response", "")
     try:
         json_start = llm_response.find("{")
         json_end = llm_response.rfind("}") + 1
         if json_start >= 0 and json_end > json_start:
-            match_result = json.loads(llm_response[json_start:json_end])
-            return match_result.get("selected_templates", [])
-    except (json.JSONDecodeError, KeyError):
+            match_result, err = safe_json_parse(llm_response[json_start:json_end])
+            if err is None:
+                return match_result.get("selected_templates", [])
+    except (KeyError, ValueError):
         pass
     return []
 
@@ -108,16 +117,13 @@ def _keyword_fallback(required_skills: list, asset_store) -> dict:
     """关键词回退匹配：按名称精确查找基因库"""
     result = {}
     for skill_name in required_skills:
-        gene = asset_store.load("skill_gene:{}".format(skill_name))
+        gene = asset_store.load(f"skill_gene:{skill_name}")
         if gene:
             result[skill_name] = gene
     return result
 
 
-def _create_skills_from_genes(
-        genes: dict,
-        output_type: str = "document"
-        ) -> dict:
+def _create_skills_from_genes(genes: dict, output_type: str = "document") -> dict:
     """从基因字典创建Skill实例"""
     skills = {}
     for name, gene in genes.items():
@@ -178,11 +184,13 @@ def assemble_agent(context: dict) -> dict:
   * copywriting类型：直接输出文案内容，不是写作指南
 """
 
-    llm_context = call_llm_skill.execute({
-        "_prompt": analysis_prompt,
-        "_system_prompt": "你是一个Agent配置分析师。请返回有效的JSON。",
-        "_temperature": 0.3,
-    })
+    llm_context = call_llm_skill.execute(
+        {
+            "_prompt": analysis_prompt,
+            "_system_prompt": "你是一个Agent配置分析师。请返回有效的JSON。",
+            "_temperature": 0.3,
+        }
+    )
 
     llm_response = llm_context.get("_llm_response", "")
 
@@ -190,13 +198,28 @@ def assemble_agent(context: dict) -> dict:
         json_start = llm_response.find("{")
         json_end = llm_response.rfind("}") + 1
         if json_start >= 0 and json_end > json_start:
-            config = json.loads(llm_response[json_start:json_end])
+            config, err = safe_json_parse(llm_response[json_start:json_end])
+            if err is not None:
+                config = {
+                    "agent_name": "generic_agent",
+                    "required_skills": [],
+                    "sop_steps": [],
+                    "system_prompt": "",
+                }
         else:
-            config = {"agent_name": "generic_agent", "required_skills": [],
-                "sop_steps": [], "system_prompt": ""}
-    except (json.JSONDecodeError, KeyError):
-        config = {"agent_name": "generic_agent", "required_skills": [],
-            "sop_steps": [], "system_prompt": ""}
+            config = {
+                "agent_name": "generic_agent",
+                "required_skills": [],
+                "sop_steps": [],
+                "system_prompt": "",
+            }
+    except (KeyError, ValueError):
+        config = {
+            "agent_name": "generic_agent",
+            "required_skills": [],
+            "sop_steps": [],
+            "system_prompt": "",
+        }
 
     required_skills = config.get("required_skills", [])
     sop_steps = config.get("sop_steps", [])
@@ -215,7 +238,7 @@ def assemble_agent(context: dict) -> dict:
         if len(all_templates) > 10 and required_skills:
             selected_names = _semantic_match(requirement, all_templates)
             for name in selected_names:
-                gene = asset_store.load("skill_gene:{}".format(name))
+                gene = asset_store.load(f"skill_gene:{name}")
                 if gene:
                     skill_func = create_skill_from_gene(gene, output_type)
                     assembled_skills[name] = Skill(name, skill_func)
@@ -224,16 +247,14 @@ def assemble_agent(context: dict) -> dict:
         # 2.3 关键词回退匹配
         if not assembled_skills:
             matched_genes = _keyword_fallback(required_skills, asset_store)
-            assembled_skills = _create_skills_from_genes(
-                matched_genes, output_type)
+            assembled_skills = _create_skills_from_genes(matched_genes, output_type)
             for name in matched_genes:
                 skill_sources[name] = "gene_library(keyword)"
 
     # 3. 未找到的能力基因，通过LLM合成
     missing_skills = [s for s in required_skills if s not in assembled_skills]
     for skill_name in missing_skills:
-        synthesized = synthesize_skill(
-            skill_name, requirement, asset_store, output_type)
+        synthesized = synthesize_skill(skill_name, requirement, asset_store, output_type)
         assembled_skills[skill_name] = synthesized
         skill_sources[skill_name] = "llm_synthesized"
 
@@ -277,20 +298,23 @@ def assemble_agent(context: dict) -> dict:
         bus, EventType = _get_event_bus()
         if bus is not None and EventType is not None:
             from core.event_bus import Event
-            bus.publish(Event(
-                event_type=EventType.AGENT_CREATED,
-                source="assemble:agent_creator",
-                data={
-                    "agent_name": child.name,
-                    "generation": child.generation,
-                    "skill_count": len(assembled_skills),
-                    "task_id": context.get("_task_id", ""),
-                },
-            ))
+
+            bus.publish(
+                Event(
+                    event_type=EventType.AGENT_CREATED,
+                    source="assemble:agent_creator",
+                    data={
+                        "agent_name": child.name,
+                        "generation": child.generation,
+                        "skill_count": len(assembled_skills),
+                        "task_id": context.get("_task_id", ""),
+                    },
+                )
+            )
     except Exception as e:
         import warnings
-        warnings.warn(
-            f"[assemble] AGENT_CREATED 事件发布失败（已忽略）: {e}")
+
+        warnings.warn(f"[assemble] AGENT_CREATED 事件发布失败（已忽略）: {e}")
 
     return context
 
@@ -299,12 +323,12 @@ def create_skill_from_gene(gene: dict, output_type: str = "document"):
     """从能力基因创建Skill执行函数"""
     skill_name = gene.get("name", "unknown")
     skill_desc = gene.get("description", "")
-    return _make_output_skill_func(
-        skill_name, skill_desc, "使用基因库Skill", output_type)
+    return _make_output_skill_func(skill_name, skill_desc, "使用基因库Skill", output_type)
 
 
-def synthesize_skill(skill_name: str, requirement: str,
-        asset_store=None, output_type: str = "document") -> Skill:
+def synthesize_skill(
+    skill_name: str, requirement: str, asset_store=None, output_type: str = "document"
+) -> Skill:
     """通过LLM合成新Skill，并归档到能力基因库"""
 
     synthesize_prompt = f"""你是一个Skill设计助手。请为以下需求生成一个Skill的执行描述：
@@ -322,11 +346,13 @@ def synthesize_skill(skill_name: str, requirement: str,
 }}
 """
 
-    llm_context = call_llm_skill.execute({
-        "_prompt": synthesize_prompt,
-        "_system_prompt": "你是一个Skill设计助手。请返回有效的JSON。",
-        "_temperature": 0.3,
-    })
+    llm_context = call_llm_skill.execute(
+        {
+            "_prompt": synthesize_prompt,
+            "_system_prompt": "你是一个Skill设计助手。请返回有效的JSON。",
+            "_temperature": 0.3,
+        }
+    )
 
     llm_response = llm_context.get("_llm_response", "")
 
@@ -334,22 +360,31 @@ def synthesize_skill(skill_name: str, requirement: str,
         json_start = llm_response.find("{")
         json_end = llm_response.rfind("}") + 1
         if json_start >= 0 and json_end > json_start:
-            gene_data = json.loads(llm_response[json_start:json_end])
+            gene_data, err = safe_json_parse(llm_response[json_start:json_end])
+            if err is not None:
+                gene_data = {
+                    "name": skill_name,
+                    "type": "functional",
+                    "description": f"执行{skill_name}的能力",
+                }
         else:
-            gene_data = {"name": skill_name, "type": "functional",
-                "description": f"执行{skill_name}的能力"}
-    except (json.JSONDecodeError, KeyError):
-        gene_data = {"name": skill_name, "type": "functional",
-            "description": f"执行{skill_name}的能力"}
+            gene_data = {
+                "name": skill_name,
+                "type": "functional",
+                "description": f"执行{skill_name}的能力",
+            }
+    except (KeyError, ValueError):
+        gene_data = {
+            "name": skill_name,
+            "type": "functional",
+            "description": f"执行{skill_name}的能力",
+        }
 
     if asset_store:
         asset_store.save(f"skill_gene:{skill_name}", gene_data)
 
     skill_func = _make_output_skill_func(
-        skill_name,
-        gene_data.get("description", skill_name),
-        "使用LLM合成Skill",
-        output_type
+        skill_name, gene_data.get("description", skill_name), "使用LLM合成Skill", output_type
     )
     return Skill(skill_name, skill_func)
 

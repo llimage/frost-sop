@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\stores\asset.py
+# hypothesis_version: 6.145.0
+
+['code_files', 'content', 'data/assets.json', 'description', 'design_doc', 'docs', 'file', 'financial_data', 'functional', 'input_keys', 'marketing_plan', 'name', 'ops_data', 'optimization_plan', 'output_keys', 'product_info', 'report', 'requirement_doc', 'review_report', 'style', 'target_audience', 'task_description', 'test_results', 'topic', 'type', 'utf-8', 'w', '代码生成', '内容创作', '分析用户需求，输出结构化的需求文档', '分析财务数据，生成报表和建议', '分析运营数据，提出流程优化建议', '创作文字内容，包括文案、文章、脚本', '制定营销策略和推广方案', '审查交付', '审查代码和文档质量，确保交付标准', '技术设计', '根据设计文档生成可运行的代码', '根据需求设计技术方案，包括架构、模块划分', '测试验证', '编写测试用例，验证代码功能', '营销策划', '财务分析', '运营优化', '需求分析']

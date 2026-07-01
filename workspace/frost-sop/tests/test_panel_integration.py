@@ -9,76 +9,78 @@ FROST V5.0 面板系统集成测试
 5. EventAdapter 事件触发与订阅
 6. CLI 渲染器 + DataProvider 集成
 """
+
 import os
-import sys
+
 import pytest
-from datetime import datetime
-from typing import Any, Dict, List, Optional
 
 # 设置测试环境
-os.environ['FROST_TESTING'] = '1'
+os.environ["FROST_TESTING"] = "1"
 
+from core.event_bus import Event, EventBus
 from core.panel import (
-    PanelDefinition, PanelComponent, ComponentType,
-    PanelType, LayoutType, Region, Layout, Theme, PanelState
+    ComponentType,
+    Layout,
+    LayoutType,
+    PanelComponent,
+    PanelDefinition,
+    PanelType,
+    Region,
 )
-from core.panel_renderer import PanelRenderer, DataProvider
-from core.panel_generator import PanelGenerator
+from core.panel_adapters import ArmoryAdapter, EventAdapter, PanelSystemAdapter, TaskAdapter
 from core.panel_data_provider import StoreDataProvider, create_data_provider
-from core.panel_decision import (
-    DecisionFlow, DecisionRecord, DecisionStatus, DecisionFlowConfig
-)
-from core.panel_adapters import (
-    TaskAdapter, EventAdapter, ArmoryAdapter, PanelSystemAdapter
-)
+from core.panel_decision import DecisionFlow, DecisionFlowConfig, DecisionStatus
+from core.panel_generator import PanelGenerator
 from core.store import Store
-from core.event_bus import EventBus, Event
-
 
 # ────────────────────────────────────────────────────────────────────────────
 # 助手函数
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def _make_store_with_task(task_id: str = "task:test001") -> Store:
     """创建带测试任务的 Store"""
     store = Store()
-    store.save(task_id, {
-        "id": task_id,
-        "title": "集成测试任务",
-        "description": "用于面板系统集成测试",
-        "status": "running",
-        "stages": [
-            {
-                "stage_id": "s1",
-                "name": "需求分析",
-                "description": "分析需求",
-                "inputs": [{"name": "需求文档", "type": "document"}],
-                "outputs": [{"name": "需求规格", "type": "document", "status": "completed"}],
-                "skill": "requirement_analysis",
-                "is_decision_point": False,
-            },
-            {
-                "stage_id": "s2",
-                "name": "代码实现",
-                "description": "实现功能",
-                "inputs": [{"name": "需求规格", "type": "document"}],
-                "outputs": [{"name": "源代码", "type": "code", "status": "completed"}],
-                "skill": "code_implementation",
-                "is_decision_point": True,
-                "decision_options": ["确认", "驳回", "修改"],
-            },
-        ],
-        "current_stage_index": 1,
-        "quality_score": {"customer": 85, "parent": 80, "child": 90},
-        "cost": 0.15,
-        "tokens": 1500,
-        "duration_seconds": 120.0,
-        "outputs": [
-            {"type": "code", "name": "main.py", "status": "completed"},
-        ],
-        "event_ids": [],
-        "priority": "high",
-    })
+    store.save(
+        task_id,
+        {
+            "id": task_id,
+            "title": "集成测试任务",
+            "description": "用于面板系统集成测试",
+            "status": "running",
+            "stages": [
+                {
+                    "stage_id": "s1",
+                    "name": "需求分析",
+                    "description": "分析需求",
+                    "inputs": [{"name": "需求文档", "type": "document"}],
+                    "outputs": [{"name": "需求规格", "type": "document", "status": "completed"}],
+                    "skill": "requirement_analysis",
+                    "is_decision_point": False,
+                },
+                {
+                    "stage_id": "s2",
+                    "name": "代码实现",
+                    "description": "实现功能",
+                    "inputs": [{"name": "需求规格", "type": "document"}],
+                    "outputs": [{"name": "源代码", "type": "code", "status": "completed"}],
+                    "skill": "code_implementation",
+                    "is_decision_point": True,
+                    "decision_options": ["确认", "驳回", "修改"],
+                },
+            ],
+            "current_stage_index": 1,
+            "quality_score": {"customer": 85, "parent": 80, "child": 90},
+            "cost": 0.15,
+            "tokens": 1500,
+            "duration_seconds": 120.0,
+            "outputs": [
+                {"type": "code", "name": "main.py", "status": "completed"},
+            ],
+            "event_ids": [],
+            "priority": "high",
+        },
+    )
     return store
 
 
@@ -122,6 +124,7 @@ def _make_mock_armory():
 # ────────────────────────────────────────────────────────────────────────────
 # 1. StoreDataProvider 集成测试
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class TestStoreDataProvider:
     """StoreDataProvider + Store 集成测试"""
@@ -193,6 +196,7 @@ class TestStoreDataProvider:
 # ────────────────────────────────────────────────────────────────────────────
 # 2. DecisionFlow + EventBus 集成测试
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class TestDecisionFlowIntegration:
     """DecisionFlow + EventBus 集成测试"""
@@ -307,6 +311,7 @@ class TestDecisionFlowIntegration:
         self.flow.submit_decision(record.decision_id, "确认")
         # 再次提交应该报错
         import pytest
+
         with pytest.raises(ValueError, match="already final"):
             self.flow.submit_decision(record.decision_id, "驳回")
 
@@ -314,6 +319,7 @@ class TestDecisionFlowIntegration:
 # ────────────────────────────────────────────────────────────────────────────
 # 3. TaskAdapter + PanelGenerator 集成测试
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class TestTaskAdapterPanelGenerator:
     """TaskAdapter + PanelGenerator 集成测试"""
@@ -367,10 +373,10 @@ class TestTaskAdapterPanelGenerator:
                 "created_at": "2026-01-02T00:00:00",
             },
         ]
-        
+
         generator = PanelGenerator()
         panel = generator.generate(tasks)
-        
+
         assert panel.panel_type == PanelType.COCKPIT
         assert "任务" in panel.title
         assert len(panel.components) > 0
@@ -392,17 +398,18 @@ class TestTaskAdapterPanelGenerator:
 # 4.5 SOP-Panel 集成测试（V5.0 新增）
 # ───────────────────────────────────────────────────────────────────────────
 
+
 class TestSopPanelIntegration:
     """
     SOP 执行引擎与 Panel 集成测试。
-    
+
     验证：当 SOP 执行遇到决策点时，自动生成 DECISION 类型面板。
     """
 
     def test_decision_point_generates_panel(self):
         """测试决策点触发时自动生成面板"""
-        from skills.orchestration import _check_decision_point
         from core.panel import PanelDefinition, PanelType
+        from skills.orchestration import _check_decision_point
 
         # 构造决策点阶段
         stage = {
@@ -435,8 +442,8 @@ class TestSopPanelIntegration:
 
     def test_panel_contains_decision_buttons(self):
         """测试生成的决策面板包含决策按钮组件"""
-        from skills.orchestration import _check_decision_point
         from core.panel import ComponentType
+        from skills.orchestration import _check_decision_point
 
         stage = {
             "name": "确认阶段",
@@ -470,10 +477,10 @@ class TestSopPanelIntegration:
         assert "_decision_panel" not in context
 
 
-
 # ───────────────────────────────────────────────────────────────────────────
 # 4. EventAdapter 测试
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class TestEventAdapter:
     """EventAdapter 事件触发与订阅测试"""
@@ -508,8 +515,11 @@ class TestEventAdapter:
         """测试触发决策事件"""
         self.event_bus.subscribe("panel.decision_made", self._capture_event)
         self.adapter.emit_decision_made(
-            "decision:task:test001:stage_1", "确认", reason="",
-            task_id="task:test001", stage_id="stage_1",
+            "decision:task:test001:stage_1",
+            "确认",
+            reason="",
+            task_id="task:test001",
+            stage_id="stage_1",
         )
         assert len(self.events_captured) == 1
         assert self.events_captured[0].data["decision"] == "确认"
@@ -517,6 +527,7 @@ class TestEventAdapter:
     def test_subscribe_to_decisions(self):
         """测试订阅决策事件"""
         callback_called = False
+
         def my_callback(event: Event):
             nonlocal callback_called
             callback_called = True
@@ -529,6 +540,7 @@ class TestEventAdapter:
 # ────────────────────────────────────────────────────────────────────────────
 # 5. ArmoryAdapter 测试
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class TestArmoryAdapter:
     """ArmoryAdapter 测试"""
@@ -586,6 +598,7 @@ class TestArmoryAdapter:
 # 6. PanelSystemAdapter 端到端测试
 # ────────────────────────────────────────────────────────────────────────────
 
+
 class TestPanelSystemAdapter:
     """PanelSystemAdapter 端到端集成测试"""
 
@@ -605,6 +618,7 @@ class TestPanelSystemAdapter:
         """测试创建渲染器"""
         renderer = self.adapter.create_renderer(task_id="task:test001")
         from renderers.cli_renderer import CliRenderer
+
         assert isinstance(renderer, CliRenderer)
 
     def test_full_pipeline_generate_and_render(self):
@@ -629,6 +643,7 @@ class TestPanelSystemAdapter:
 # ────────────────────────────────────────────────────────────────────────────
 # 7. CLI 渲染器 + DataProvider 集成测试
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class TestCliRendererIntegration:
     """CLI 渲染器 + DataProvider 集成测试"""
@@ -658,9 +673,12 @@ class TestCliRendererIntegration:
             panel_id="test:live_data",
             panel_type=PanelType.TASK,
             title="实时数据测试",
-            layout=Layout(type=LayoutType.SINGLE, regions=[
-                Region(name="main", ratio=1.0, content_type="text", components=[]),
-            ]),
+            layout=Layout(
+                type=LayoutType.SINGLE,
+                regions=[
+                    Region(name="main", ratio=1.0, content_type="text", components=[]),
+                ],
+            ),
             components=[
                 PanelComponent(
                     id="comp:status",
@@ -679,6 +697,7 @@ class TestCliRendererIntegration:
 # ────────────────────────────────────────────────────────────────────────────
 # 8. 全链路集成测试
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class TestFullPipeline:
     """全链路集成测试：任务 → 适配 → 生成 → 渲染 → 决策"""
@@ -734,6 +753,7 @@ class TestFullPipeline:
         # 创建渲染器
         provider = StoreDataProvider(store, task_id="task:test001")
         from renderers.cli_renderer import CliRenderer
+
         renderer = CliRenderer(data_provider=provider)
 
         # 渲染（不报错即通过）
@@ -745,21 +765,32 @@ class TestFullPipeline:
 
         # 添加更多任务
         for i in range(3):
-            store.save(f"task:task_{i:03d}", {
-                "id": f"task:task_{i:03d}",
-                "title": f"任务 {i}",
-                "status": "running",
-                "stages": [{"stage_id": "s1", "name": "阶段1", "is_decision_point": False,
-                            "inputs": [], "outputs": [], "skill": ""}],
-                "current_stage_index": 0,
-                "quality_score": {"customer": 80 + i},
-                "cost": 0.1 * i,
-                "tokens": 100 * i,
-                "duration_seconds": 60.0,
-                "outputs": [],
-                "event_ids": [],
-                "created_at": "2026-01-0" + str(i+1) + "T00:00:00",
-            })
+            store.save(
+                f"task:task_{i:03d}",
+                {
+                    "id": f"task:task_{i:03d}",
+                    "title": f"任务 {i}",
+                    "status": "running",
+                    "stages": [
+                        {
+                            "stage_id": "s1",
+                            "name": "阶段1",
+                            "is_decision_point": False,
+                            "inputs": [],
+                            "outputs": [],
+                            "skill": "",
+                        }
+                    ],
+                    "current_stage_index": 0,
+                    "quality_score": {"customer": 80 + i},
+                    "cost": 0.1 * i,
+                    "tokens": 100 * i,
+                    "duration_seconds": 60.0,
+                    "outputs": [],
+                    "event_ids": [],
+                    "created_at": "2026-01-0" + str(i + 1) + "T00:00:00",
+                },
+            )
 
         # 用 list_keys() 遍历所有 task 键，组装任务列表
         task_keys = [k for k in store.list_keys() if k.startswith("task:")]
@@ -779,6 +810,7 @@ class TestFullPipeline:
 # ────────────────────────────────────────────────────────────────────────────
 # 9. 边界条件和错误处理
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class TestIntegrationEdgeCases:
     """集成测试：边界条件和错误处理"""

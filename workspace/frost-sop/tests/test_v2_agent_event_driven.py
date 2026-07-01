@@ -11,17 +11,21 @@ V2.0 子阶段 4.3 验收测试：Agent 类事件驱动改造
 """
 
 import os
+
 import pytest
 
-os.environ['FROST_TESTING'] = '1'
+os.environ["FROST_TESTING"] = "1"
 
 from core.agent import Agent
-from core.skill import Skill
 from core.event_bus import EventBus, EventType, get_event_bus
+from core.skill import Skill
 
 
 def make_noop():
-    def noop(ctx): ctx["_ran"] = True; return ctx
+    def noop(ctx):
+        ctx["_ran"] = True
+        return ctx
+
     return Skill("noop", noop)
 
 
@@ -80,8 +84,13 @@ class TestAgentEventDriven:
         step_events = []
         bus.subscribe(EventType.STEP_COMPLETED, lambda e: step_events.append(e))
 
-        def skill_a(ctx): ctx["_a"] = 1; return ctx
-        def skill_b(ctx): ctx["_b"] = 2; return ctx
+        def skill_a(ctx):
+            ctx["_a"] = 1
+            return ctx
+
+        def skill_b(ctx):
+            ctx["_b"] = 2
+            return ctx
 
         agent = Agent(
             name="test_ev_steps",
@@ -137,9 +146,17 @@ class TestAgentEventDriven:
 
         bus.subscribe(EventType.STEP_COMPLETED, track)
 
-        def s1(ctx): ctx["s1"] = 1; return ctx
-        def s2(ctx): ctx["s2"] = 2; return ctx
-        def s3(ctx): ctx["s3"] = 3; return ctx
+        def s1(ctx):
+            ctx["s1"] = 1
+            return ctx
+
+        def s2(ctx):
+            ctx["s2"] = 2
+            return ctx
+
+        def s3(ctx):
+            ctx["s3"] = 3
+            return ctx
 
         agent = Agent(
             name="test_ev_order",
@@ -160,8 +177,12 @@ class TestAgentEventDriven:
         step_events = []
         bus.subscribe(EventType.STEP_COMPLETED, lambda e: step_events.append(e))
 
-        def ok_skill(ctx): ctx["ok"] = True; return ctx
-        def fail_skill(ctx): raise RuntimeError("故意失败")
+        def ok_skill(ctx):
+            ctx["ok"] = True
+            return ctx
+
+        def fail_skill(ctx):
+            raise RuntimeError("故意失败")
 
         agent = Agent(
             name="test_ev_fail",

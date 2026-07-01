@@ -3,17 +3,19 @@
 PHILOSOPHY: 此测试验证LLM Skill能调用真实API。
 手动运行，不纳入自动化测试套件（需要API Key和网络）。
 """
+
 """
 真实LLM调用测试
 PHILOSOPHY: 此测试验证LLM Skill能调用真实API。
 手动运行，不纳入自动化测试套件（需要API Key和网络）。
 """
-import sys
 import os
+import sys
 
 # Windows 控制台编码修复：强制 UTF-8 输出
 if sys.platform == "win32":
     import io
+
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -42,8 +44,9 @@ def test_real_llm_call():
     print(f"使用模型: {result.get('_llm_model', '')}")
     print(f"推理痕迹: {result.get('_reason', '')}")
 
-    assert any(kw in response for kw in ["FROST", "框架", "Agent", "阈值", "签名"]), \
+    assert any(kw in response for kw in ["FROST", "框架", "Agent", "阈值", "签名"]), (
         "响应内容应包含相关关键词"
+    )
     assert tokens.get("total", 0) > 0, "应消耗Token"
 
     print("\n[PASS] 真实LLM调用成功")

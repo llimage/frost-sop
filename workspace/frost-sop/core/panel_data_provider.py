@@ -15,7 +15,7 @@ PHILOSOPHY: 面板与后端数据的唯一连接点。
 - "panel:{panel_id}"    → 从面板状态 Store 获取面板状态
 """
 
-from typing import Any, Dict, Optional, List
+from typing import Any
 
 from core.panel_renderer import DataProvider
 from core.store import Store
@@ -37,8 +37,9 @@ class StoreDataProvider(DataProvider):
     4. "armory:{weapon_id}" — 从武器库获取武器元数据
     """
 
-    def __init__(self, store: Store, task_id: Optional[str] = None,
-                 armory_registry=None, decision_flow=None):
+    def __init__(
+        self, store: Store, task_id: str | None = None, armory_registry=None, decision_flow=None
+    ):
         """
         初始化数据提供者。
 
@@ -251,7 +252,7 @@ class StoreDataProvider(DataProvider):
 
         return current
 
-    def _split_path(self, path: str) -> List[str]:
+    def _split_path(self, path: str) -> list[str]:
         """分割路径字符串，支持点号分隔"""
         # 处理 stages[0].name → ["stages[0]", "name"]
         parts = []
@@ -282,8 +283,10 @@ class StoreDataProvider(DataProvider):
 # 便捷函数
 # ────────────────────────────────────────────────────────────────────────────
 
-def create_data_provider(store: Store, task_id: Optional[str] = None,
-                         armory_registry=None, decision_flow=None) -> StoreDataProvider:
+
+def create_data_provider(
+    store: Store, task_id: str | None = None, armory_registry=None, decision_flow=None
+) -> StoreDataProvider:
     """便捷函数：创建 StoreDataProvider"""
     return StoreDataProvider(
         store=store,

@@ -3,20 +3,26 @@ V5.0 P2: 关系元数据层测试
 测试 DependencyGraph / ImpactAnalyzer / TransitiveResolver
 """
 
-import sys, os
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import pytest
 from core.armory import (
-    WeaponMetadata, WeaponType, WeaponState, WeaponCategory, ArmoryRegistry,
+    ArmoryRegistry,
+    WeaponCategory,
+    WeaponMetadata,
+    WeaponState,
+    WeaponType,
 )
 from core.relation_meta import (
-    DependencyGraph, ImpactAnalyzer, ImpactReport,
+    DependencyGraph,
+    ImpactAnalyzer,
     TransitiveResolver,
 )
 
-
 # ── 辅助函数 ──────────────────────────────────────────────────────────────────
+
 
 def make_weapon(weapon_id, name=None, deps=None, wtype=WeaponType.SKILL, state=WeaponState.ACTIVE):
     """创建测试武器"""
@@ -61,6 +67,7 @@ def build_sop_registry():
 
 
 # ── DependencyGraph 测试 ──────────────────────────────────────────────────────
+
 
 class TestDependencyGraph:
     def test_empty_graph(self):
@@ -174,6 +181,7 @@ class TestDependencyGraph:
 
 # ── ImpactAnalyzer 测试 ───────────────────────────────────────────────────────
 
+
 class TestImpactAnalyzer:
     def test_analyze_no_dependents(self):
         """无依赖方的武器移除影响低"""
@@ -245,6 +253,7 @@ class TestImpactAnalyzer:
 
 
 # ── TransitiveResolver 测试 ───────────────────────────────────────────────────
+
 
 class TestTransitiveResolver:
     def test_resolve_chain(self):

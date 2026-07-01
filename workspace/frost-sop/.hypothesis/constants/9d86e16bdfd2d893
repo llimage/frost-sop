@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\agents\ancestor.py
+# hypothesis_version: 6.145.0
+
+['TASK_CREATED', '_llm_response', '_prompt', 'ancestor', 'call_llm', 'decomposition', 'emit', 'spawn', 'task_created', 'task_description', 'task_id', 'unknown', 'validate_sop']

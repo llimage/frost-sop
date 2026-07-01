@@ -6,6 +6,7 @@ STR-002 是宪法第五条（瞬态生命周期）的延伸——
 """
 
 from datetime import datetime
+
 from core.skill import Skill
 
 
@@ -46,8 +47,9 @@ def analyze_trends(context: dict) -> dict:
         return context
 
     total = len(tasks)
-    successful = sum(1 for t in tasks if isinstance(t, dict)
-                     and t.get("status") in ("completed", "success"))
+    successful = sum(
+        1 for t in tasks if isinstance(t, dict) and t.get("status") in ("completed", "success")
+    )
     failed = total - successful
     success_rate = successful / max(total, 1)
 
@@ -89,7 +91,8 @@ def analyze_trends(context: dict) -> dict:
             sop_failure_rate = stats["failed"] / max(stats["total"], 1)
             if sop_failure_rate >= 0.3:
                 insights.append(
-                    f"SOP '{sop_name}' 失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议优化")
+                    f"SOP '{sop_name}' 失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议优化"
+                )
 
     # 洞察3：主要错误类型
     if error_types:
@@ -105,7 +108,9 @@ def analyze_trends(context: dict) -> dict:
         "error_types": error_types,
         "insights": insights,
     }
-    context["_reason"] = f"分析 {total} 条任务，成功率 {success_rate:.0%}，生成 {len(insights)} 条洞察"
+    context["_reason"] = (
+        f"分析 {total} 条任务，成功率 {success_rate:.0%}，生成 {len(insights)} 条洞察"
+    )
     return context
 
 
@@ -127,46 +132,56 @@ def generate_suggestions(context: dict) -> dict:
         if stats["failed"] > 0:
             sop_failure_rate = stats["failed"] / max(stats["total"], 1)
             if sop_failure_rate >= 0.5:
-                suggestions.append({
-                    "type": "sop_optimization",
-                    "target": sop_name,
-                    "reason": f"失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议重新设计 SOP 阶段",
-                    "priority": "high" if sop_failure_rate >= 0.7 else "medium",
-                })
+                suggestions.append(
+                    {
+                        "type": "sop_optimization",
+                        "target": sop_name,
+                        "reason": f"失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议重新设计 SOP 阶段",
+                        "priority": "high" if sop_failure_rate >= 0.7 else "medium",
+                    }
+                )
             elif sop_failure_rate >= 0.3:
-                suggestions.append({
-                    "type": "sop_review",
-                    "target": sop_name,
-                    "reason": f"失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议审查失败阶段",
-                    "priority": "low",
-                })
+                suggestions.append(
+                    {
+                        "type": "sop_review",
+                        "target": sop_name,
+                        "reason": f"失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议审查失败阶段",
+                        "priority": "low",
+                    }
+                )
 
     # 建议2：基于错误类型
     error_types = trends.get("error_types", {})
     if error_types.get("compliance", 0) >= 2:
-        suggestions.append({
-            "type": "constitution_review",
-            "target": "compliance_rules",
-            "reason": f"合规错误 {error_types['compliance']} 次，建议审查合规规则是否过严",
-            "priority": "medium",
-        })
+        suggestions.append(
+            {
+                "type": "constitution_review",
+                "target": "compliance_rules",
+                "reason": f"合规错误 {error_types['compliance']} 次，建议审查合规规则是否过严",
+                "priority": "medium",
+            }
+        )
 
     # 建议3：基于成功率
     if trends.get("success_rate", 1.0) < 0.5:
-        suggestions.append({
-            "type": "urgent_review",
-            "target": "family_health",
-            "reason": f"整体成功率 {trends['success_rate']:.0%}，建议创始人介入审查",
-            "priority": "high",
-        })
+        suggestions.append(
+            {
+                "type": "urgent_review",
+                "target": "family_health",
+                "reason": f"整体成功率 {trends['success_rate']:.0%}，建议创始人介入审查",
+                "priority": "high",
+            }
+        )
 
     if not suggestions:
-        suggestions.append({
-            "type": "no_action",
-            "target": "family_health",
-            "reason": "家族运行状态良好，暂无优化建议",
-            "priority": "low",
-        })
+        suggestions.append(
+            {
+                "type": "no_action",
+                "target": "family_health",
+                "reason": "家族运行状态良好，暂无优化建议",
+                "priority": "low",
+            }
+        )
 
     context["_suggestions"] = suggestions
     context["_reason"] = f"生成 {len(suggestions)} 条优化建议"
@@ -219,6 +234,7 @@ present_for_approval_skill = Skill("present_for_approval", present_for_approval)
 # V4.0 P1: 传承系统激活
 # ================================================================
 
+
 def update_skill_graph(context: dict) -> dict:
     """
     技能图增量进化：新Skill归档后自动调用。
@@ -234,20 +250,21 @@ def update_skill_graph(context: dict) -> dict:
         context["_skill_graph_updated"] = False
         context["_reason"] = "无新Skill ID，跳过技能图更新"
         return context
-    
+
     try:
         # 尝试导入技能图（如果已存在）
         from core.skill_graph import SkillGraph
+
         sg = context.get("_skill_graph") or SkillGraph()
-        
+
         # 添加节点
         sg.add_node(new_skill_id, metadata=context.get("_new_skill_metadata", {}))
-        
+
         # 尝试添加边（基于 trigger_keywords 或 skill_type）
         related_skills = context.get("_related_skills", [])
         for related in related_skills:
             sg.add_edge(new_skill_id, related, relation="related")
-        
+
         context["_skill_graph"] = sg
         context["_skill_graph_updated"] = True
         context["_skill_graph_nodes"] = len(sg.nodes) if hasattr(sg, "nodes") else 0
@@ -256,7 +273,7 @@ def update_skill_graph(context: dict) -> dict:
         # core.skill_graph 尚未实现，记录但不报错
         context["_skill_graph_updated"] = False
         context["_reason"] = "core.skill_graph 尚未实现，跳过技能图更新"
-    
+
     return context
 
 
@@ -264,7 +281,7 @@ def update_mistake_book(context: dict) -> dict:
     """
     错题本自动更新：终端采集的失败记录自动归类。
     更新 `lesson:` 键的 `times_encountered` 字段。
-    
+
     输入 context 键：
         _failure_record: dict —— 失败记录
         _asset_store: Store —— 资产 Store
@@ -274,12 +291,12 @@ def update_mistake_book(context: dict) -> dict:
     """
     failure = context.get("_failure_record", {})
     asset_store = context.get("_asset_store")
-    
+
     if not failure or not asset_store:
         context["_mistake_book_updated"] = False
         context["_reason"] = "无失败记录或资产Store，跳过错题本更新"
         return context
-    
+
     # 提取失败类型
     error_msg = failure.get("error", failure.get("output", ""))
     error_type = "execution_error"
@@ -289,20 +306,20 @@ def update_mistake_book(context: dict) -> dict:
         error_type = "timeout_error"
     elif "api" in error_msg.lower():
         error_type = "api_error"
-    
+
     # 查找或创建错题本条目
     lesson_key = f"lesson:{error_type}"
     existing = asset_store.load(lesson_key) or {}
-    
+
     # 更新 times_encountered
     times = existing.get("times_encountered", 0) + 1
     existing["times_encountered"] = times
     existing["last_encountered"] = datetime.now().isoformat()
     existing["error_type"] = error_type
     existing["last_error"] = error_msg[:200]
-    
+
     asset_store.save(lesson_key, existing)
-    
+
     context["_mistake_book_updated"] = True
     context["_lesson_key"] = lesson_key
     context["_reason"] = f"错题本已更新：{lesson_key}，累计 {times} 次"
@@ -313,7 +330,7 @@ def manage_sop_version(context: dict) -> dict:
     """
     SOP 模板版本管理：STR-002 优化建议自动创建 v2 版本。
     保留 v1 供回滚。
-    
+
     输入 context 键：
         _sop_optimization: dict —— SOP 优化建议
         _asset_store: Store —— 资产 Store
@@ -323,22 +340,22 @@ def manage_sop_version(context: dict) -> dict:
     """
     sop_opt = context.get("_sop_optimization", {})
     asset_store = context.get("_asset_store")
-    
+
     if not sop_opt or not asset_store:
         context["_sop_version_created"] = False
         context["_reason"] = "无SOP优化建议或资产Store，跳过版本管理"
         return context
-    
+
     target = sop_opt.get("target", "")
     if not target:
         context["_sop_version_created"] = False
         context["_reason"] = "无目标SOP，跳过版本管理"
         return context
-    
+
     # 读取原版 SOP
     original_key = f"sop_template:{target}:v1"
     original = asset_store.load(original_key)
-    
+
     if not original:
         # v1 不存在，先创建 v1
         original = {
@@ -348,11 +365,11 @@ def manage_sop_version(context: dict) -> dict:
             "created_at": datetime.now().isoformat(),
         }
         asset_store.save(original_key, original)
-    
+
     # 创建 v2
     v2_key = f"sop_template:{target}:v2"
     v2_content = original.get("content", "") + "\n\n# 优化建议\n" + sop_opt.get("reason", "")
-    
+
     v2_data = {
         "sop_id": target,
         "version": "v2",
@@ -362,7 +379,7 @@ def manage_sop_version(context: dict) -> dict:
         "optimization": sop_opt,
     }
     asset_store.save(v2_key, v2_data)
-    
+
     context["_sop_version_created"] = True
     context["_sop_version"] = "v2"
     context["_reason"] = f"SOP 版本管理：{target} v2 已创建，v1 保留供回滚"

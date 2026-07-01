@@ -9,20 +9,18 @@ P0-5: API Key 加密存储模块
 - 支持首次运行提示输入和后续自动解密
 """
 
-import os
-import json
 import base64
-import hashlib
-import socket
 import getpass
+import hashlib
+import json
+import os
+import socket
 from pathlib import Path
-from typing import Optional, Dict
 
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.exceptions import InvalidTag
-
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 # ── 常量 ──────────────────────────────────────────────────
 _SECRETS_FILE = "data/.secrets.enc"
@@ -88,6 +86,7 @@ def _derive_key(machine_key: bytes) -> bytes:
 
 # ── 核心 API ───────────────────────────────────────────────
 
+
 def encrypt_api_key(plaintext: str) -> str:
     """
     加密 API 密钥。
@@ -112,7 +111,7 @@ def encrypt_api_key(plaintext: str) -> str:
     return base64.b64encode(combined).decode("ascii")
 
 
-def decrypt_api_key(encrypted: str) -> Optional[str]:
+def decrypt_api_key(encrypted: str) -> str | None:
     """
     解密 API 密钥。
 
@@ -174,7 +173,7 @@ def save_secret(key: str, value: str) -> bool:
         return False
 
 
-def get_secret(key: str) -> Optional[str]:
+def get_secret(key: str) -> str | None:
     """
     获取解密后的密钥值。
 
@@ -218,7 +217,7 @@ def is_first_run() -> bool:
     return not Path(_SECRETS_FILE).exists() or not _load_secrets()
 
 
-def setup_wizard() -> Dict[str, str]:
+def setup_wizard() -> dict[str, str]:
     """
     首次运行设置向导：提示用户输入 API 密钥并加密存储。
 
@@ -263,19 +262,20 @@ def setup_wizard() -> Dict[str, str]:
 
 # ── 内部辅助 ───────────────────────────────────────────────
 
-def _load_secrets() -> Dict[str, str]:
+
+def _load_secrets() -> dict[str, str]:
     """从文件加载加密的密钥字典。"""
     secrets_path = Path(_SECRETS_FILE)
     if not secrets_path.exists():
         return {}
     try:
-        with open(secrets_path, "r", encoding="utf-8") as f:
+        with open(secrets_path, encoding="utf-8") as f:
             return json.load(f)
-    except (json.JSONDecodeError, IOError):
+    except (OSError, json.JSONDecodeError):
         return {}
 
 
-def _save_secrets(secrets: Dict[str, str]):
+def _save_secrets(secrets: dict[str, str]):
     """保存密钥字典到文件。"""
     secrets_path = Path(_SECRETS_FILE)
     secrets_path.parent.mkdir(parents=True, exist_ok=True)
@@ -284,10 +284,10 @@ def _save_secrets(secrets: Dict[str, str]):
 
 
 # ── 模块级缓存（单次会话内不解密多次） ──
-_decrypted_cache: Dict[str, str] = {}
+_decrypted_cache: dict[str, str] = {}
 
 
-def get_decrypted_key(key_name: str, prompt_if_missing: bool = True) -> Optional[str]:
+def get_decrypted_key(key_name: str, prompt_if_missing: bool = True) -> str | None:
     """
     获取解密后的 API 密钥（带缓存）。
 
@@ -343,6 +343,6 @@ def migrate_from_env():
 
     if migrated:
         print(f"\n  ✅ 已迁移 {len(migrated)} 个密钥到加密存储: {', '.join(migrated)}")
-        print(f"  💡 建议从 .env 文件中删除明文密钥以提高安全性。")
+        print("  💡 建议从 .env 文件中删除明文密钥以提高安全性。")
 
     return migrated

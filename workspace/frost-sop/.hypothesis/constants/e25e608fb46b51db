@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\health_meta.py
+# hypothesis_version: 6.145.0
+
+[0.0, 20.0, 30.0, 80.0, 100, 'action', 'active', 'archived', 'critical (0-20)', 'current_score', 'declining', 'deprecate', 'deprecated', 'excellent (80-100)', 'failure_count', 'fair (40-60)', 'good (60-80)', 'health_score', 'improving', 'keep', 'new', 'poor (20-40)', 'promote', 'rank', 'reason', 'recommended_state', 'retire', 'retired', 'stable', 'success_count', 'success_rate', 'timestamp', 'trend', 'unknown', 'usage_count', 'volatile', 'weapon_id', 'weapon_name', 'weapon_state', '当前状态良好', '武器不存在', '预置武器', '预置武器不自动淘汰']

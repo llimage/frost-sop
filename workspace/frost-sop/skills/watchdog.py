@@ -9,8 +9,9 @@ PHILOSOPHY:
 """
 
 import logging
-from datetime import datetime, timedelta
-from core.event_bus import get_event_bus, Event
+from datetime import datetime
+
+from core.event_bus import Event, get_event_bus
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ HEARTBEAT_TIMEOUT_SECONDS = 120
 # ============================================================
 # Skill 1: send_heartbeat — 父辈每30秒调用
 # ============================================================
+
 
 def send_heartbeat(context: dict) -> dict:
     """
@@ -52,11 +54,14 @@ def send_heartbeat(context: dict) -> dict:
         try:
             # key 格式: heartbeat:{agent_id}
             store_key = f"heartbeat:{agent_id}"
-            store.save(store_key, {
-                "agent_id": agent_id,
-                "agent_role": agent_role,
-                "timestamp": now.isoformat(),
-            })
+            store.save(
+                store_key,
+                {
+                    "agent_id": agent_id,
+                    "agent_role": agent_role,
+                    "timestamp": now.isoformat(),
+                },
+            )
             # 如果是祖辈，额外写入 ancestor:last_heartbeat（供 check_ancestor_alive 读取）
             if agent_role == "ancestor":
                 store.save("ancestor:last_heartbeat", now)
@@ -71,14 +76,13 @@ def send_heartbeat(context: dict) -> dict:
             "agent_role": agent_role,
             "task_id": task_id,
             "timestamp": now.isoformat(),
-        }
+        },
     )
 
     try:
         notified = event_bus.publish(event)
         logger.info(
-            "[Heartbeat] %s (%s) 发送心跳，通知了 %s 个订阅者",
-            agent_id, agent_role, notified
+            "[Heartbeat] %s (%s) 发送心跳，通知了 %s 个订阅者", agent_id, agent_role, notified
         )
         context["_heartbeat_sent"] = True
         context["_heartbeat_time"] = now.isoformat()
@@ -93,6 +97,7 @@ def send_heartbeat(context: dict) -> dict:
 # ============================================================
 # Skill 2: monitor_heartbeat — 祖辈每60秒调用
 # ============================================================
+
 
 def monitor_heartbeat(context: dict) -> dict:
     """
@@ -126,10 +131,7 @@ def monitor_heartbeat(context: dict) -> dict:
 
     # 从 EventBus 内存日志读取最近心跳
     # 获取最近 200 条心跳事件（按时间倒序，最新在前）
-    recent_heartbeats = event_bus.get_event_log(
-        event_type=EVENT_HEARTBEAT,
-        limit=200
-    )
+    recent_heartbeats = event_bus.get_event_log(event_type=EVENT_HEARTBEAT, limit=200)
     # get_event_log 返回最新在前，需要反转来得到时间顺序
     recent_heartbeats.reverse()
 
@@ -149,26 +151,32 @@ def monitor_heartbeat(context: dict) -> dict:
         last_ts = last_heartbeat_map.get(agent_id)
         if last_ts is None:
             # 从未收到心跳，视为超时
-            timeout_parents.append({
-                "agent_id": agent_id,
-                "last_heartbeat": None,
-                "idle_seconds": None,
-                "status": "no_heartbeat_ever",
-            })
+            timeout_parents.append(
+                {
+                    "agent_id": agent_id,
+                    "last_heartbeat": None,
+                    "idle_seconds": None,
+                    "status": "no_heartbeat_ever",
+                }
+            )
             dead_parents.append(agent_id)
         else:
             idle_seconds = (now - last_ts).total_seconds()
             if idle_seconds > timeout:
-                timeout_parents.append({
-                    "agent_id": agent_id,
-                    "last_heartbeat": last_ts.isoformat(),
-                    "idle_seconds": int(idle_seconds),
-                    "status": "timeout",
-                })
+                timeout_parents.append(
+                    {
+                        "agent_id": agent_id,
+                        "last_heartbeat": last_ts.isoformat(),
+                        "idle_seconds": int(idle_seconds),
+                        "status": "timeout",
+                    }
+                )
                 dead_parents.append(agent_id)
                 logger.warning(
                     "[Heartbeat] 父辈 %s 心跳超时 %s 秒（阈值 %s 秒）",
-                    agent_id, int(idle_seconds), timeout
+                    agent_id,
+                    int(idle_seconds),
+                    timeout,
                 )
 
     monitor_result = {
@@ -185,8 +193,7 @@ def monitor_heartbeat(context: dict) -> dict:
     context["_monitor_result"] = monitor_result
 
     logger.info(
-        "[Heartbeat] 监控完成: %s 个活跃父辈，%s 个超时",
-        len(active_parents), len(timeout_parents)
+        "[Heartbeat] 监控完成: %s 个活跃父辈，%s 个超时", len(active_parents), len(timeout_parents)
     )
 
     return context
@@ -206,8 +213,7 @@ def _get_active_parents_from_store(store) -> list:
             if key.startswith("agent_status:"):
                 data = store.load(key)
                 if isinstance(data, dict):
-                    if (data.get("status") == "active"
-                            and data.get("agent_type") == "parent"):
+                    if data.get("status") == "active" and data.get("agent_type") == "parent":
                         parent_ids.append(data.get("agent_id", key.split(":")[-1]))
         return parent_ids
     except Exception as e:
@@ -219,8 +225,8 @@ def _get_active_parents_from_store(store) -> list:
 # 便捷函数: 启动/停止心跳（供 Agent 调用）
 # ============================================================
 
-def start_heartbeat_loop(agent_id: str, agent_role: str,
-                          interval_seconds: int = 30):
+
+def start_heartbeat_loop(agent_id: str, agent_role: str, interval_seconds: int = 30):
     """
     启动心跳循环（在独立线程中运行）。
     注意: 这是一个阻塞函数，应在独立线程中调用。
@@ -229,9 +235,9 @@ def start_heartbeat_loop(agent_id: str, agent_role: str,
     此函数保留为未来异步模式做准备。
     """
     import time
+
     logger.info(
-        "[Heartbeat] 启动心跳循环: %s (%s), 间隔 %ss",
-        agent_id, agent_role, interval_seconds
+        "[Heartbeat] 启动心跳循环: %s (%s), 间隔 %ss", agent_id, agent_role, interval_seconds
     )
     while True:
         ctx = {
@@ -247,17 +253,18 @@ def start_heartbeat_loop(agent_id: str, agent_role: str,
 # V4.0 P1: 呼吸监控
 # ============================================================
 
+
 def report_stage_status(context: dict) -> dict:
     """
     阶段状态上报：向 EventBus 发布 stage_status 事件。
     由父辈在每个 SOP 阶段完成时调用。
-    
+
     输入 context 键：
         _stage_name: str —— 阶段名称
         _stage_status: str —— 状态（completed / failed / skipped）
         _task_id: str —— 当前任务 ID
         _agent_id: str —— 执行 Agent ID
-    
+
     输出 context 键：
         _stage_status_reported: bool
     """
@@ -267,7 +274,7 @@ def report_stage_status(context: dict) -> dict:
     task_id = context.get("_task_id", "unknown")
     agent_id = context.get("_agent_id", "unknown")
     now = datetime.now()
-    
+
     event = Event(
         event_type="stage_status",
         source=agent_id,
@@ -277,20 +284,23 @@ def report_stage_status(context: dict) -> dict:
             "task_id": task_id,
             "agent_id": agent_id,
             "timestamp": now.isoformat(),
-        }
+        },
     )
-    
+
     try:
         notified = event_bus.publish(event)
         logger.info(
             "[StageStatus] %s: %s (%s), 通知了 %s 个订阅者",
-            stage_name, stage_status, task_id, notified
+            stage_name,
+            stage_status,
+            task_id,
+            notified,
         )
         context["_stage_status_reported"] = True
     except Exception as e:
         logger.error("[StageStatus] 上报失败: %s", e)
         context["_stage_status_reported"] = False
-    
+
     return context
 
 
@@ -298,13 +308,13 @@ def report_task_health(context: dict) -> dict:
     """
     任务健康上报：向 EventBus 发布 task_health 事件。
     由父辈定期检查任务健康状态时调用。
-    
+
     输入 context 键：
         _task_id: str —— 任务 ID
         _health_score: float —— 健康分数 (0.0 - 1.0)
         _health_reason: str —— 健康状态原因
         _agent_id: str —— 检查 Agent ID
-    
+
     输出 context 键：
         _task_health_reported: bool
         _health_level: str —— 健康等级 (healthy / warning / critical)
@@ -315,7 +325,7 @@ def report_task_health(context: dict) -> dict:
     health_reason = context.get("_health_reason", "")
     agent_id = context.get("_agent_id", "unknown")
     now = datetime.now()
-    
+
     # 确定健康等级
     if health_score >= 0.7:
         health_level = "healthy"
@@ -323,7 +333,7 @@ def report_task_health(context: dict) -> dict:
         health_level = "warning"
     else:
         health_level = "critical"
-    
+
     event = Event(
         event_type="task_health",
         source=agent_id,
@@ -334,33 +344,36 @@ def report_task_health(context: dict) -> dict:
             "reason": health_reason,
             "agent_id": agent_id,
             "timestamp": now.isoformat(),
-        }
+        },
     )
-    
+
     try:
         notified = event_bus.publish(event)
         logger.info(
             "[TaskHealth] %s: %s (%.2f), 通知了 %s 个订阅者",
-            task_id, health_level, health_score, notified
+            task_id,
+            health_level,
+            health_score,
+            notified,
         )
         context["_task_health_reported"] = True
         context["_health_level"] = health_level
     except Exception as e:
         logger.error("[TaskHealth] 上报失败: %s", e)
         context["_task_health_reported"] = False
-    
+
     return context
 
 
 def check_consecutive_failures(context: dict) -> dict:
     """
     连续失败熔断：检查任务/阶段的连续失败次数，超过阈值触发熔断。
-    
+
     输入 context 键：
         _task_id: str —— 任务 ID
         _failure_history: list —— 失败历史列表
         _circuit_breaker_threshold: int —— 熔断阈值（默认 3）
-    
+
     输出 context 键：
         _circuit_breaker_triggered: bool
         _consecutive_failures: int
@@ -369,7 +382,7 @@ def check_consecutive_failures(context: dict) -> dict:
     task_id = context.get("_task_id", "unknown")
     failure_history = context.get("_failure_history", [])
     threshold = context.get("_circuit_breaker_threshold", 3)
-    
+
     # 计算连续失败次数
     consecutive = 0
     for record in reversed(failure_history):
@@ -377,18 +390,15 @@ def check_consecutive_failures(context: dict) -> dict:
             consecutive += 1
         else:
             break
-    
+
     context["_consecutive_failures"] = consecutive
-    
+
     # 检查是否触发熔断
     if consecutive >= threshold:
-        logger.warning(
-            "[CircuitBreaker] 任务 %s 连续失败 %s 次，触发熔断！",
-            task_id, consecutive
-        )
+        logger.warning("[CircuitBreaker] 任务 %s 连续失败 %s 次，触发熔断！", task_id, consecutive)
         context["_circuit_breaker_triggered"] = True
         context["_circuit_breaker_reason"] = f"连续失败 {consecutive} 次，超过阈值 {threshold}"
-        
+
         # 发布熔断事件
         event_bus = get_event_bus()
         event = Event(
@@ -399,7 +409,7 @@ def check_consecutive_failures(context: dict) -> dict:
                 "consecutive_failures": consecutive,
                 "threshold": threshold,
                 "timestamp": datetime.now().isoformat(),
-            }
+            },
         )
         try:
             event_bus.publish(event)
@@ -408,13 +418,14 @@ def check_consecutive_failures(context: dict) -> dict:
     else:
         context["_circuit_breaker_triggered"] = False
         context["_circuit_breaker_reason"] = ""
-    
+
     return context
 
 
 # ============================================================
 # Skill 注册（供 agents/parent.py 导入）
 # ============================================================
+
 
 def get_watchdog_skills():
     """

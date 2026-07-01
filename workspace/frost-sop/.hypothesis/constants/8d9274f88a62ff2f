@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\panel_decision.py
+# hypothesis_version: 6.145.0
+
+[0.9, 100, 300, 600, 1800, 3600, 'approved', 'at', 'cancelled', 'decision', 'decision.cancelled', 'decision.created', 'decision.made', 'decision.timeout', 'decision_id', 'in_progress', 'modified', 'monarch', 'pending', 'quality_score', 'reason', 'rejected', 'role', 'sop_engine', 'stage_id', 'stage_name', 'status', 'system', 'task_id', 'timeout', 'total', '修改', '确认', '确认（自动）', '驳回', '驳回（超时）']

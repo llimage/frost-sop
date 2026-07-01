@@ -10,10 +10,10 @@ V2.0 阶段三验收测试：长老审计自动化
 """
 
 import os
-import threading
 import tempfile
+import threading
 
-os.environ['FROST_TESTING'] = '1'
+os.environ["FROST_TESTING"] = "1"
 
 from core.store import Store
 
@@ -24,6 +24,7 @@ class TestElderAutoAudit:
     def _make_temp_db(self):
         """创建临时测试数据库，返回 (db, tmp_path, orig_state)"""
         import core.db as db_module
+
         f = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         tmp_db = f.name
         f.close()
@@ -46,6 +47,7 @@ class TestElderAutoAudit:
         # V2.0: 同时重置 EventBus，避免旧 event_id 写入新 DB 时 UNIQUE 冲突
         try:
             from core.event_bus import EventBus
+
             EventBus.reset()
         except Exception:
             pass
@@ -55,6 +57,7 @@ class TestElderAutoAudit:
     def _restore_db(self, orig):
         """恢复原始 DB 状态"""
         import core.db as db_module
+
         db_module.DBManager._instance = orig["instance"]
         db_module.DBManager._connection = orig["connection"]
         db_module._db_manager = orig["global"]
@@ -65,10 +68,13 @@ class TestElderAutoAudit:
 
         # 创建带任务数据的 Store
         asset_store = Store()
-        asset_store.save("task:test_audit", {
-            "status": "completed",
-            "stage_results": [],
-        })
+        asset_store.save(
+            "task:test_audit",
+            {
+                "status": "completed",
+                "stage_results": [],
+            },
+        )
 
         context = {
             "_task_id": "test_audit_001",
@@ -106,20 +112,25 @@ class TestElderAutoAudit:
 
         try:
             # 确保有 founder agent（避免 FK 失败）
-            test_db.insert("agents", {
-                "id": "elder_audit_test_au",
-                "name": "长老测试",
-                "agent_type": "elder",
-                "generation": 0,
-            })
+            test_db.insert(
+                "agents",
+                {
+                    "id": "elder_audit_test_au",
+                    "name": "长老测试",
+                    "agent_type": "elder",
+                    "generation": 0,
+                },
+            )
 
             from skills.orchestration import _trigger_elder_audit
+
             asset_store = Store()
             asset_store.save("task:test", {"status": "completed", "stage_results": []})
 
             # V2.0: 临时 patch EventBus._persist_event，防止在临时 DB 上写 event_log 时冲突
             try:
                 from core.event_bus import EventBus
+
                 _orig_persist = EventBus._persist_event
 
                 def _noop_persist(self_bus, event):
@@ -137,6 +148,7 @@ class TestElderAutoAudit:
                 if _orig_persist is not None:
                     try:
                         from core.event_bus import EventBus
+
                         EventBus._persist_event = _orig_persist
                     except Exception:
                         pass
@@ -149,6 +161,7 @@ class TestElderAutoAudit:
         finally:
             self._restore_db(orig)
             import os as _os
+
             try:
                 _os.unlink(tmp_db)
             except Exception:
@@ -174,6 +187,7 @@ class TestElderAutoAudit:
         finally:
             self._restore_db(orig)
             import os as _os
+
             try:
                 _os.unlink(tmp_db)
             except Exception:
@@ -182,12 +196,14 @@ class TestElderAutoAudit:
     def test_v2_phase3_06_parent_has_finalize_task_skill(self):
         """create_parent 创建的父辈 Agent 包含 finalize_task Skill"""
         from agents.parent import create_parent
+
         parent = create_parent("test_parent_v2", Store())
         assert "finalize_task" in parent.skills, "父辈应包含 finalize_task Skill"
 
     def test_v2_phase3_07_finalize_task_in_orchestration_module(self):
         """skills/orchestration 模块导出 finalize_task_skill"""
         from skills.orchestration import finalize_task_skill
+
         assert finalize_task_skill is not None
         assert finalize_task_skill.name == "finalize_task"
 

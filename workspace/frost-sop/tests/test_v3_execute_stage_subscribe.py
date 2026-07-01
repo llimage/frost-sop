@@ -10,19 +10,18 @@ FROST-SOP V3.0 — execute_stage 事件订阅测试
 6. 多个阶段顺序执行
 """
 
-import os
 import asyncio
+import os
+
 import pytest
 
-os.environ['FROST_TESTING'] = '1'
+os.environ["FROST_TESTING"] = "1"
 
-from core.event_bus import (
-    AsyncEventBus, Event, EventType, get_async_event_bus
-)
-from skills.orchestration import register_stage_executor
 from agents.parent import create_parent
-from stores.asset import create_asset_store
+from core.event_bus import AsyncEventBus, Event, EventType, get_async_event_bus
 from core.store import Store
+from skills.orchestration import register_stage_executor
+from stores.asset import create_asset_store
 
 
 def _setup():
@@ -35,6 +34,7 @@ def _setup():
 # ---------------------------------------------------------------------------
 # 测试 1: register_stage_executor 注册 STAGE_STARTED 订阅
 # ---------------------------------------------------------------------------
+
 
 def test_01_register_subscribes_to_stage_started():
     """register_stage_executor 注册后应有 STAGE_STARTED 订阅者"""
@@ -52,6 +52,7 @@ def test_01_register_subscribes_to_stage_started():
 # 测试 2: 收到 STAGE_STARTED 后发布 STAGE_COMPLETED
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_02_stage_started_triggers_stage_completed():
     """STAGE_STARTED 事件触发 execute_stage 并发布 STAGE_COMPLETED"""
@@ -62,20 +63,24 @@ async def test_02_stage_started_triggers_stage_completed():
 
     completed_events = []
 
-    async def capture(e): completed_events.append(e)
+    async def capture(e):
+        completed_events.append(e)
+
     bus.subscribe_async(EventType.STAGE_COMPLETED, capture)
 
     # 发布 STAGE_STARTED
-    await bus.publish(Event(
-        event_type=EventType.STAGE_STARTED,
-        source="parent:stage_executor",
-        data={
-            "task_id": "test_v3_stage_002",
-            "stage_name": "需求分析",
-            "stage_order": 1,
-            "total_stages": 3,
-        },
-    ))
+    await bus.publish(
+        Event(
+            event_type=EventType.STAGE_STARTED,
+            source="parent:stage_executor",
+            data={
+                "task_id": "test_v3_stage_002",
+                "stage_name": "需求分析",
+                "stage_order": 1,
+                "total_stages": 3,
+            },
+        )
+    )
 
     await asyncio.sleep(0.3)
 
@@ -91,6 +96,7 @@ async def test_02_stage_started_triggers_stage_completed():
 # 测试 3: STAGE_COMPLETED 包含状态信息
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_03_stage_completed_contains_status():
     """STAGE_COMPLETED 事件包含执行状态"""
@@ -101,19 +107,23 @@ async def test_03_stage_completed_contains_status():
 
     completed = []
 
-    async def capture(e): completed.append(e)
+    async def capture(e):
+        completed.append(e)
+
     bus.subscribe_async(EventType.STAGE_COMPLETED, capture)
 
-    await bus.publish(Event(
-        event_type=EventType.STAGE_STARTED,
-        source="parent:stage_executor",
-        data={
-            "task_id": "test_v3_stage_003",
-            "stage_name": "技术设计",
-            "stage_order": 2,
-            "total_stages": 5,
-        },
-    ))
+    await bus.publish(
+        Event(
+            event_type=EventType.STAGE_STARTED,
+            source="parent:stage_executor",
+            data={
+                "task_id": "test_v3_stage_003",
+                "stage_name": "技术设计",
+                "stage_order": 2,
+                "total_stages": 5,
+            },
+        )
+    )
 
     await asyncio.sleep(0.3)
 
@@ -126,6 +136,7 @@ async def test_03_stage_completed_contains_status():
 # 测试 4: 未注册时不订阅
 # ---------------------------------------------------------------------------
 
+
 def test_04_no_subscription_without_register():
     """不调用 register_stage_executor 时没有 STAGE_STARTED 订阅"""
     bus = _setup()
@@ -135,6 +146,7 @@ def test_04_no_subscription_without_register():
 # ---------------------------------------------------------------------------
 # 测试 5: 多个阶段顺序执行
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_05_multiple_stages_sequential():
@@ -146,21 +158,25 @@ async def test_05_multiple_stages_sequential():
 
     completed = []
 
-    async def capture(e): completed.append(e)
+    async def capture(e):
+        completed.append(e)
+
     bus.subscribe_async(EventType.STAGE_COMPLETED, capture)
 
     # 发布两个 STAGE_STARTED
     for i in range(1, 3):
-        await bus.publish(Event(
-            event_type=EventType.STAGE_STARTED,
-            source="parent:stage_executor",
-            data={
-                "task_id": "test_v3_stage_005",
-                "stage_name": f"阶段{i}",
-                "stage_order": i,
-                "total_stages": 2,
-            },
-        ))
+        await bus.publish(
+            Event(
+                event_type=EventType.STAGE_STARTED,
+                source="parent:stage_executor",
+                data={
+                    "task_id": "test_v3_stage_005",
+                    "stage_name": f"阶段{i}",
+                    "stage_order": i,
+                    "total_stages": 2,
+                },
+            )
+        )
         await asyncio.sleep(0.2)
 
     assert len(completed) >= 2
@@ -171,6 +187,7 @@ async def test_05_multiple_stages_sequential():
 # ---------------------------------------------------------------------------
 # 测试 6: register_stage_executor 返回 True
 # ---------------------------------------------------------------------------
+
 
 def test_06_register_returns_true():
     """register_stage_executor 成功注册返回 True"""

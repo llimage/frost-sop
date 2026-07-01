@@ -3,15 +3,17 @@ F12 E2E 浏览器自动化诊断测试
 目标：发现所有 UI 断链，诚实记录。不做任何代码修复。
 策略：逐元素验证，不跳过、不假设、不替代码找理由。
 """
-import sys
-import os
-import time
+
 import json
+import os
+import sys
+import time
 import traceback
 from datetime import datetime
 
 # 确保 FROST_TESTING 环境变量
-os.environ['FROST_TESTING'] = '1'
+os.environ["FROST_TESTING"] = "1"
+
 
 # ================================================================
 # E2E 测试结果收集器
@@ -23,25 +25,37 @@ class E2EResults:
         self.errors = []  # 全局错误
         self.start_time = datetime.now()
 
-    def add_element_test(self, location, element_id, element_type, clickable, has_response,
-                         response_correct, error_msg=None):
-        self.elements.append({
-            "location": location,
-            "element_id": element_id,
-            "element_type": element_type,
-            "clickable": clickable,  # True/False
-            "has_response": has_response,  # True/False/None
-            "response_correct": response_correct,  # True/False/None
-            "error_msg": error_msg,
-        })
+    def add_element_test(
+        self,
+        location,
+        element_id,
+        element_type,
+        clickable,
+        has_response,
+        response_correct,
+        error_msg=None,
+    ):
+        self.elements.append(
+            {
+                "location": location,
+                "element_id": element_id,
+                "element_type": element_type,
+                "clickable": clickable,  # True/False
+                "has_response": has_response,  # True/False/None
+                "response_correct": response_correct,  # True/False/None
+                "error_msg": error_msg,
+            }
+        )
 
     def add_flow_test(self, flow_name, passed, error_step=None, error_msg=None):
-        self.user_flows.append({
-            "flow_name": flow_name,
-            "passed": passed,
-            "error_step": error_step,
-            "error_msg": error_msg,
-        })
+        self.user_flows.append(
+            {
+                "flow_name": flow_name,
+                "passed": passed,
+                "error_step": error_step,
+                "error_msg": error_msg,
+            }
+        )
 
     def add_error(self, error_msg):
         self.errors.append(error_msg)
@@ -52,8 +66,7 @@ class E2EResults:
         not_clickable = total - clickable_count
         responded_count = sum(1 for e in self.elements if e["has_response"] is True)
         correct_count = sum(1 for e in self.elements if e["response_correct"] is True)
-        incorrect_count = sum(1 for e in self.elements
-                              if e["response_correct"] is False)
+        incorrect_count = sum(1 for e in self.elements if e["response_correct"] is False)
         flows_passed = sum(1 for f in self.user_flows if f["passed"])
         flows_failed = len(self.user_flows) - flows_passed
 
@@ -64,16 +77,20 @@ class E2EResults:
             "responded": responded_count,
             "no_response": total - responded_count,
             "response_correct": correct_count,
-            "response_incorrect_or_unknown": incorrect_count + (total - responded_count - correct_count),
+            "response_incorrect_or_unknown": incorrect_count
+            + (total - responded_count - correct_count),
             "user_flows_passed": flows_passed,
             "user_flows_failed": flows_failed,
             "global_errors": len(self.errors),
             "element_pass_rate": round(clickable_count / total * 100, 1) if total > 0 else 0,
-            "flow_pass_rate": round(flows_passed / len(self.user_flows) * 100, 1) if self.user_flows else 0,
+            "flow_pass_rate": round(flows_passed / len(self.user_flows) * 100, 1)
+            if self.user_flows
+            else 0,
         }
 
 
 results = E2EResults()
+
 
 # ================================================================
 # Playwright 浏览器自动化
@@ -102,8 +119,9 @@ def run_e2e_tests():
 
         # 收集 console errors
         console_errors = []
-        page.on("console", lambda msg: console_errors.append(
-            msg.text) if msg.type == "error" else None)
+        page.on(
+            "console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None
+        )
 
         try:
             # Step 1: 打开首页
@@ -137,7 +155,7 @@ def run_e2e_tests():
             ]
 
             # 尝试用不同选择器找到导航链接
-            nav_links = page.query_selector_all('.nav-link')
+            nav_links = page.query_selector_all(".nav-link")
             print(f"  找到 {len(nav_links)} 个导航链接")
 
             # A2. 项目概览区按钮
@@ -148,7 +166,7 @@ def run_e2e_tests():
             ]
             for label, key, etype in buttons_to_test:
                 try:
-                    btn = page.query_selector(f'button[kind="primary"]')
+                    btn = page.query_selector('button[kind="primary"]')
                     if not btn:
                         btn = page.query_selector(f'button:has-text("{label}")')
                     clickable = btn is not None and btn.is_enabled() and btn.is_visible()
@@ -157,8 +175,9 @@ def run_e2e_tests():
                     error = None
                     if not clickable:
                         error = "未找到按钮或按钮不可点击"
-                    results.add_element_test("项目概览区", key, etype, clickable,
-                                             has_resp, correct, error)
+                    results.add_element_test(
+                        "项目概览区", key, etype, clickable, has_resp, correct, error
+                    )
                     status = "✓" if clickable else "✗"
                     print(f"  {status} {label} ({key}): clickable={clickable}")
                 except Exception as ex:
@@ -175,27 +194,45 @@ def run_e2e_tests():
                     if inp.is_visible():
                         ceo_input = inp
                         break
-                clickable = ceo_input is not None and ceo_input.is_enabled() and ceo_input.is_visible()
-                results.add_element_test("CEO对话面板", "ceo_input", "input",
-                                         clickable, None, None,
-                                         None if clickable else "输入框不可用")
+                clickable = (
+                    ceo_input is not None and ceo_input.is_enabled() and ceo_input.is_visible()
+                )
+                results.add_element_test(
+                    "CEO对话面板",
+                    "ceo_input",
+                    "input",
+                    clickable,
+                    None,
+                    None,
+                    None if clickable else "输入框不可用",
+                )
                 print(f"  {'✓' if clickable else '✗'} CEO输入框: clickable={clickable}")
             except Exception as ex:
-                results.add_element_test("CEO对话面板", "ceo_input", "input",
-                                         False, None, None, str(ex))
+                results.add_element_test(
+                    "CEO对话面板", "ceo_input", "input", False, None, None, str(ex)
+                )
                 print(f"  ✗ CEO输入框: {ex}")
 
             # 发送按钮
             try:
-                send_btn = page.query_selector('button:has-text("发送"), button[key="btn_ceo_send"]')
+                send_btn = page.query_selector(
+                    'button:has-text("发送"), button[key="btn_ceo_send"]'
+                )
                 clickable = send_btn is not None and send_btn.is_enabled() and send_btn.is_visible()
-                results.add_element_test("CEO对话面板", "btn_ceo_send", "button",
-                                         clickable, None, None,
-                                         None if clickable else "发送按钮不可用")
+                results.add_element_test(
+                    "CEO对话面板",
+                    "btn_ceo_send",
+                    "button",
+                    clickable,
+                    None,
+                    None,
+                    None if clickable else "发送按钮不可用",
+                )
                 print(f"  {'✓' if clickable else '✗'} 发送按钮: clickable={clickable}")
             except Exception as ex:
-                results.add_element_test("CEO对话面板", "btn_ceo_send",
-                                         "button", False, None, None, str(ex))
+                results.add_element_test(
+                    "CEO对话面板", "btn_ceo_send", "button", False, None, None, str(ex)
+                )
                 print(f"  ✗ 发送按钮: {ex}")
 
             # 三个快捷指令
@@ -208,9 +245,15 @@ def run_e2e_tests():
                 try:
                     btn = page.query_selector(f'button:has-text("{label}"), button[key="{key}"]')
                     clickable = btn is not None and btn.is_enabled() and btn.is_visible()
-                    results.add_element_test("快捷指令", key, "button",
-                                             clickable, None, None,
-                                             None if clickable else "快捷按钮不可用")
+                    results.add_element_test(
+                        "快捷指令",
+                        key,
+                        "button",
+                        clickable,
+                        None,
+                        None,
+                        None if clickable else "快捷按钮不可用",
+                    )
                     print(f"  {'✓' if clickable else '✗'} {label} ({key}): clickable={clickable}")
                 except Exception as ex:
                     results.add_element_test("快捷指令", key, "button", False, None, None, str(ex))
@@ -227,9 +270,15 @@ def run_e2e_tests():
                 try:
                     btn = page.query_selector(f'button:has-text("{label}")')
                     clickable = btn is not None and btn.is_enabled() and btn.is_visible()
-                    results.add_element_test("模式切换", key, "button",
-                                             clickable, None, None,
-                                             None if clickable else "模式按钮不可用")
+                    results.add_element_test(
+                        "模式切换",
+                        key,
+                        "button",
+                        clickable,
+                        None,
+                        None,
+                        None if clickable else "模式按钮不可用",
+                    )
                     print(f"  {'✓' if clickable else '✗'} {label} ({key}): clickable={clickable}")
                 except Exception as ex:
                     results.add_element_test("模式切换", key, "button", False, None, None, str(ex))
@@ -244,22 +293,38 @@ def run_e2e_tests():
                 print(f"  找到 {agent_count} 个垂直块（可能包含 Agent 卡片）")
 
                 # 寻找 Agent 标题
-                for agent_name in ["CEO Agent", "Architect", "Parent Agent", "Elder Agent",
-                                   "Code Agent", "Test Agent", "Review Agent", "DevOps Agent"]:
+                for agent_name in [
+                    "CEO Agent",
+                    "Architect",
+                    "Parent Agent",
+                    "Elder Agent",
+                    "Code Agent",
+                    "Test Agent",
+                    "Review Agent",
+                    "DevOps Agent",
+                ]:
                     try:
                         el = page.query_selector(f'text="{agent_name}"')
                         found = el is not None and el.is_visible()
-                        results.add_element_test("Agent团队", f"agent_{agent_name}", "card",
-                                                 found, None, None,
-                                                 None if found else f"Agent {agent_name} 未找到")
+                        results.add_element_test(
+                            "Agent团队",
+                            f"agent_{agent_name}",
+                            "card",
+                            found,
+                            None,
+                            None,
+                            None if found else f"Agent {agent_name} 未找到",
+                        )
                         print(f"  {'✓' if found else '✗'} Agent: {agent_name}")
                     except Exception as ex:
-                        results.add_element_test("Agent团队", f"agent_{agent_name}", "card",
-                                                 False, None, None, str(ex))
+                        results.add_element_test(
+                            "Agent团队", f"agent_{agent_name}", "card", False, None, None, str(ex)
+                        )
                         print(f"  ✗ Agent: {agent_name}: {ex}")
             except Exception as ex:
-                results.add_element_test("Agent团队", "agent_grid", "grid",
-                                         False, None, None, str(ex))
+                results.add_element_test(
+                    "Agent团队", "agent_grid", "grid", False, None, None, str(ex)
+                )
                 print(f"  ✗ Agent团队: {ex}")
 
             # A6. 执行任务按钮
@@ -276,9 +341,15 @@ def run_e2e_tests():
                 try:
                     btn = page.query_selector(f'button:has-text("{label}")')
                     clickable = btn is not None and btn.is_enabled() and btn.is_visible()
-                    results.add_element_test("任务执行", key, etype,
-                                             clickable, None, None,
-                                             None if clickable else f"{label} 按钮不可用")
+                    results.add_element_test(
+                        "任务执行",
+                        key,
+                        etype,
+                        clickable,
+                        None,
+                        None,
+                        None if clickable else f"{label} 按钮不可用",
+                    )
                     print(f"  {'✓' if clickable else '✗'} {label} ({key}): clickable={clickable}")
                 except Exception as ex:
                     results.add_element_test("任务执行", key, etype, False, None, None, str(ex))
@@ -295,9 +366,15 @@ def run_e2e_tests():
                 try:
                     btn = page.query_selector(f'button:has-text("{label}")')
                     clickable = btn is not None and btn.is_enabled() and btn.is_visible()
-                    results.add_element_test("日终回顾", key, "button",
-                                             clickable, None, None,
-                                             None if clickable else f"{label} 按钮不可用")
+                    results.add_element_test(
+                        "日终回顾",
+                        key,
+                        "button",
+                        clickable,
+                        None,
+                        None,
+                        None if clickable else f"{label} 按钮不可用",
+                    )
                     print(f"  {'✓' if clickable else '✗'} {label} ({key}): clickable={clickable}")
                 except Exception as ex:
                     results.add_element_test("日终回顾", key, "button", False, None, None, str(ex))
@@ -307,14 +384,23 @@ def run_e2e_tests():
             print("\n  --- H. 能量记录器 ---")
             try:
                 record_btn = page.query_selector('button:has-text("记录此刻")')
-                clickable = record_btn is not None and record_btn.is_enabled() and record_btn.is_visible()
-                results.add_element_test("能量记录器", "record_energy", "button",
-                                         clickable, None, None,
-                                         None if clickable else "记录此刻按钮不可用")
+                clickable = (
+                    record_btn is not None and record_btn.is_enabled() and record_btn.is_visible()
+                )
+                results.add_element_test(
+                    "能量记录器",
+                    "record_energy",
+                    "button",
+                    clickable,
+                    None,
+                    None,
+                    None if clickable else "记录此刻按钮不可用",
+                )
                 print(f"  {'✓' if clickable else '✗'} 记录此刻: clickable={clickable}")
             except Exception as ex:
-                results.add_element_test("能量记录器", "record_energy",
-                                         "button", False, None, None, str(ex))
+                results.add_element_test(
+                    "能量记录器", "record_energy", "button", False, None, None, str(ex)
+                )
                 print(f"  ✗ 记录此刻: {ex}")
 
             # A9. 侧边栏元素
@@ -327,9 +413,15 @@ def run_e2e_tests():
                 try:
                     btn = page.query_selector(f'button:has-text("{label}")')
                     clickable = btn is not None and btn.is_enabled() and btn.is_visible()
-                    results.add_element_test("侧边栏", key, "button",
-                                             clickable, None, None,
-                                             None if clickable else f"{label} 按钮不可用")
+                    results.add_element_test(
+                        "侧边栏",
+                        key,
+                        "button",
+                        clickable,
+                        None,
+                        None,
+                        None if clickable else f"{label} 按钮不可用",
+                    )
                     print(f"  {'✓' if clickable else '✗'} {label} ({key}): clickable={clickable}")
                 except Exception as ex:
                     results.add_element_test("侧边栏", key, "button", False, None, None, str(ex))
@@ -339,14 +431,25 @@ def run_e2e_tests():
             print("\n  --- J. 日程管理 ---")
             try:
                 add_schedule_btn = page.query_selector('button:has-text("添加日程")')
-                clickable = add_schedule_btn is not None and add_schedule_btn.is_enabled() and add_schedule_btn.is_visible()
-                results.add_element_test("日程管理", "add_schedule_btn", "button",
-                                         clickable, None, None,
-                                         None if clickable else "添加日程按钮不可用")
+                clickable = (
+                    add_schedule_btn is not None
+                    and add_schedule_btn.is_enabled()
+                    and add_schedule_btn.is_visible()
+                )
+                results.add_element_test(
+                    "日程管理",
+                    "add_schedule_btn",
+                    "button",
+                    clickable,
+                    None,
+                    None,
+                    None if clickable else "添加日程按钮不可用",
+                )
                 print(f"  {'✓' if clickable else '✗'} 添加日程: clickable={clickable}")
             except Exception as ex:
-                results.add_element_test("日程管理", "add_schedule_btn",
-                                         "button", False, None, None, str(ex))
+                results.add_element_test(
+                    "日程管理", "add_schedule_btn", "button", False, None, None, str(ex)
+                )
                 print(f"  ✗ 添加日程: {ex}")
 
             # ========================================================
@@ -380,8 +483,7 @@ def run_e2e_tests():
                     results.add_flow_test("切换项目", True)
                     print(f"  ✓ 点击了 {len(proj_links)} 个侧边栏按钮中的第一个")
                 else:
-                    results.add_flow_test("切换项目", False, "无项目按钮",
-                                          "侧边栏无可点击的项目")
+                    results.add_flow_test("切换项目", False, "无项目按钮", "侧边栏无可点击的项目")
                     print("  ~ 侧边栏无项目按钮（可能仅单个项目）")
             except Exception as ex:
                 results.add_flow_test("切换项目", False, "点击", str(ex))
@@ -404,16 +506,15 @@ def run_e2e_tests():
                             results.add_flow_test("发送CEO消息", True)
                             print("  ✓ CEO消息发送成功")
                         else:
-                            results.add_flow_test("发送CEO消息", False, "无发送按钮",
-                                                  "发送按钮不可用")
+                            results.add_flow_test(
+                                "发送CEO消息", False, "无发送按钮", "发送按钮不可用"
+                            )
                             print("  ✗ 发送按钮不可用")
                     else:
-                        results.add_flow_test("发送CEO消息", False, "输入框不可见",
-                                              "输入框不可见")
+                        results.add_flow_test("发送CEO消息", False, "输入框不可见", "输入框不可见")
                         print("  ✗ 输入框不可见")
                 else:
-                    results.add_flow_test("发送CEO消息", False, "无输入框",
-                                          "页面无textarea或input")
+                    results.add_flow_test("发送CEO消息", False, "无输入框", "页面无textarea或input")
                     print("  ✗ 页面无输入框")
             except Exception as ex:
                 results.add_flow_test("发送CEO消息", False, "发送", str(ex))
@@ -429,8 +530,9 @@ def run_e2e_tests():
                     results.add_flow_test("快捷指令-进度如何", True)
                     print("  ✓ 快捷指令'进度如何'点击成功")
                 else:
-                    results.add_flow_test("快捷指令-进度如何", False, "按钮不可用",
-                                          "快捷指令按钮不可用")
+                    results.add_flow_test(
+                        "快捷指令-进度如何", False, "按钮不可用", "快捷指令按钮不可用"
+                    )
                     print("  ✗ 快捷指令按钮不可用")
             except Exception as ex:
                 results.add_flow_test("快捷指令-进度如何", False, "点击", str(ex))
@@ -446,8 +548,7 @@ def run_e2e_tests():
                     results.add_flow_test("查看成本面板", True)
                     print("  ✓ 成本面板加载成功")
                 else:
-                    results.add_flow_test("查看成本面板", False, "无成本链接",
-                                          "成本导航不可见")
+                    results.add_flow_test("查看成本面板", False, "无成本链接", "成本导航不可见")
                     print("  ~ 成本导航不可见，可能已显示在首屏")
             except Exception as ex:
                 results.add_flow_test("查看成本面板", False, "切换", str(ex))
@@ -465,8 +566,9 @@ def run_e2e_tests():
                     results.add_flow_test("查看底部面板", True)
                     print(f"  ✓ 底部内容可见 (日志: {has_log}, 家族状态: {has_footer})")
                 else:
-                    results.add_flow_test("查看底部面板", False, "内容缺失",
-                                          "底部无日志/家族状态内容")
+                    results.add_flow_test(
+                        "查看底部面板", False, "内容缺失", "底部无日志/家族状态内容"
+                    )
                     print("  ✗ 底部内容缺失")
             except Exception as ex:
                 results.add_flow_test("查看底部面板", False, "滚动", str(ex))
@@ -479,7 +581,7 @@ def run_e2e_tests():
             if console_errors:
                 print(f"  ⚠ 发现 {len(console_errors)} 个 console errors:")
                 for i, err in enumerate(console_errors[:20]):  # 最多显示20个
-                    print(f"    [{i+1}] {err[:200]}")
+                    print(f"    [{i + 1}] {err[:200]}")
                 results.add_error(f"Console errors: {len(console_errors)} 个")
             else:
                 print("  ✓ 无 console errors")
@@ -516,7 +618,9 @@ def print_failures(results_obj):
     failures = [e for e in results_obj.elements if not e["clickable"]]
     if failures:
         for f in failures:
-            print(f"  ✗ [{f['location']}] {f['element_id']}: {f.get('error_msg', '不可点击/不可见')}")
+            print(
+                f"  ✗ [{f['location']}] {f['element_id']}: {f.get('error_msg', '不可点击/不可见')}"
+            )
     else:
         print("  (无元素级失败)")
 
@@ -525,7 +629,8 @@ def print_failures(results_obj):
     if failures:
         for f in failures:
             print(
-                f"  ✗ {f['flow_name']}: {f.get('error_msg', '未知错误')} (步骤: {f.get('error_step', 'N/A')})")
+                f"  ✗ {f['flow_name']}: {f.get('error_msg', '未知错误')} (步骤: {f.get('error_step', 'N/A')})"
+            )
     else:
         print("  (无用户路径失败)")
 
@@ -543,14 +648,25 @@ def print_failures(results_obj):
 def start_streamlit():
     """后台启动 Streamlit"""
     import subprocess
+
     print("启动 Streamlit 服务 (localhost:8501) ...")
     env = os.environ.copy()
-    env['FROST_TESTING'] = '1'
+    env["FROST_TESTING"] = "1"
 
     proc = subprocess.Popen(
-        [sys.executable, "-X", "utf8", "-m", "streamlit", "run", "app.py",
-         "--server.port=8501", "--server.headless=true",
-         "--server.runOnSave=false", "--browser.gatherUsageStats=false"],
+        [
+            sys.executable,
+            "-X",
+            "utf8",
+            "-m",
+            "streamlit",
+            "run",
+            "app.py",
+            "--server.port=8501",
+            "--server.headless=true",
+            "--server.runOnSave=false",
+            "--browser.gatherUsageStats=false",
+        ],
         cwd="D:/my_ai/Solo-Ops-Platform/workspace/frost-sop",
         env=env,
         stdout=subprocess.PIPE,
@@ -559,10 +675,11 @@ def start_streamlit():
 
     # 等待服务就绪
     import urllib.request
+
     for i in range(60):
         try:
             urllib.request.urlopen("http://localhost:8501", timeout=2)
-            print(f"  ✓ Streamlit 就绪 (耗时 {i+1}s)")
+            print(f"  ✓ Streamlit 就绪 (耗时 {i + 1}s)")
             return proc
         except Exception:
             time.sleep(1)
@@ -614,10 +731,15 @@ if __name__ == "__main__":
     # 保存结果到 JSON
     output_path = "output/f12_e2e_results.json"
     with open(output_path, "w", encoding="utf-8") as f:
-        json.dump({
-            "summary": results.summary(),
-            "elements": results.elements,
-            "user_flows": results.user_flows,
-            "errors": results.errors,
-        }, f, ensure_ascii=False, indent=2)
+        json.dump(
+            {
+                "summary": results.summary(),
+                "elements": results.elements,
+                "user_flows": results.user_flows,
+                "errors": results.errors,
+            },
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
     print(f"\n详细结果已保存到: {output_path}")

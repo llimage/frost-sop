@@ -26,13 +26,14 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 import pytest
-from core.event_bus import EventBus, Event, EventType, get_event_bus
-from core.store import Store
 
+from core.event_bus import Event, EventBus, EventType, get_event_bus
+from core.store import Store
 
 # ---------------------------------------------------------------------------
 # 辅助工具
 # ---------------------------------------------------------------------------
+
 
 def _make_minimal_context(task_id="t-4.4-test"):
     """构造最小可用的 assemble_agent context（mock模式）"""
@@ -48,13 +49,15 @@ def _make_minimal_context(task_id="t-4.4-test"):
 # 测试 1：孙辈组装完成后，EventBus 中存在 AGENT_CREATED 事件
 # ---------------------------------------------------------------------------
 
+
 def test_assemble_publishes_agent_created():
     """孙辈组装完成后，EventBus 中应有 AGENT_CREATED 事件"""
     EventBus.reset()
-    bus = get_event_bus()   # reset 后重新获取单例
+    bus = get_event_bus()  # reset 后重新获取单例
     bus.clear_subscribers()
 
     from skills.assemble import assemble_agent
+
     ctx = _make_minimal_context()
     assemble_agent(ctx)
 
@@ -67,6 +70,7 @@ def test_assemble_publishes_agent_created():
 # 测试 2：事件 source 为 "assemble:agent_creator"
 # ---------------------------------------------------------------------------
 
+
 def test_assemble_event_source():
     """AGENT_CREATED 事件的 source 应为 'assemble:agent_creator'"""
     EventBus.reset()
@@ -74,6 +78,7 @@ def test_assemble_event_source():
     bus.clear_subscribers()
 
     from skills.assemble import assemble_agent
+
     ctx = _make_minimal_context()
     assemble_agent(ctx)
 
@@ -87,6 +92,7 @@ def test_assemble_event_source():
 # 测试 3：事件 data 包含 agent_name 和 generation
 # ---------------------------------------------------------------------------
 
+
 def test_assemble_event_data_fields():
     """AGENT_CREATED 事件 data 应包含 agent_name、generation、skill_count"""
     EventBus.reset()
@@ -94,6 +100,7 @@ def test_assemble_event_data_fields():
     bus.clear_subscribers()
 
     from skills.assemble import assemble_agent
+
     ctx = _make_minimal_context()
     assemble_agent(ctx)
 
@@ -111,6 +118,7 @@ def test_assemble_event_data_fields():
 # 测试 4：task_id 从 context 传递到事件 data
 # ---------------------------------------------------------------------------
 
+
 def test_assemble_event_task_id_propagation():
     """_task_id 应正确传递到 AGENT_CREATED 事件的 data 中"""
     EventBus.reset()
@@ -118,6 +126,7 @@ def test_assemble_event_task_id_propagation():
     bus.clear_subscribers()
 
     from skills.assemble import assemble_agent
+
     expected_task_id = "task-4.4-propagation-test"
     ctx = _make_minimal_context(task_id=expected_task_id)
     assemble_agent(ctx)
@@ -132,10 +141,12 @@ def test_assemble_event_task_id_propagation():
 # 测试 5：assemble fail-safe —— EventBus 不可用时不崩溃
 # ---------------------------------------------------------------------------
 
+
 def test_assemble_event_failsafe(monkeypatch):
     """EventBus 不可用时，assemble_agent 应正常完成（不抛异常）"""
     # 临时 patch _get_event_bus 使其抛异常
     import skills.assemble as asm_module
+
     original = asm_module._get_event_bus
 
     def _broken_bus():
@@ -144,6 +155,7 @@ def test_assemble_event_failsafe(monkeypatch):
     monkeypatch.setattr(asm_module, "_get_event_bus", _broken_bus)
 
     from skills.assemble import assemble_agent
+
     ctx = _make_minimal_context()
     # 不应抛异常
     result = assemble_agent(ctx)
@@ -154,9 +166,11 @@ def test_assemble_event_failsafe(monkeypatch):
 # 测试 6：subscribe_elder_to_events 返回 True
 # ---------------------------------------------------------------------------
 
+
 def test_subscribe_elder_returns_true():
     """subscribe_elder_to_events 在正常情况下应返回 True"""
     from agents.elder import create_elder, subscribe_elder_to_events
+
     store = Store()
     elder = create_elder("test-elder-sub", asset_store=store)
 
@@ -172,9 +186,11 @@ def test_subscribe_elder_returns_true():
 # 测试 7：长老订阅后，TASK_COMPLETED 触发自动审计
 # ---------------------------------------------------------------------------
 
+
 def test_elder_auto_audit_on_task_completed():
     """长老订阅 TASK_COMPLETED 后，事件发布时应自动调用 audit_family"""
     from agents.elder import create_elder, subscribe_elder_to_events
+
     store = Store()
     elder = create_elder("test-elder-auto-audit", asset_store=store)
 
@@ -189,11 +205,13 @@ def test_elder_auto_audit_on_task_completed():
 
     # 通过给 elder store 写入一个 sentinel 来检测 audit 是否跑过
     # 直接检查事件日志即可
-    bus.publish(Event(
-        event_type=EventType.TASK_COMPLETED,
-        source="test",
-        data={"task_id": "t-auto-audit-001"},
-    ))
+    bus.publish(
+        Event(
+            event_type=EventType.TASK_COMPLETED,
+            source="test",
+            data={"task_id": "t-auto-audit-001"},
+        )
+    )
 
     # 事件是同步分发的，处理器也是同步调用，所以不需要 sleep
     # 如果出现异步，等 100ms 兜底
@@ -208,6 +226,7 @@ def test_elder_auto_audit_on_task_completed():
 # ---------------------------------------------------------------------------
 # 测试 8：长老 audit_family fail-safe —— handler 异常不影响其他订阅者
 # ---------------------------------------------------------------------------
+
 
 def test_elder_event_handler_failsafe():
     """长老审计抛异常时，EventBus 应继续通知其他订阅者（fail-safe）"""
@@ -227,7 +246,7 @@ def test_elder_event_handler_failsafe():
         data={"task_id": "t-failsafe"},
     )
     try:
-        handler(event)   # 内部 audit_family({"_asset_store": None}) → 会提前返回
+        handler(event)  # 内部 audit_family({"_asset_store": None}) → 会提前返回
     except Exception as e:
         pytest.fail(f"handler 不应抛出异常，但抛出了: {e}")
 
@@ -235,6 +254,7 @@ def test_elder_event_handler_failsafe():
 # ---------------------------------------------------------------------------
 # 测试 9：未订阅时，TASK_COMPLETED 不自动触发审计（隔离验证）
 # ---------------------------------------------------------------------------
+
 
 def test_no_auto_audit_without_subscribe():
     """未订阅时，TASK_COMPLETED 事件不应触发任何订阅者"""
@@ -245,11 +265,13 @@ def test_no_auto_audit_without_subscribe():
 
     invoked = []
 
-    bus.publish(Event(
-        event_type=EventType.TASK_COMPLETED,
-        source="test",
-        data={"task_id": "t-no-sub"},
-    ))
+    bus.publish(
+        Event(
+            event_type=EventType.TASK_COMPLETED,
+            source="test",
+            data={"task_id": "t-no-sub"},
+        )
+    )
 
     # 没有订阅者，invoked 应为空
     assert invoked == [], "未订阅时不应有回调被触发"

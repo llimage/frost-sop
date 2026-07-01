@@ -8,33 +8,36 @@ PHILOSOPHY: 决策不是一次性的按钮点击，而是完整的流程——
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field, asdict
-from datetime import datetime
+
 import threading
-from enum import Enum, auto
-from typing import Any, Dict, List, Optional, Callable
+from dataclasses import asdict, dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any
 
-from core.event_bus import EventBus, Event
-
+from core.event_bus import Event, EventBus
 
 # ────────────────────────────────────────────────────────────────────────────
 # 决策状态
 # ────────────────────────────────────────────────────────────────────────────
 
+
 class DecisionStatus(Enum):
     """决策状态"""
-    PENDING = "pending"              # 等待 Human Agent 决策
-    IN_PROGRESS = "in_progress"      # 决策中（如需要填写理由）
-    APPROVED = "approved"          # 确认通过
-    REJECTED = "rejected"          # 驳回
-    MODIFIED = "modified"          # 修改后确认
-    TIMEOUT = "timeout"            # 决策超时（Human Agent 未响应）
-    CANCELLED = "cancelled"        # 取消（任务被终止）
+
+    PENDING = "pending"  # 等待 Human Agent 决策
+    IN_PROGRESS = "in_progress"  # 决策中（如需要填写理由）
+    APPROVED = "approved"  # 确认通过
+    REJECTED = "rejected"  # 驳回
+    MODIFIED = "modified"  # 修改后确认
+    TIMEOUT = "timeout"  # 决策超时（Human Agent 未响应）
+    CANCELLED = "cancelled"  # 取消（任务被终止）
 
 
 # ────────────────────────────────────────────────────────────────────────────
 # 决策记录
 # ────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class DecisionRecord:
@@ -48,16 +51,16 @@ class DecisionRecord:
     """
 
     # 基础标识
-    decision_id: str                   # 唯一ID（如 "decision:task_001:stage_3"）
-    task_id: str                       # 关联任务ID
-    stage_id: str                      # 关联阶段ID
-    stage_name: str = ""               # 阶段名称（人类可读）
+    decision_id: str  # 唯一ID（如 "decision:task_001:stage_3"）
+    task_id: str  # 关联任务ID
+    stage_id: str  # 关联阶段ID
+    stage_name: str = ""  # 阶段名称（人类可读）
 
     # 决策状态
     status: DecisionStatus = DecisionStatus.PENDING
 
     # 决策前状态（上下文）
-    context_before: Dict[str, Any] = field(default_factory=dict)
+    context_before: dict[str, Any] = field(default_factory=dict)
     # {
     #     "outputs": [...],           # 当前阶段的产出物
     #     "quality_score": {...},     # 质量评分
@@ -66,32 +69,32 @@ class DecisionRecord:
     # }
 
     # 决策结果
-    decision: str = ""               # "确认" / "驳回" / "修改"
-    reason: str = ""                 # 驳回/修改理由
-    modified_inputs: Dict[str, Any] = field(default_factory=dict)
+    decision: str = ""  # "确认" / "驳回" / "修改"
+    reason: str = ""  # 驳回/修改理由
+    modified_inputs: dict[str, Any] = field(default_factory=dict)
     # 如果 decision="修改"，记录修改后的输入
 
     # 元数据
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    decided_at: Optional[str] = None
-    timeout_at: Optional[str] = None   # 决策超时时间
-    human_agent_id: str = "monarch"    # 决策人（默认君主）
+    decided_at: str | None = None
+    timeout_at: str | None = None  # 决策超时时间
+    human_agent_id: str = "monarch"  # 决策人（默认君主）
 
     # 审批链（如果决策需要多级审批）
-    approval_chain: List[Dict[str, str]] = field(default_factory=list)
+    approval_chain: list[dict[str, str]] = field(default_factory=list)
     # [{"role": "父辈", "decision": "确认", "at": "2026-06-28T10:00:00"}]
 
     # 事件记录（与该决策相关的所有事件ID）
-    event_ids: List[str] = field(default_factory=list)
+    event_ids: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """序列化为字典"""
         d = asdict(self)
         d["status"] = self.status.value
         return d
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "DecisionRecord":
+    def from_dict(cls, data: dict[str, Any]) -> DecisionRecord:
         """从字典反序列化"""
         data = dict(data)
         data["status"] = DecisionStatus(data.get("status", "pending"))
@@ -116,27 +119,29 @@ class DecisionRecord:
 # 决策流程配置
 # ────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class DecisionFlowConfig:
     """决策流程配置"""
+
     # 超时设置
-    timeout_seconds: int = 3600        # 默认1小时超时
-    reminder_intervals: List[int] = field(default_factory=lambda: [300, 600, 1800])
+    timeout_seconds: int = 3600  # 默认1小时超时
+    reminder_intervals: list[int] = field(default_factory=lambda: [300, 600, 1800])
     # 提醒间隔（5分钟、10分钟、30分钟）
 
     # 多级审批
     require_multi_approval: bool = False
-    approval_roles: List[str] = field(default_factory=list)
+    approval_roles: list[str] = field(default_factory=list)
     # 如：["parent", "ancestor", "monarch"]
 
     # 必填字段
     require_reason_for_reject: bool = True
     require_reason_for_modify: bool = True
-    min_reason_length: int = 10         # 理由最小长度
+    min_reason_length: int = 10  # 理由最小长度
 
     # 修改限制
     allow_modify: bool = True
-    max_modifications: int = 3          # 最多修改次数
+    max_modifications: int = 3  # 最多修改次数
 
     # 自动决策
     auto_approve_on_timeout: bool = False
@@ -146,6 +151,7 @@ class DecisionFlowConfig:
 # ────────────────────────────────────────────────────────────────────────────
 # 决策流程状态机
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class DecisionFlow:
     """
@@ -166,18 +172,23 @@ class DecisionFlow:
     - 根据配置：自动确认 / 驳回 / 上报祖辈
     """
 
-    def __init__(self, event_bus: Optional[EventBus] = None,
-                 config: DecisionFlowConfig = None,
-                 store=None):
+    def __init__(
+        self, event_bus: EventBus | None = None, config: DecisionFlowConfig = None, store=None
+    ):
         self.event_bus = event_bus
         self.config = config or DecisionFlowConfig()
         self.store = store
-        self.records: Dict[str, DecisionRecord] = {}
+        self.records: dict[str, DecisionRecord] = {}
 
     # ── 创建决策 ──────────────────────────────────────────────────────────
 
-    def create_decision(self, task_id: str, stage_id: str, stage_name: str = "",
-                        context_before: Dict[str, Any] = None) -> DecisionRecord:
+    def create_decision(
+        self,
+        task_id: str,
+        stage_id: str,
+        stage_name: str = "",
+        context_before: dict[str, Any] = None,
+    ) -> DecisionRecord:
         """
         创建决策记录。
 
@@ -220,9 +231,14 @@ class DecisionFlow:
 
     # ── 提交决策 ──────────────────────────────────────────────────────────
 
-    def submit_decision(self, decision_id: str, decision: str,
-                        reason: str = "", modified_inputs: Dict[str, Any] = None,
-                        human_agent_id: str = "monarch") -> DecisionRecord:
+    def submit_decision(
+        self,
+        decision_id: str,
+        decision: str,
+        reason: str = "",
+        modified_inputs: dict[str, Any] = None,
+        human_agent_id: str = "monarch",
+    ) -> DecisionRecord:
         """
         提交决策。
 
@@ -288,12 +304,14 @@ class DecisionFlow:
             record.status = DecisionStatus.MODIFIED
 
         # 添加到审批链
-        record.approval_chain.append({
-            "role": human_agent_id,
-            "decision": decision,
-            "reason": reason,
-            "at": record.decided_at,
-        })
+        record.approval_chain.append(
+            {
+                "role": human_agent_id,
+                "decision": decision,
+                "reason": reason,
+                "at": record.decided_at,
+            }
+        )
 
         # 持久化
         if self.store:
@@ -320,18 +338,19 @@ class DecisionFlow:
 
     # ── 获取决策 ──────────────────────────────────────────────────────────
 
-    def get_decision(self, decision_id: str) -> Optional[DecisionRecord]:
+    def get_decision(self, decision_id: str) -> DecisionRecord | None:
         """获取决策记录"""
         return self.records.get(decision_id)
 
-    def get_task_decisions(self, task_id: str) -> List[DecisionRecord]:
+    def get_task_decisions(self, task_id: str) -> list[DecisionRecord]:
         """获取任务的所有决策记录"""
         return [r for r in self.records.values() if r.task_id == task_id]
 
-    def get_pending_decisions(self, human_agent_id: str = "monarch") -> List[DecisionRecord]:
+    def get_pending_decisions(self, human_agent_id: str = "monarch") -> list[DecisionRecord]:
         """获取指定 Human Agent 的所有待决策"""
         return [
-            r for r in self.records.values()
+            r
+            for r in self.records.values()
             if r.status == DecisionStatus.PENDING and r.human_agent_id == human_agent_id
         ]
 
@@ -393,7 +412,7 @@ class DecisionFlow:
 
         return False
 
-    def check_all_timeouts(self) -> List[str]:
+    def check_all_timeouts(self) -> list[str]:
         """检查所有待决策的超时情况"""
         timed_out = []
         for decision_id, record in self.records.items():
@@ -438,7 +457,7 @@ class DecisionFlow:
 
     # ── 决策统计 ──────────────────────────────────────────────────────────
 
-    def get_decision_stats(self, task_id: Optional[str] = None) -> Dict[str, Any]:
+    def get_decision_stats(self, task_id: str | None = None) -> dict[str, Any]:
         """获取决策统计"""
         records = self.records.values()
         if task_id:
@@ -476,9 +495,11 @@ class DecisionFlow:
 # 便捷函数
 # ────────────────────────────────────────────────────────────────────────────
 
+
 def create_decision_flow(event_bus=None, config=None, store=None) -> DecisionFlow:
     """便捷函数：创建决策流程"""
     return DecisionFlow(event_bus=event_bus, config=config, store=store)
+
 
 # ───────────────────────────────────────────────────────────────────────────
 # 单例（供 orchestration.py 直接调用）
@@ -491,6 +512,7 @@ def create_decision_flow(event_bus=None, config=None, store=None) -> DecisionFlo
 
 _decision_flow_instance = None
 _flow_lock = threading.Lock()
+
 
 def get_decision_flow(event_bus=None, config=None, store=None):
     """

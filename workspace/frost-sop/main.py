@@ -3,24 +3,25 @@ FROST-SOP V1.0 - Family AI Command Platform
 Main entry point for the FROST-SOP system.
 """
 
-import json
-import uuid
-import asyncio
-import logging
 import argparse
+import asyncio
+import json
+import logging
+import uuid
 from datetime import datetime
-from stores.constitution import create_constitution_store
-from stores.asset import create_asset_store
+
 from agents.ancestor import create_ancestor
-from agents.parent import create_parent
 from agents.elder import create_elder, subscribe_elder_to_events
-from core.store import Store
+from agents.parent import create_parent
 from core.db import get_db
+from core.store import Store
+from stores.asset import create_asset_store
+from stores.constitution import create_constitution_store
 
 logger = logging.getLogger(__name__)
 
 # V3.2b: DeadManSwitch 导入
-from core.dead_mans_switch import setup_dead_man_switch, DeadManSwitch
+from core.dead_mans_switch import setup_dead_man_switch
 
 
 def main(task_input=None, sop_id=None):
@@ -67,24 +68,30 @@ def main(task_input=None, sop_id=None):
     # Ensure default project exists (required by FK constraint)
     existing_project = db.select_one("projects", "id", "default")
     if not existing_project:
-        db.insert("projects", {
-            "id": "default",
-            "name": "默认项目",
-            "status": "active",
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-        })
+        db.insert(
+            "projects",
+            {
+                "id": "default",
+                "name": "默认项目",
+                "status": "active",
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+            },
+        )
         print("   [DB] Default project created")
 
-    db.insert("tasks", {
-        "id": task_id,
-        "title": task_input[:100],
-        "description": task_input,
-        "project_id": "default",
-        "status": "running",
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-    })
+    db.insert(
+        "tasks",
+        {
+            "id": task_id,
+            "title": task_input[:100],
+            "description": task_input,
+            "project_id": "default",
+            "status": "running",
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+        },
+    )
     print(f"   [DB] Task persisted: {task_id}")
 
     # 4. Ancestor LLM decomposes task
@@ -93,7 +100,7 @@ def main(task_input=None, sop_id=None):
         sop_steps=["call_llm"],
         initial_context={
             "_prompt": f"Analyze the following task, decompose into 1-3 parent agents, return JSON: {task_input}"
-        }
+        },
     )
     llm_response = context.get("_llm_response", "")
     print(f"   Decomposition result: {llm_response}")
@@ -105,34 +112,47 @@ def main(task_input=None, sop_id=None):
 
     # 5.1 Load SOP template
     from core.sop import SOP
+
     sop = SOP.load_from_yaml(sop_file)
     print(f"   Loaded SOP: {sop.name} v{sop.version}")
 
     # F14: Ensure SOP template exists in DB (FK prerequisite for sop_executions)
     existing_sop_tpl = db.select_one("sop_templates", "id", sop.sop_id)
     if not existing_sop_tpl:
-        db.insert("sop_templates", {
-            "id": sop.sop_id,
-            "sop_id": sop.sop_id,
-            "name": sop.name,
-            "version": sop.version,
-            "content": json.dumps({"stages": sop.stages, "required_stages": sop.required_stages, "forbidden_skills": sop.forbidden_skills}),
-            "is_preset": 1,
-            "is_validated": 1,
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-        })
+        db.insert(
+            "sop_templates",
+            {
+                "id": sop.sop_id,
+                "sop_id": sop.sop_id,
+                "name": sop.name,
+                "version": sop.version,
+                "content": json.dumps(
+                    {
+                        "stages": sop.stages,
+                        "required_stages": sop.required_stages,
+                        "forbidden_skills": sop.forbidden_skills,
+                    }
+                ),
+                "is_preset": 1,
+                "is_validated": 1,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+            },
+        )
         print(f"   [DB] SOP template persisted: {sop.sop_id}")
 
     # F14: Log SOP execution start
-    sop_exec_id = db.insert("sop_executions", {
-        "task_id": task_id,
-        "sop_template_id": sop.sop_id,
-        "started_at": datetime.now().isoformat(),
-        "status": "running",
-        "total_stages": len(sop.stages),
-        "completed_stages": 0,
-    })
+    sop_exec_id = db.insert(
+        "sop_executions",
+        {
+            "task_id": task_id,
+            "sop_template_id": sop.sop_id,
+            "started_at": datetime.now().isoformat(),
+            "status": "running",
+            "total_stages": len(sop.stages),
+            "completed_stages": 0,
+        },
+    )
     print(f"   [DB] SOP execution logged: id={sop_exec_id}")
 
     # 5.2 Compliance validation (on preset SOP)
@@ -146,11 +166,11 @@ def main(task_input=None, sop_id=None):
         initial_context={
             "_sop_to_validate": sop,
             "_compliance_rules": compliance_rules,
-        }
+        },
     )
     validation = context.get("_validation_result", {})
     if validation.get("valid"):
-        print(f"   Compliance check: [PASS] Passed")
+        print("   Compliance check: [PASS] Passed")
     else:
         print(f"   Compliance check: [FAIL] Failed - {validation.get('errors', [])}")
         return
@@ -158,11 +178,14 @@ def main(task_input=None, sop_id=None):
     # 5.4 父辈搜索替代SOP模板（验证外部探索能力）
     print("\n[5.4] 父辈搜索替代SOP模板...")
     from skills.search import search_sop_skill
-    search_ctx = search_sop_skill.execute({
-        "_search_query": sop_id,
-        "_asset_store": asset_store,
-        "_search_external": True,
-    })
+
+    search_ctx = search_sop_skill.execute(
+        {
+            "_search_query": sop_id,
+            "_asset_store": asset_store,
+            "_search_external": True,
+        }
+    )
     search_results = search_ctx.get("_search_results", [])
     print(f"   搜索结果: 找到 {len(search_results)} 个SOP模板")
     for r in search_results:
@@ -172,6 +195,7 @@ def main(task_input=None, sop_id=None):
     if search_results and search_results[0]["source"] == "web":
         print("\n[5.5] 对外部搜索到的SOP进行合规校验...")
         from core.sop import SOP
+
         ext_data = search_results[0].get("content", {})
         if ext_data:
             external_sop = SOP(
@@ -183,16 +207,19 @@ def main(task_input=None, sop_id=None):
                 forbidden_skills=ext_data.get("forbidden_skills", []),
             )
             from skills.orchestration import validate_sop_skill
-            val_ctx = validate_sop_skill.execute({
-                "_sop_to_validate": external_sop,
-                "_compliance_rules": compliance_rules,
-            })
+
+            val_ctx = validate_sop_skill.execute(
+                {
+                    "_sop_to_validate": external_sop,
+                    "_compliance_rules": compliance_rules,
+                }
+            )
             ext_val = val_ctx.get("_validation_result", {})
             if ext_val.get("valid"):
-                print(f"   外部SOP合规校验: [PASS] 通过（可以加载使用）")
+                print("   外部SOP合规校验: [PASS] 通过（可以加载使用）")
             else:
                 print(f"   外部SOP合规校验: [FAIL] 失败 - {ext_val.get('errors', [])}")
-                print(f"   拒绝加载，使用家族资产Store中的预置模板")
+                print("   拒绝加载，使用家族资产Store中的预置模板")
 
     # ================================================================
     # 5.3 父辈内化外部搜索到的 SOP（P3 核心验证）
@@ -204,7 +231,8 @@ def main(task_input=None, sop_id=None):
     if search_results:
         external_result = search_results[0]
         print(
-            f"   使用外部搜索结果: 来源={external_result['source']}, SOP={external_result.get('name', external_result.get('sop_id'))}")
+            f"   使用外部搜索结果: 来源={external_result['source']}, SOP={external_result.get('name', external_result.get('sop_id'))}"
+        )
         sop_to_internalize = external_result.get("content", {})
 
     if not sop_to_internalize or not sop_to_internalize.get("stages"):
@@ -220,8 +248,7 @@ def main(task_input=None, sop_id=None):
 
     # 5.3.2 调用 internalize_sop Skill
     int_context = parent.run(
-        sop_steps=["internalize_sop"],
-        initial_context={"_sop_to_internalize": sop_to_internalize}
+        sop_steps=["internalize_sop"], initial_context={"_sop_to_internalize": sop_to_internalize}
     )
     internalized_steps = int_context.get("_internalized_steps", [])
     sop_stages_detail = int_context.get("_sop_stages", [])
@@ -231,19 +258,24 @@ def main(task_input=None, sop_id=None):
 
     # V2.0 P1-6: 发布 TASK_DECOMPOSED 事件（SOP 内化完成 = 任务分解完成）
     try:
-        from core.event_bus import get_event_bus, Event, EventType
+        from core.event_bus import Event, EventType, get_event_bus
+
         bus = get_event_bus()
-        bus.publish(Event(
-            event_type=EventType.TASK_DECOMPOSED,
-            source="main:task_decomposer",
-            data={
-                "task_id": task_id,
-                "task_description": task_input,
-                "sop_id": sop_id,
-                "stage_count": len(sop_stages_detail),
-                "stages": [s.get("name", f"阶段{i+1}") for i, s in enumerate(sop_stages_detail)],
-            },
-        ))
+        bus.publish(
+            Event(
+                event_type=EventType.TASK_DECOMPOSED,
+                source="main:task_decomposer",
+                data={
+                    "task_id": task_id,
+                    "task_description": task_input,
+                    "sop_id": sop_id,
+                    "stage_count": len(sop_stages_detail),
+                    "stages": [
+                        s.get("name", f"阶段{i + 1}") for i, s in enumerate(sop_stages_detail)
+                    ],
+                },
+            )
+        )
         logger.info("  📡 [V2.0] TASK_DECOMPOSED 事件已发布（%s个阶段）", len(sop_stages_detail))
     except Exception as e:
         logger.warning("  [V2.0] TASK_DECOMPOSED 发布失败（不影响流程）: %s", e)
@@ -256,25 +288,25 @@ def main(task_input=None, sop_id=None):
     stage_context = {"_stage_results": [], "_parent_agent": parent, "_task_id": task_id}
 
     for i, stage in enumerate(sop_stages_detail):
-        stage_name = stage.get("name", f"阶段{i+1}")
+        stage_name = stage.get("name", f"阶段{i + 1}")
         stage_order = i + 1
         print(f"\n   --- 阶段 {stage_order}/{len(sop_stages_detail)}: {stage_name} ---")
 
         # F14: Record stage start in DB
-        stage_db_id = db.insert("task_stages", {
-            "task_id": task_id,
-            "stage_name": stage_name,
-            "stage_order": stage_order,
-            "status": "running",
-            "started_at": datetime.now().isoformat(),
-        })
+        stage_db_id = db.insert(
+            "task_stages",
+            {
+                "task_id": task_id,
+                "stage_name": stage_name,
+                "stage_order": stage_order,
+                "status": "running",
+                "started_at": datetime.now().isoformat(),
+            },
+        )
 
         stage_context["_current_stage"] = stage
 
-        stage_context = parent.run(
-            sop_steps=["execute_stage"],
-            initial_context=stage_context
-        )
+        stage_context = parent.run(sop_steps=["execute_stage"], initial_context=stage_context)
 
         result = stage_context.get("_current_stage_result", {})
         child_gen = result.get("child_generation", "?")
@@ -285,16 +317,26 @@ def main(task_input=None, sop_id=None):
         print(f"   产出: {stage_output[:80]}...")
 
         # F14: Update stage result in DB
-        db.update("task_stages", "id", stage_db_id, {
-            "status": stage_status,
-            "output": stage_output,
-            "completed_at": datetime.now().isoformat(),
-        })
+        db.update(
+            "task_stages",
+            "id",
+            stage_db_id,
+            {
+                "status": stage_status,
+                "output": stage_output,
+                "completed_at": datetime.now().isoformat(),
+            },
+        )
 
         # F14: Update SOP execution progress
-        db.update("sop_executions", "id", sop_exec_id, {
-            "completed_stages": stage_order,
-        })
+        db.update(
+            "sop_executions",
+            "id",
+            sop_exec_id,
+            {
+                "completed_stages": stage_order,
+            },
+        )
 
         # 收割孙辈Store数据到父辈Store
         child_data = stage_context.get("_child_store_data", {})
@@ -308,27 +350,40 @@ def main(task_input=None, sop_id=None):
     print("\n[5.5] 父辈收割产出...")
 
     all_results = stage_context.get("_stage_results", [])
-    asset_store.save("task:latest", {
-        "task": task_input,
-        "sop_source": search_results[0]["source"] if search_results else "preset",
-        "sop_name": sop_to_internalize.get("name", "未知"),
-        "stages_completed": len(all_results),
-        "stage_results": all_results,
-        "total_stages": len(sop_stages_detail),
-    })
+    asset_store.save(
+        "task:latest",
+        {
+            "task": task_input,
+            "sop_source": search_results[0]["source"] if search_results else "preset",
+            "sop_name": sop_to_internalize.get("name", "未知"),
+            "stages_completed": len(all_results),
+            "stage_results": all_results,
+            "total_stages": len(sop_stages_detail),
+        },
+    )
     print(f"   已收割 {len(all_results)} 个阶段的产出到资产Store")
 
     # F14: Mark task and SOP execution as completed in DB
-    db.update("tasks", "id", task_id, {
-        "status": "completed",
-        "completed_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-        "result_summary": f"完成 {len(all_results)}/{len(sop_stages_detail)} 个阶段",
-    })
-    db.update("sop_executions", "id", sop_exec_id, {
-        "status": "completed",
-        "completed_at": datetime.now().isoformat(),
-    })
+    db.update(
+        "tasks",
+        "id",
+        task_id,
+        {
+            "status": "completed",
+            "completed_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+            "result_summary": f"完成 {len(all_results)}/{len(sop_stages_detail)} 个阶段",
+        },
+    )
+    db.update(
+        "sop_executions",
+        "id",
+        sop_exec_id,
+        {
+            "status": "completed",
+            "completed_at": datetime.now().isoformat(),
+        },
+    )
     print(f"   [DB] Task {task_id} completed, all results persisted")
 
     # V2.0 阶段三：任务完成后触发长老自动审计（后台非阻塞）
@@ -340,10 +395,10 @@ def main(task_input=None, sop_id=None):
             "_asset_store": asset_store,
             "_constitution_store": constitution_store,
             "_stage_results": all_results,
-        }
+        },
     )
     if finalize_context.get("_elder_audit_triggered"):
-        print(f"   [V2.0] 长老审计后台线程已启动")
+        print("   [V2.0] 长老审计后台线程已启动")
     else:
         print(f"   [V2.0] 长老审计未触发: {finalize_context.get('_reason', '未知')}")
 
@@ -356,6 +411,7 @@ def main(task_input=None, sop_id=None):
 # ============================================================
 # V3.0: 异步事件驱动入口
 # ============================================================
+
 
 async def main_async(task_input: str = None, sop_id: str = None, timeout: int = 600):
     """
@@ -373,10 +429,11 @@ async def main_async(task_input: str = None, sop_id: str = None, timeout: int = 
         timeout: 超时时间（秒，默认 600）
     """
     import asyncio
-    from core.event_bus import get_async_event_bus, Event, EventType
+
     from agents.ancestor import create_ancestor
-    from agents.parent import create_parent
     from agents.elder import create_elder, subscribe_elder_to_events
+    from agents.parent import create_parent
+    from core.event_bus import Event, EventType, get_async_event_bus
     from skills.orchestration import register_stage_executor
 
     if task_input is None:
@@ -397,8 +454,9 @@ async def main_async(task_input: str = None, sop_id: str = None, timeout: int = 
 
     # 3. 创建组件（event_driven=True）
     ancestor = create_ancestor(constitution_store, asset_store, event_driven=True)
-    parent = create_parent("parent_v3", Store(), event_driven=True,
-                           asset_store=asset_store, sop_id=sop_id)
+    parent = create_parent(
+        "parent_v3", Store(), event_driven=True, asset_store=asset_store, sop_id=sop_id
+    )
     elder = create_elder("elder_v3", asset_store=asset_store)
     # V2.0 长老订阅（使用同步 EventBus，fail-safe）
     subscribe_elder_to_events(elder)
@@ -433,15 +491,17 @@ async def main_async(task_input: str = None, sop_id: str = None, timeout: int = 
     task_id = f"task_v3_{uuid.uuid4().hex[:8]}"
     logger.info("[V3.0] 发布 TASK_CREATED: %s", task_id)
 
-    await bus.publish(Event(
-        event_type=EventType.TASK_CREATED,
-        source="main:async_entry",
-        data={
-            "task_id": task_id,
-            "task_description": task_input,
-            "sop_id": sop_id,
-        },
-    ))
+    await bus.publish(
+        Event(
+            event_type=EventType.TASK_CREATED,
+            source="main:async_entry",
+            data={
+                "task_id": task_id,
+                "task_description": task_input,
+                "sop_id": sop_id,
+            },
+        )
+    )
 
     # 7. 等待任务完成或超时
     try:
@@ -449,28 +509,31 @@ async def main_async(task_input: str = None, sop_id: str = None, timeout: int = 
     except asyncio.TimeoutError:
         # 超时 → 发布 TASK_TIMEOUT（非 TASK_FAILED）
         logger.warning("[V3.0] 任务超时（%s秒），发布 TASK_TIMEOUT", timeout)
-        await bus.publish(Event(
-            event_type=EventType.TASK_TIMEOUT,
-            source="main:async_entry",
-            data={
-                "task_id": task_id,
-                "timeout_seconds": timeout,
-            },
-        ))
+        await bus.publish(
+            Event(
+                event_type=EventType.TASK_TIMEOUT,
+                source="main:async_entry",
+                data={
+                    "task_id": task_id,
+                    "timeout_seconds": timeout,
+                },
+            )
+        )
         final_status["status"] = "timeout"
 
     # 8. 输出结果
     logger.info("=" * 60)
     if final_status["status"] == "completed":
         event = final_status["event"]
-        logger.info("[V3.0] 任务完成: %s (阶段: %s/%s)",
-                    task_id,
-                    event.data.get("stages_completed", "?"),
-                    event.data.get("total_stages", "?"))
+        logger.info(
+            "[V3.0] 任务完成: %s (阶段: %s/%s)",
+            task_id,
+            event.data.get("stages_completed", "?"),
+            event.data.get("total_stages", "?"),
+        )
     elif final_status["status"] == "failed":
         event = final_status["event"]
-        logger.error("[V3.0] 任务失败: %s — %s",
-                     task_id, event.data.get("error", "unknown"))
+        logger.error("[V3.0] 任务失败: %s — %s", task_id, event.data.get("error", "unknown"))
     elif final_status["status"] == "timeout":
         logger.warning("[V3.0] 任务超时: %s (%s秒)", task_id, timeout)
     logger.info("=" * 60)
@@ -478,21 +541,50 @@ async def main_async(task_input: str = None, sop_id: str = None, timeout: int = 
     return final_status["status"]
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="FROST-SOP CLI")
-    parser.add_argument("--task", type=str, default=None, help="Task description")
-    parser.add_argument("--sop", type=str, default=None, help="SOP template ID (e.g. DEV-001)")
-    parser.add_argument("--async-mode", action="store_true",
-                        help="Use V3.0 async event-driven mode")
-    parser.add_argument("--timeout", type=int, default=600, help="Timeout in seconds (async mode)")
+def main_cli():
+    """
+    CLI 入口点（用于 pip install 后的 console_scripts）。
+    用法:
+        frost-sop --task "帮我写一个API文档" --sop DEV-001
+        frost-sop --async-mode --task "添加用户认证" --timeout 300
+    """
+    parser = argparse.ArgumentParser(
+        description="FROST-SOP 家族AI指挥平台 — 命令行接口",
+        epilog="示例: frost-sop --task '帮我分析代码质量' --sop DEV-001",
+    )
+    parser.add_argument("--task", type=str, default=None, help="任务描述")
+    parser.add_argument("--sop", type=str, default=None, help="SOP模板ID (e.g. DEV-001, DEV-002)")
+    parser.add_argument(
+        "--async-mode", action="store_true", help="使用 V3.0 异步事件驱动模式"
+    )
+    parser.add_argument("--timeout", type=int, default=600, help="超时时间（秒，异步模式）")
+    parser.add_argument("--serve", action="store_true", help="启动 FastAPI 服务（代替执行任务）")
+    parser.add_argument("--port", type=int, default=8000, help="FastAPI 端口（与 --serve 配合使用）")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="FastAPI host（与 --serve 配合使用）")
+    parser.add_argument("--init-db", action="store_true", help="仅初始化数据库（不执行任务）")
     args = parser.parse_args()
 
-    # 日志配置（覆盖同步和异步两种模式）
+    # 日志配置
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[logging.StreamHandler()]
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.StreamHandler()],
     )
+
+    # --init-db 模式：仅初始化数据库后退出
+    if args.init_db:
+        print("正在初始化数据库...")
+        get_db()
+        print("✅ 数据库初始化完成（19张表）")
+        return
+
+    # --serve 模式：启动 FastAPI 服务
+    if args.serve:
+        import uvicorn
+
+        print(f"正在启动 FROST-SOP API 服务 → http://{args.host}:{args.port}/docs")
+        uvicorn.run("api.main:app", host=args.host, port=args.port, reload=True)
+        return
 
     # V3.2b: 死人开关初始化 + EventBus 订阅
     dead_man_switch = setup_dead_man_switch(timeout_minutes=30)
@@ -503,7 +595,6 @@ if __name__ == "__main__":
     import time
 
     def _check_dead_man_switch():
-        """后台线程：每60秒检查死人开关"""
         while True:
             time.sleep(60)
             alert = dead_man_switch.check()
@@ -518,14 +609,20 @@ if __name__ == "__main__":
 
     if args.async_mode:
         # V3.0 异步事件驱动模式
-        # CLI 入口负责重置 AsyncEventBus，确保干净状态
         from core.event_bus import AsyncEventBus
+
         AsyncEventBus.reset()
-        asyncio.run(main_async(
-            task_input=args.task,
-            sop_id=args.sop,
-            timeout=args.timeout,
-        ))
+        asyncio.run(
+            main_async(
+                task_input=args.task,
+                sop_id=args.sop,
+                timeout=args.timeout,
+            )
+        )
     else:
         # V2.0 同步管道模式（默认）
         main(task_input=args.task, sop_id=args.sop)
+
+
+if __name__ == "__main__":
+    main_cli()

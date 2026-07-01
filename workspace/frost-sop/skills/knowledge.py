@@ -34,6 +34,7 @@ def archive_sop(context: dict) -> dict:
     sop_name = sop_data.get("name", "未命名SOP")
 
     import datetime
+
     archive_record = {
         "sop_id": sop_id,
         "name": sop_name,
@@ -81,6 +82,7 @@ def archive_lesson(context: dict) -> dict:
     error_type = lesson.get("error_type", "unknown")
 
     import datetime
+
     lesson_record = {
         "task_id": task_id,
         "error_type": error_type,
@@ -133,7 +135,10 @@ def query_lessons(context: dict) -> dict:
         if key.startswith("lesson:"):
             lesson_data = asset_store.load(key)
             if lesson_data:
-                if not error_type or error_type.lower() in lesson_data.get("error_type", "").lower():
+                if (
+                    not error_type
+                    or error_type.lower() in lesson_data.get("error_type", "").lower()
+                ):
                     lessons.append(lesson_data)
 
     lessons.sort(key=lambda x: x.get("times_encountered", 0), reverse=True)

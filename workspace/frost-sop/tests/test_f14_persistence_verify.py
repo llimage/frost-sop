@@ -19,16 +19,16 @@ that main.py would trigger. This avoids issues with
 Streamlit being imported by main.py indirectly.
 """
 
-import os
-import sys
-import sqlite3
 import json
+import os
+import sqlite3
+import sys
 import uuid
 from datetime import datetime
 from pathlib import Path
 
 # Set testing mode BEFORE any imports
-os.environ['FROST_TESTING'] = '1'
+os.environ["FROST_TESTING"] = "1"
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -45,15 +45,22 @@ def get_pre_counts():
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    tables = ["projects", "tasks", "task_stages",
-        "sop_executions", "agents", "agent_status", "cost_log"]
+    tables = [
+        "projects",
+        "tasks",
+        "task_stages",
+        "sop_executions",
+        "agents",
+        "agent_status",
+        "cost_log",
+    ]
     counts = {}
     for t in tables:
         try:
             cursor.execute(f"SELECT COUNT(*) as cnt FROM {t}")
             row = cursor.fetchone()
             counts[t] = row["cnt"] if row else 0
-        except Exception as e:
+        except Exception:
             counts[t] = -1  # table doesn't exist
     conn.close()
     return counts
@@ -90,50 +97,62 @@ def test_persistence_flow():
     # ── Step 1: Create default project ──
     existing = db.select_one("projects", "id", "default")
     if not existing:
-        db.insert("projects", {
-            "id": "default",
-            "name": "F14测试项目",
-            "status": "active",
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-        })
+        db.insert(
+            "projects",
+            {
+                "id": "default",
+                "name": "F14测试项目",
+                "status": "active",
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+            },
+        )
 
     # ── Step 1b: Ensure SOP template exists (FK prerequisite) ──
     existing_sop = db.select_one("sop_templates", "id", "DEV-001")
     if not existing_sop:
-        db.insert("sop_templates", {
-            "id": "DEV-001",
-            "sop_id": "DEV-001",
-            "name": "新功能开发",
-            "version": "2.0",
-            "content": json.dumps({"stages": []}),
-            "is_preset": 1,
-            "is_validated": 1,
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-        })
+        db.insert(
+            "sop_templates",
+            {
+                "id": "DEV-001",
+                "sop_id": "DEV-001",
+                "name": "新功能开发",
+                "version": "2.0",
+                "content": json.dumps({"stages": []}),
+                "is_preset": 1,
+                "is_validated": 1,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+            },
+        )
 
     # ── Step 2: Create task ──
     task_id = f"task_f14_{uuid.uuid4().hex[:8]}"
-    db.insert("tasks", {
-        "id": task_id,
-        "title": "F14持久化测试任务",
-        "description": "验证数据库写入功能",
-        "project_id": "default",
-        "status": "running",
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-    })
+    db.insert(
+        "tasks",
+        {
+            "id": task_id,
+            "title": "F14持久化测试任务",
+            "description": "验证数据库写入功能",
+            "project_id": "default",
+            "status": "running",
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+        },
+    )
 
     # ── Step 3: Log SOP execution ──
-    sop_exec_id = db.insert("sop_executions", {
-        "task_id": task_id,
-        "sop_template_id": "DEV-001",
-        "started_at": datetime.now().isoformat(),
-        "status": "running",
-        "total_stages": 5,
-        "completed_stages": 0,
-    })
+    sop_exec_id = db.insert(
+        "sop_executions",
+        {
+            "task_id": task_id,
+            "sop_template_id": "DEV-001",
+            "started_at": datetime.now().isoformat(),
+            "status": "running",
+            "total_stages": 5,
+            "completed_stages": 0,
+        },
+    )
 
     # ── Step 4: Execute 5 stages ──
     stages = [
@@ -146,73 +165,108 @@ def test_persistence_flow():
 
     for i, stage in enumerate(stages):
         # Insert stage start
-        stage_db_id = db.insert("task_stages", {
-            "task_id": task_id,
-            "stage_name": stage["name"],
-            "stage_order": i + 1,
-            "status": "running",
-            "started_at": datetime.now().isoformat(),
-        })
+        stage_db_id = db.insert(
+            "task_stages",
+            {
+                "task_id": task_id,
+                "stage_name": stage["name"],
+                "stage_order": i + 1,
+                "status": "running",
+                "started_at": datetime.now().isoformat(),
+            },
+        )
 
         # Simulate stage completion
-        db.update("task_stages", "id", stage_db_id, {
-            "status": "completed",
-            "output": f"[{stage['name']}] 阶段完成，由{stage['agent']}执行",
-            "completed_at": datetime.now().isoformat(),
-        })
+        db.update(
+            "task_stages",
+            "id",
+            stage_db_id,
+            {
+                "status": "completed",
+                "output": f"[{stage['name']}] 阶段完成，由{stage['agent']}执行",
+                "completed_at": datetime.now().isoformat(),
+            },
+        )
 
         # Create child agent
         agent_id = f"child_{stage['agent']}_{uuid.uuid4().hex[:6]}"
-        db.insert("agents", {
-            "id": agent_id,
-            "name": f"{stage['agent']}_F14",
-            "agent_type": "child",
-            "generation": 2,
-            "created_at": datetime.now().isoformat(),
-        })
+        db.insert(
+            "agents",
+            {
+                "id": agent_id,
+                "name": f"{stage['agent']}_F14",
+                "agent_type": "child",
+                "generation": 2,
+                "created_at": datetime.now().isoformat(),
+            },
+        )
 
         # Create agent status
-        db.insert("agent_status", {
-            "agent_id": agent_id,
-            "status": "active",
-            "current_task_id": task_id,
-            "last_heartbeat": datetime.now().isoformat(),
-        })
+        db.insert(
+            "agent_status",
+            {
+                "agent_id": agent_id,
+                "status": "active",
+                "current_task_id": task_id,
+                "last_heartbeat": datetime.now().isoformat(),
+            },
+        )
 
         # Log cost (with proper agent_id and task_id)
-        db.insert("cost_log", {
-            "task_id": task_id,
-            "agent_id": agent_id,
-            "model": "deepseek-chat",
-            "input_tokens": 500 + i * 100,
-            "output_tokens": 200 + i * 50,
-            "total_tokens": 700 + i * 150,
-            "estimated_cost": 0.002 + i * 0.001,
-        })
+        db.insert(
+            "cost_log",
+            {
+                "task_id": task_id,
+                "agent_id": agent_id,
+                "model": "deepseek-chat",
+                "input_tokens": 500 + i * 100,
+                "output_tokens": 200 + i * 50,
+                "total_tokens": 700 + i * 150,
+                "estimated_cost": 0.002 + i * 0.001,
+            },
+        )
 
         # Update SOP progress
-        db.update("sop_executions", "id", sop_exec_id, {
-            "completed_stages": i + 1,
-        })
+        db.update(
+            "sop_executions",
+            "id",
+            sop_exec_id,
+            {
+                "completed_stages": i + 1,
+            },
+        )
 
     # ── Step 5: Mark task complete ──
-    db.update("tasks", "id", task_id, {
-        "status": "completed",
-        "completed_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-        "result_summary": "完成 5/5 个阶段",
-    })
-    db.update("sop_executions", "id", sop_exec_id, {
-        "status": "completed",
-        "completed_at": datetime.now().isoformat(),
-    })
+    db.update(
+        "tasks",
+        "id",
+        task_id,
+        {
+            "status": "completed",
+            "completed_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+            "result_summary": "完成 5/5 个阶段",
+        },
+    )
+    db.update(
+        "sop_executions",
+        "id",
+        sop_exec_id,
+        {
+            "status": "completed",
+            "completed_at": datetime.now().isoformat(),
+        },
+    )
 
     # ── Step 6: Log audit ──
-    db.insert("audit_log", {
-        "agent_id": "ancestor",
-        "action": "task_completed",
-        "details": f"Task {task_id}: F14 persistence verification completed",
-    })
+    db.insert(
+        "audit_log",
+        {
+            "agent_id": "ancestor",
+            "action": "task_completed",
+            "details": f"Task {task_id}: F14 persistence verification completed",
+        },
+    )
 
     return task_id, sop_exec_id
 
@@ -370,7 +424,7 @@ def main():
     cost_check = verify_cost_log_association(task_id)
     print(f"   'unknown' agent_id records: {cost_check['unknown_agent_count']}")
     print(f"   NULL/empty task_id records: {cost_check['null_task_count']}")
-    print(f"   Latest cost_log samples:")
+    print("   Latest cost_log samples:")
     for s in cost_check["samples"]:
         print(f"     agent={s['agent_id']}, task={s['task_id']}, tokens={s['total_tokens']}")
 

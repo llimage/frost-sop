@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+---
+
+## [3.0.1] - 2026-07-01 (P0 安全 + A 级运行链路)
+
+### 概述
+P0 安全审计后的全面加固，以及 FROST 家族资产体系的运行链路修复。本版本使系统从"安全及格但跑不起来"变为"安全达标且核心链路通"。
+
+### Security (P0)
+- **SQL注入防护**：`core/db.py` 20表白名单 + 列名正则 `^[a-zA-Z_][a-zA-Z0-9_]*$` + WHERE黑名单（13关键字）
+- **CORS安全**：`api/main.py` 从 `["*"]` 改为环境变量 `FROST_CORS_ORIGINS` 驱动
+- **废弃代码删除**：`workspace/frost-sop/app.py`（2,483行 Streamlit，已有 NiceGUI 替代）
+- **工程硬化**：`pyproject.toml`（ruff/mypy/bandit/pytest 配置）
+
+### Security (S 级修复)
+- **S-001 json.loads Schema 验证**：新建 `core/json_safety.py`，6处调用全部加 Pydantic Schema + DoS 防护
+- **S-002 input() 阻塞**：`skills/orchestration.py` 新增 `FROST_NON_INTERACTIVE` 环境变量兜底
+- **S-003 文件路径验证**：新建 `core/path_safety.py`，6处 `open()` 改为 `safe_open()`
+- **S-004 依赖锁定**：13个依赖 `>=` → `==`，构建可复现
+
+### Fixed (A 级运行链路)
+- **A-004 merge_from 接入**：`_execute_child()` 中孙辈退出时自动合并 Store 数据到父辈
+- **A-005 record_usage 接入**：`_execute_child()` 中每次武器使用后调用 `ArmoryRegistry.record_usage()`
+- **A-006 失败复盘**：`SkillExtractor.scan_failed_calls()` → `scan_and_archive_lessons()`，`finalize_task` 中自动触发
+
+### Engineering
+- **ruff 0.15.20**：代码检查 + 格式化（2,464 → 202 errors，92% 自动修复）
+- **mypy 2.1.0**：类型检查（301 errors，待后续修复）
+- **pre-commit 4.6.0**：Git 提交时自动检查
+- **.gitignore**：排除 audit_package/ 和临时审计报告
+
+### Test Status
+- **全量回归**: 603 passed, 6 skipped, 0 failed
+
+---
+
 ## [3.0.0] - 2026-06-29 (Baseline)
 
 ### 概述
@@ -115,6 +150,7 @@ V3.0 是在 V2.0 事件总线基础上的"治理 + 元数据 + 下一代 UI" 大
 
 ---
 
+[3.0.1]: https://gitee.com/liao_liang_7514/frost-sop/releases/tag/v3.0.1
 [3.0.0]: https://gitee.com/liao_liang_7514/frost-sop/releases/tag/v3.0.0
 [2.0.0]: https://gitee.com/liao_liang_7514/frost-sop/releases/tag/v2.0.0
 [1.0.0-f10-baseline]: https://gitee.com/liao_liang_7514/frost-sop/releases/tag/v1.0.0-f10-baseline

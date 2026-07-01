@@ -59,3 +59,10 @@ tests/__pycache__/
 # 操作系统
 .DS_Store
 Thumbs.db
+
+# 审计包（大文件，不进入版本控制）
+audit_package*/
+*.zip
+
+# 交接文档（临时文件）
+HANDOFF_SUMMARY_*.md

@@ -3,19 +3,20 @@ PHILOSOPHY:
 Orchestration Skills manage agent lifecycle (spawn/emit/validate/merge).
 """
 
-import logging
-from datetime import datetime
 import asyncio
-from typing import Dict, Any, Optional
+import contextlib
+import logging
+import os
+import sys
 
-from core.skill import Skill
 from core.agent import Agent
+from core.skill import Skill
 from core.store import Store
 
 logger = logging.getLogger(__name__)
 
 # V5.0：使用 DecisionFlow 状态机替代 decision_manager
-from core.panel_decision import get_decision_flow, DecisionStatus
+from core.panel_decision import get_decision_flow
 
 
 def spawn(context: dict) -> dict:
@@ -28,33 +29,35 @@ def spawn(context: dict) -> dict:
     Returns:
         Updated context with child execution results
     """
-    spec = context.get('_spawn_spec', {})
+    spec = context.get("_spawn_spec", {})
     if not spec:
         return context
 
-    template = spec.get('template_agent')
+    template = spec.get("template_agent")
     if not template:
         return context
 
     # Create child agent
     child = Agent(
-        name=spec.get('agent_id', 'child'),
+        name=spec.get("agent_id", "child"),
         store=Store(),
         skills=template.skills.copy() if template.skills else {},
-        sop_steps=template._sop_steps.copy() if hasattr(template, '_sop_steps') else [],
+        sop_steps=template._sop_steps.copy() if hasattr(template, "_sop_steps") else [],
     )
 
     # Run child agent
-    result_ctx = child.run(child._sop_steps, spec.get('initial_context', {}))
+    result_ctx = child.run(child._sop_steps, spec.get("initial_context", {}))
 
     # Collect results
     context.update(result_ctx)
-    if '_children_results' not in context:
-        context['_children_results'] = []
-    context['_children_results'].append({
-        "agent_id": child.name,
-        "result": result_ctx,
-    })
+    if "_children_results" not in context:
+        context["_children_results"] = []
+    context["_children_results"].append(
+        {
+            "agent_id": child.name,
+            "result": result_ctx,
+        }
+    )
 
     return context
 
@@ -69,8 +72,8 @@ def emit(context: dict) -> dict:
     Returns:
         Updated context with '_result' dictionary
     """
-    keys = context.get('_emit_keys', ['_result'])
-    context['_result'] = {k: context.get(k) for k in keys}
+    keys = context.get("_emit_keys", ["_result"])
+    context["_result"] = {k: context.get(k) for k in keys}
     return context
 
 
@@ -86,16 +89,18 @@ def validate_sop(context: dict) -> dict:
     """
     from core.sop import SOPValidator
 
-    sop = context.get('_sop_to_validate')
-    rules = context.get('_compliance_rules', {})
+    sop = context.get("_sop_to_validate")
+    rules = context.get("_compliance_rules", {})
 
     if sop is None:
-        context['_validation_result'] = {"valid": False,
-            "errors": [{"message": "No SOP to validate"}]}
+        context["_validation_result"] = {
+            "valid": False,
+            "errors": [{"message": "No SOP to validate"}],
+        }
         return context
 
     validator = SOPValidator()
-    context['_validation_result'] = validator.validate(sop, rules)
+    context["_validation_result"] = validator.validate(sop, rules)
 
     return context
 
@@ -110,9 +115,9 @@ def merge_from(context: dict) -> dict:
     Returns:
         Updated context with merged data
     """
-    child_store = context.get('_child_store')
-    parent_store = context.get('_store')
-    filter_keys = context.get('_merge_keys', [])
+    child_store = context.get("_child_store")
+    parent_store = context.get("_store")
+    filter_keys = context.get("_merge_keys", [])
 
     if child_store is None or parent_store is None:
         return context
@@ -134,6 +139,7 @@ merge_from_skill = Skill("merge_from", merge_from)
 # ============================================================
 # P3 新增：SOP 内化与阶段执行 Skill
 # ============================================================
+
 
 def internalize_sop(context: dict) -> dict:
     """
@@ -174,10 +180,10 @@ def internalize_sop(context: dict) -> dict:
     return context
 
 
-
 # ============================================================
 # execute_stage 子函数（降低复杂度，每个子函数 <10）
 # ============================================================
+
 
 def _check_decision_point(context: dict, stage: dict) -> bool:
     """
@@ -201,9 +207,7 @@ def _check_decision_point(context: dict, stage: dict) -> bool:
     if requires_decision:
         task_id = context.get("_task_id", "unknown")
         if task_id == "unknown":
-            logger.warning(
-                "跳过决策点（无有效 task_id）: %s", stage_name
-            )
+            logger.warning("跳过决策点（无有效 task_id）: %s", stage_name)
         else:
             # S-002 修复：使用 DecisionFlow 状态机替代 decision_manager
             flow = get_decision_flow()
@@ -233,7 +237,8 @@ def _check_decision_point(context: dict, stage: dict) -> bool:
 
             logger.info(
                 "[V5.0] DecisionFlow 决策已创建: %s (status=%s)",
-                decision_id, record.status.value,
+                decision_id,
+                record.status.value,
             )
 
             # V5.0：生成 DECISION 面板
@@ -253,13 +258,9 @@ def _check_decision_point(context: dict, stage: dict) -> bool:
                 generator = PanelGenerator()
                 decision_panel = generator.generate(task_for_panel)
                 context["_decision_panel"] = decision_panel
-                logger.info(
-                    "[V5.0] 决策面板已生成: %s", decision_panel.panel_id
-                )
+                logger.info("[V5.0] 决策面板已生成: %s", decision_panel.panel_id)
             except Exception as e:
-                logger.warning(
-                    "[V5.0] 决策面板生成失败（不影响暂停）: %s", e
-                )
+                logger.warning("[V5.0] 决策面板生成失败（不影响暂停）: %s", e)
 
     return context.get("_paused_for_decision", False)
 
@@ -280,7 +281,7 @@ def _wait_for_decision_and_continue(context: dict, blocking: bool = True) -> dic
                   决策面板并调用 _submit_decision_from_ui() 提交决策。
     """
     import logging
-    import sys
+
     logger = logging.getLogger(__name__)
 
     panel = context.get("_decision_panel")
@@ -307,25 +308,30 @@ def _wait_for_decision_and_continue(context: dict, blocking: bool = True) -> dic
     # 阻塞模式（CLI）
     # 1. 渲染决策面板
     from renderers.cli_renderer import CliRenderer
+
     renderer = CliRenderer()
     renderer.render(panel)
 
-    # 2. 等待用户输入
+    # 2. 等待用户输入（安全防护：S-002 fix）
     options = context.get("_decision_options", ["确认", "驳回", "修改"])
 
     print()
-    if not sys.stdin.isatty():
-        # 非 CLI 环境（如测试），使用默认决策
-        logger.warning("_wait_for_decision_and_continue: 非 CLI 环境，使用默认决策")
+    # 检查是否在非交互环境中运行
+    # isatty() 可能在管道/重定向场景下误判，FROST_NON_INTERACTIVE 作为兜底
+    non_interactive = not sys.stdin.isatty() or os.environ.get(
+        "FROST_NON_INTERACTIVE", ""
+    ).lower() in ("1", "true", "yes")
+    if non_interactive:
+        logger.warning("_wait_for_decision_and_continue: 非交互环境，使用默认决策")
         choice = options[0]  # 默认确认
     else:
         while True:
             try:
-                choice = input(f"请输入决策（{"，".join(options)}）：").strip()
+                choice = input(f"请输入决策（{'，'.join(options)}）：").strip()
                 if choice in options:
                     break
                 else:
-                    print(f"无效输入，请重新输入（{"，".join(options)}）")
+                    print(f"无效输入，请重新输入（{'，'.join(options)}）")
             except EOFError:
                 logger.warning("_wait_for_decision_and_continue: EOF，使用默认决策")
                 choice = options[0]
@@ -335,11 +341,14 @@ def _wait_for_decision_and_continue(context: dict, blocking: bool = True) -> dic
     return _submit_decision_and_update_context(context, decision_id, choice, "CLI 用户输入")
 
 
-def _submit_decision_and_update_context(context: dict, decision_id: str, choice: str, reason_prefix: str = "") -> dict:
+def _submit_decision_and_update_context(
+    context: dict, decision_id: str, choice: str, reason_prefix: str = ""
+) -> dict:
     """
     提交决策并更新 context（供 CLI 和 UI 模式共用）。
     """
     import logging
+
     logger = logging.getLogger(__name__)
 
     from core.panel_decision import get_decision_flow
@@ -354,7 +363,9 @@ def _submit_decision_and_update_context(context: dict, decision_id: str, choice:
         )
         logger.info(
             "决策已提交: decision_id=%s, decision=%s, status=%s",
-            decision_id, choice, record.status.value,
+            decision_id,
+            choice,
+            record.status.value,
         )
     except Exception as e:
         logger.error("提交决策失败: %s", e)
@@ -430,37 +441,53 @@ def _assemble_child(context: dict, stage: dict):
         # F14: Persist child agent to database
         try:
             from core.db import get_db
+
             db = get_db()
             agent_id = child.name
             existing_agent = db.select_one("agents", "id", agent_id)
             if not existing_agent:
                 from datetime import datetime
-                db.insert("agents", {
-                    "id": agent_id,
-                    "name": child.name,
-                    "agent_type": "child",
-                    "generation": child.generation,
-                    "created_at": datetime.now().isoformat(),
-                })
+
+                db.insert(
+                    "agents",
+                    {
+                        "id": agent_id,
+                        "name": child.name,
+                        "agent_type": "child",
+                        "generation": child.generation,
+                        "created_at": datetime.now().isoformat(),
+                    },
+                )
             task_id = context.get("_task_id", "")
             existing_status = db.select_one("agent_status", "agent_id", agent_id)
             if existing_status:
                 from datetime import datetime
-                db.update("agent_status", "agent_id", agent_id, {
-                    "status": "active",
-                    "current_task_id": task_id,
-                    "last_heartbeat": datetime.now().isoformat(),
-                })
+
+                db.update(
+                    "agent_status",
+                    "agent_id",
+                    agent_id,
+                    {
+                        "status": "active",
+                        "current_task_id": task_id,
+                        "last_heartbeat": datetime.now().isoformat(),
+                    },
+                )
             else:
                 from datetime import datetime
-                db.insert("agent_status", {
-                    "agent_id": agent_id,
-                    "status": "active",
-                    "current_task_id": task_id,
-                    "last_heartbeat": datetime.now().isoformat(),
-                })
+
+                db.insert(
+                    "agent_status",
+                    {
+                        "agent_id": agent_id,
+                        "status": "active",
+                        "current_task_id": task_id,
+                        "last_heartbeat": datetime.now().isoformat(),
+                    },
+                )
         except Exception as e:
             import traceback
+
             logger.warning("[F14] Agent持久化失败: %s: %s", type(e).__name__, e)
             traceback.print_exc()
 
@@ -483,7 +510,13 @@ def _assemble_child(context: dict, stage: dict):
 def _execute_child(child, context: dict, stage: dict) -> dict:
     """
     执行孙辈Agent，返回结果上下文。
-    包含：构造initial_context、调用child.run()、更新agent_status为destroyed。
+
+    包含：
+    1. 构造initial_context
+    2. 调用child.run()
+    3. A-004: merge_from — 将子Agent Store数据合并到父Store
+    4. A-005: record_usage — 记录武器使用反馈
+    5. 更新agent_status为destroyed
     """
     stage_name = stage.get("name", "未知阶段")
     stage_requirement = stage.get("requirement", f"执行{stage_name}任务")
@@ -497,27 +530,102 @@ def _execute_child(child, context: dict, stage: dict) -> dict:
     }
 
     agent_config = context.get("_agent_config", {})
+    execution_success = True
     try:
         result_context = child.run(
             sop_steps=agent_config.get("sop_steps", ["call_llm_for_output"]),
-            initial_context=initial_context
+            initial_context=initial_context,
         )
     except Exception as e:
         result_context = {"_generated_content": f"执行失败: {str(e)}"}
+        execution_success = False
+
+    # ── A-004: merge_from — 孙辈退出 → 父辈合并经验 ──
+    _merge_child_store_to_parent(child, context)
+
+    # ── A-005: record_usage — 武器使用反馈环 ──
+    _record_weapon_usage(agent_config, context, execution_success)
 
     # V2.0: 更新 agent_status 为 destroyed
     try:
-        from core.db import get_db
         from datetime import datetime
+
+        from core.db import get_db
+
         db_after = get_db()
-        db_after.update("agent_status", "agent_id", child.name, {
-            "status": "destroyed",
-            "last_heartbeat": datetime.now().isoformat(),
-        })
+        db_after.update(
+            "agent_status",
+            "agent_id",
+            child.name,
+            {
+                "status": "destroyed",
+                "last_heartbeat": datetime.now().isoformat(),
+            },
+        )
     except Exception as e:
         logger.warning("[V2.0] 孙辈销毁状态更新失败 (%s): %s", child.name, e)
 
     return result_context
+
+
+def _merge_child_store_to_parent(child, context: dict) -> None:
+    """
+    A-004: 将孙辈Agent的Store数据合并到父辈Store。
+
+    这是FROST家族资产体系的"跨代际经验继承"核心机制：
+    - 孙辈执行任务产生的结果（output/lesson/task数据）
+    - 自动回流到父辈Store
+    - 过滤内部键（_开头），只合并业务数据
+    """
+    parent_store = context.get("_store")
+    if parent_store is None or child is None:
+        return
+
+    try:
+        child_keys = child.store.list_keys()
+        merge_count = 0
+        for key in child_keys:
+            # 跳过内部键
+            if key.startswith("_"):
+                continue
+            value = child.store.load(key)
+            if value is not None:
+                parent_store.save(key, value)
+                merge_count += 1
+        if merge_count > 0:
+            logger.info(
+                "[A-004] merge_from: 孙辈 '%s' → 父辈合并 %d 个键",
+                child.name,
+                merge_count,
+            )
+    except Exception as e:
+        logger.warning("[A-004] merge_from 失败 (%s): %s", child.name, e)
+
+
+def _record_weapon_usage(agent_config: dict, context: dict, success: bool) -> None:
+    """
+    A-005: 记录武器使用反馈，更新健康评分。
+
+    每次孙辈Agent执行完成后，记录其所用武器（Skills）的使用结果，
+    驱动 health_score 动态更新，让武器库自然选择"优胜劣汰"。
+    """
+    skills_used = agent_config.get("skills", [])
+    if not skills_used:
+        return
+
+    try:
+        from core.armory import get_armory_registry
+
+        parent_store = context.get("_store")
+        armory = get_armory_registry(store=parent_store)
+
+        for skill_name in skills_used:
+            # 武器ID格式：skill:{skill_name}
+            weapon_id = f"skill:{skill_name}"
+            with contextlib.suppress(ValueError):
+                armory.record_usage(weapon_id, success=success)
+    except Exception as e:
+        logger.debug("[A-005] record_usage 失败: %s", e)
 
 
 def _persist_result(context: dict, stage_name: str, result_context: dict, child) -> dict:
@@ -528,7 +636,7 @@ def _persist_result(context: dict, stage_name: str, result_context: dict, child)
     agent_config = context.get("_agent_config", {})
     result_text = result_context.get(
         "_generated_content",
-        result_context.get("_result", result_context.get("_llm_response", "执行完成"))
+        result_context.get("_result", result_context.get("_llm_response", "执行完成")),
     )
     status = "completed" if "_generated_content" in result_context else "failed"
 
@@ -596,11 +704,9 @@ def execute_stage(context: dict) -> dict:
             # 被驳回，不执行当前阶段
             if "_stage_results" not in context:
                 context["_stage_results"] = []
-            context["_stage_results"].append({
-                "stage": stage_name,
-                "status": "rejected",
-                "reason": "用户驳回"
-            })
+            context["_stage_results"].append(
+                {"stage": stage_name, "status": "rejected", "reason": "用户驳回"}
+            )
             context["_current_stage_result"] = {"status": "rejected", "reason": "用户驳回"}
             return context
         # 如果 needs_revision，暂时先执行（后续可扩展）
@@ -627,6 +733,7 @@ execute_stage_skill = Skill("execute_stage", execute_stage)
 # ============================================================
 # V2.0 阶段三：长老审计自动化
 # ============================================================
+
 
 def _trigger_elder_audit(task_id: str, asset_store=None, constitution_store=None):
     """
@@ -660,7 +767,7 @@ def _trigger_elder_audit(task_id: str, asset_store=None, constitution_store=None
                 "_asset_store": asset_store,
                 "_constitution_store": constitution_store,
                 "_task_id": task_id,
-            }
+            },
         )
 
         audit_report = audit_context.get("_audit_report", {})
@@ -668,25 +775,30 @@ def _trigger_elder_audit(task_id: str, asset_store=None, constitution_store=None
 
         # 将审计结果写入 audit_log 表
         db = get_db()
-        db.log_audit({
-            "agent_id": f"elder_audit_{task_id[:8]}",
-            "action": "auto_audit",
-            "details": f"task_id={task_id} | {reason} | report={str(audit_report)[:500]}",
-            "level": "info",
-        })
+        db.log_audit(
+            {
+                "agent_id": f"elder_audit_{task_id[:8]}",
+                "action": "auto_audit",
+                "details": f"task_id={task_id} | {reason} | report={str(audit_report)[:500]}",
+                "level": "info",
+            }
+        )
         logger.info("[V2.0-长老审计] 完成 task_id=%s: %s", task_id, reason)
 
     except Exception as e:
         # 长老审计失败仅记录日志，不影响任务完成状态
         try:
             from core.db import get_db
+
             db = get_db()
-            db.log_audit({
-                "agent_id": "elder_audit",
-                "action": "auto_audit_failed",
-                "details": f"task_id={task_id} | 长老审计失败: {str(e)[:200]}",
-                "level": "warning",
-            })
+            db.log_audit(
+                {
+                    "agent_id": "elder_audit",
+                    "action": "auto_audit_failed",
+                    "details": f"task_id={task_id} | 长老审计失败: {str(e)[:200]}",
+                    "level": "warning",
+                }
+            )
         except Exception:
             pass
         logger.warning("[V2.0-长老审计] 失败（不影响任务状态）: %s", e)
@@ -723,16 +835,58 @@ def finalize_task(context: dict) -> dict:
     audit_thread = threading.Thread(
         target=_trigger_elder_audit,
         args=(task_id, asset_store, constitution_store),
-        daemon=True,   # 守护线程：主线程结束时自动结束，不阻塞
+        daemon=True,  # 守护线程：主线程结束时自动结束，不阻塞
         name=f"elder_audit_{task_id[:8]}",
     )
     audit_thread.start()
 
     context["_elder_audit_triggered"] = True
-    context["_elder_audit_thread"] = audit_thread   # 供测试等待使用
+    context["_elder_audit_thread"] = audit_thread  # 供测试等待使用
     context["_reason"] = f"finalize_task: 长老审计后台线程已启动，task_id={task_id}"
 
     logger.info("[V2.0-长老审计] 后台审计已启动，task_id=%s", task_id)
+
+    # ── A-006: 失败复盘 ──
+    context = _scan_failed_calls_for_lessons(context)
+
+    return context
+
+
+def _scan_failed_calls_for_lessons(context: dict) -> dict:
+    """
+    A-006: 扫描 tool_calls 目录中的失败调用，提取教训写入错题本。
+
+    这是FROST失败闭环学习的核心机制：
+    - 扫描所有 success=false 的 tool_calls 日志
+    - 按错误类型分类（timeout/api/validation/execution）
+    - 写入 lesson: 前缀的错题本条目
+    - 重复错误递增 times_encountered 计数
+    """
+    try:
+        from core.skill_extractor import SkillExtractor
+
+        extractor = SkillExtractor()
+        asset_store = context.get("_asset_store")
+
+        lesson_keys = extractor.scan_and_archive_lessons(store=asset_store)
+
+        if lesson_keys:
+            context["_lessons_archived"] = len(lesson_keys)
+            context["_lesson_keys"] = lesson_keys
+            logger.info(
+                "[A-006] 失败复盘: 从 %d 个失败调用中提取教训",
+                len(lesson_keys),
+            )
+        else:
+            context["_lessons_archived"] = 0
+
+        # 附加失败复盘结果到 reason
+        previous_reason = context.get("_reason", "")
+        if lesson_keys:
+            context["_reason"] = f"{previous_reason} | 失败复盘: {len(lesson_keys)} 条教训已归档"
+    except Exception as e:
+        logger.warning("[A-006] 失败复盘失败（不影响任务状态）: %s", e)
+
     return context
 
 
@@ -740,118 +894,6 @@ def finalize_task(context: dict) -> dict:
 finalize_task_skill = Skill("finalize_task", finalize_task)
 
 
-# ============================================================
-# V3.0: 事件驱动的阶段执行器
-# ============================================================
-
-def register_stage_executor(parent_agent, asset_store) -> bool:
-    """
-    V3.0: 注册 execute_stage 为 STAGE_STARTED 事件的异步订阅者。
-
-    收到 STAGE_STARTED 后：
-    1. 从事件数据中提取阶段信息
-    2. 调用 execute_stage 执行阶段（assemble_agent → child.run()）
-    3. 发布 STAGE_COMPLETED 事件
-    4. 如果所有阶段已完成，发布 TASK_COMPLETED 事件
-
-    Args:
-        parent_agent: 父辈 Agent 实例
-        asset_store: 资产 Store
-
-    Returns:
-        True 如果注册成功，False 如果 AsyncEventBus 不可用
-    """
-    import logging
-    logger = logging.getLogger(__name__)
-
-    try:
-        from core.event_bus import get_async_event_bus, Event, EventType
-
-        bus = get_async_event_bus()
-
-        # V3.0 修复：跟踪每个任务的阶段完成状态
-        # {task_id: {"total": N, "completed": set(), "total_stages": N}}
-        _task_progress: dict = {}
-
-        async def on_stage_started(event: Event):
-            """STAGE_STARTED 回调：执行阶段 → 发布 STAGE_COMPLETED → 检查是否全部完成"""
-            nonlocal _task_progress
-
-            task_id = event.data.get("task_id", "unknown")
-            stage_name = event.data.get("stage_name", "未知阶段")
-            stage_order = event.data.get("stage_order", 0)
-            total_stages = event.data.get("total_stages", 0)
-
-            logger.info("[V3.0] execute_stage 收到 STAGE_STARTED: %s (阶段 %s/%s)",
-                        stage_name, stage_order, total_stages)
-
-            # 初始化任务进度跟踪
-            if task_id not in _task_progress:
-                _task_progress[task_id] = {
-                    "total": total_stages,
-                    "completed": set(),
-                    "total_stages": total_stages,
-                }
-
-            # 构造 execute_stage 的 context
-            stage_context = {
-                "_current_stage": {
-                    "name": stage_name,
-                    "agent": "执行者",
-                    "skills": ["call_llm"],
-                    "requirement": f"执行 {stage_name}",
-                },
-                "_parent_agent": parent_agent,
-                "_asset_store": asset_store,
-                "_stage_results": [],
-                "_task_id": task_id,
-            }
-
-            # 调用 execute_stage（P1-1 修复：asyncio.to_thread 避免阻塞事件循环）
-            result_context = await asyncio.to_thread(execute_stage, stage_context)
-            result = result_context.get("_current_stage_result", {})
-            stage_status = result.get("status", "unknown")
-
-            # 发布 STAGE_COMPLETED
-            await bus.publish(Event(
-                event_type=EventType.STAGE_COMPLETED,
-                source="orchestration:stage_executor",
-                data={
-                    "task_id": task_id,
-                    "stage_name": stage_name,
-                    "stage_order": stage_order,
-                    "total_stages": total_stages,
-                    "status": stage_status,
-                },
-            ))
-            logger.info("[V3.0] execute_stage 发布 STAGE_COMPLETED: %s (status=%s)",
-                        stage_name, stage_status)
-
-            # V3.0 修复：检查是否所有阶段已完成
-            progress = _task_progress[task_id]
-            progress["completed"].add(stage_order)
-
-            if len(progress["completed"]) >= progress["total"]:
-                # 所有阶段已完成 → 发布 TASK_COMPLETED
-                logger.info("[V3.0] 所有阶段已完成 (%s/%s)，发布 TASK_COMPLETED: %s",
-                            len(progress["completed"]), progress["total"], task_id)
-                await bus.publish(Event(
-                    event_type=EventType.TASK_COMPLETED,
-                    source="orchestration:stage_executor",
-                    data={
-                        "task_id": task_id,
-                        "stages_completed": len(progress["completed"]),
-                        "total_stages": progress["total"],
-                        "status": "completed",
-                    },
-                ))
-                # 清理进度跟踪
-                del _task_progress[task_id]
-
-        bus.subscribe_async(EventType.STAGE_STARTED, on_stage_started)
-        logger.info("[V3.0] execute_stage 已订阅 STAGE_STARTED 事件")
-        return True
-
-    except Exception as e:
-        logger.warning("[V3.0] execute_stage 事件订阅失败（已忽略）: %s", e)
-        return False
+# V3.0 事件驱动的阶段执行器已拆分至 orchestration_v3.py
+# 为保持向后兼容，重新导出
+from skills.orchestration_v3 import register_stage_executor  # noqa: E402, F401

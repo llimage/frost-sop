@@ -8,7 +8,7 @@ core/cost.py - 成本追踪模块
 
 import json
 from datetime import date
-from typing import Dict, Any
+from typing import Any
 
 from core.db import get_db
 
@@ -39,9 +39,15 @@ class CostTracker:
         self.alert_ratio = alert_ratio
         self._db = get_db()
 
-    def track_cost(self, agent_id: str, tokens: int, model: str = "default",
-                   task_id: str = None, input_tokens: int = None,
-                   output_tokens: int = None) -> float:
+    def track_cost(
+        self,
+        agent_id: str,
+        tokens: int,
+        model: str = "default",
+        task_id: str | None = None,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+    ) -> float:
         """
         追踪成本
 
@@ -61,19 +67,22 @@ class CostTracker:
         estimated_cost = (tokens / 1000) * cost_per_1k_tokens
 
         # 写入成本日志
-        self._db.insert("cost_log", {
-            "task_id": task_id,
-            "agent_id": agent_id,
-            "model": model,
-            "input_tokens": input_tokens if input_tokens is not None else tokens,
-            "output_tokens": output_tokens if output_tokens is not None else 0,
-            "total_tokens": tokens,
-            "estimated_cost": estimated_cost
-        })
+        self._db.insert(
+            "cost_log",
+            {
+                "task_id": task_id,
+                "agent_id": agent_id,
+                "model": model,
+                "input_tokens": input_tokens if input_tokens is not None else tokens,
+                "output_tokens": output_tokens if output_tokens is not None else 0,
+                "total_tokens": tokens,
+                "estimated_cost": estimated_cost,
+            },
+        )
 
         return estimated_cost
 
-    def check_budget(self, year: int = None, month: int = None) -> Dict[str, Any]:
+    def check_budget(self, year: int | None = None, month: int | None = None) -> dict[str, Any]:
         """
         检查预算使用率
 
@@ -99,9 +108,9 @@ class CostTracker:
         if usage_ratio >= 1.0:
             status = "exceeded"  # 超预算
         elif usage_ratio >= self.alert_ratio:
-            status = "warning"   # 预警
+            status = "warning"  # 预警
         else:
-            status = "normal"    # 正常
+            status = "normal"  # 正常
 
         return {
             "monthly_budget": self.monthly_budget,
@@ -109,7 +118,7 @@ class CostTracker:
             "usage_ratio": usage_ratio,
             "remaining": self.monthly_budget - total_cost,
             "status": status,
-            "alert_ratio": self.alert_ratio
+            "alert_ratio": self.alert_ratio,
         }
 
     def check_and_throw(self, agent_id: str, tokens: int, model: str = "default"):
@@ -132,7 +141,7 @@ class CostTracker:
             )
         # 仅检查预算，不在此处追踪成本（成本追踪在实际LLM调用后进行，避免重复计数）
 
-    def update_budget_config(self, monthly_budget: float = None, alert_ratio: float = None):
+    def update_budget_config(self, monthly_budget: float | None = None, alert_ratio: float | None = None):
         """
         更新预算配置
 
@@ -146,14 +155,16 @@ class CostTracker:
             self.alert_ratio = alert_ratio
 
         # 保存到配置表
-        self._db.insert("config", {
-            "key": "cost_budget",
-            "value": json.dumps({
-                "monthly_budget": self.monthly_budget,
-                "alert_ratio": self.alert_ratio
-            }),
-            "description": "成本预算配置"
-        })
+        self._db.insert(
+            "config",
+            {
+                "key": "cost_budget",
+                "value": json.dumps(
+                    {"monthly_budget": self.monthly_budget, "alert_ratio": self.alert_ratio}
+                ),
+                "description": "成本预算配置",
+            },
+        )
 
 
 # 全局成本追踪器（单例）

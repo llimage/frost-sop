@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\cost.py
+# hypothesis_version: 6.145.0
+
+[0.001, 0.01, 0.8, 1.0, 300.0, 1000, '\n[1] 测试成本追踪...', '\n[2] 测试预算检查...', '\n[3] 测试预算熔断...', '\n✅ CostTracker 测试完成', '  ❌ 未触发熔断（预期外）', '=', '__main__', 'agent_id', 'alert_ratio', 'config', 'cost_budget', 'cost_log', 'default', 'description', 'estimated_cost', 'exceeded', 'input_tokens', 'key', 'model', 'monthly_budget', 'normal', 'output_tokens', 'remaining', 'status', 'task_id', 'test_agent', 'test_model', 'total_cost', 'total_tokens', 'usage_ratio', 'value', 'warning', '成本预算配置']

@@ -9,16 +9,17 @@ V3.0 缺失测试 3.1：真实模式测试（FROST_TESTING=0）
 2. 配置真实 LLM API Key（如 OPENAI_API_KEY 或 DEEPSEEK_API_KEY）
 3. 使用轻量模型（如 DeepSeek-V2-Lite）
 """
-import os
-import pytest
+
 import asyncio
+import os
+
+import pytest
 
 # 如果没有设置真实模式，跳过整个模块
 if os.environ.get("FROST_TESTING") == "1":
     pytest.skip(
-        "真实模式测试需要 FROST_TESTING=0，已跳过。"
-        "运行方式: FROST_TESTING=0 pytest -m slow",
-        allow_module_level=True
+        "真实模式测试需要 FROST_TESTING=0，已跳过。运行方式: FROST_TESTING=0 pytest -m slow",
+        allow_module_level=True,
     )
 
 
@@ -30,8 +31,8 @@ async def test_real_mode_ancestor_publishes_task_decomposed():
 
     ⚠️ 消耗 Token：~1K tokens
     """
-    from core.event_bus import get_async_event_bus, Event, EventType, reset_event_bus
     from agents.ancestor import create_ancestor
+    from core.event_bus import Event, EventType, get_async_event_bus, reset_event_bus
     from core.store import HierarchicalStore
 
     reset_event_bus()
@@ -45,11 +46,13 @@ async def test_real_mode_ancestor_publishes_task_decomposed():
 
     ancestor = create_ancestor(HierarchicalStore(), None, event_driven=True)
 
-    await bus.publish(Event(
-        event_type=EventType.TASK_CREATED,
-        source="test",
-        data={"task_description": "写一个 Hello World 网页", "task_id": "real-001"}
-    ))
+    await bus.publish(
+        Event(
+            event_type=EventType.TASK_CREATED,
+            source="test",
+            data={"task_description": "写一个 Hello World 网页", "task_id": "real-001"},
+        )
+    )
 
     # 等待 LLM 响应（最多 30 秒）
     for _ in range(60):
@@ -75,7 +78,7 @@ async def test_real_mode_full_e2e():
     try:
         result = await asyncio.wait_for(
             main_async("写一个简单的 Python 脚本打印 Hello World", sop_id="DEV-001", timeout=60),
-            timeout=90
+            timeout=90,
         )
         # 验证事件链完整
         assert result is not None
@@ -102,6 +105,6 @@ async def test_real_mode_cost_log_exists():
     # 验证有真实的 token 消耗记录
     has_real_cost = any(r.get("total_cost", 0) > 0 for r in recent)
     if has_real_cost:
-        print(f"   ✅ 发现真实 Token 消耗记录")
+        print("   ✅ 发现真实 Token 消耗记录")
     else:
-        print(f"   ⚠️ cost_log 中无真实消耗（可能使用了 mock）")
+        print("   ⚠️ cost_log 中无真实消耗（可能使用了 mock）")

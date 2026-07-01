@@ -1,11 +1,14 @@
 """
 调试：audit_family 数据读取问题
 """
-import sys, os
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.store import Store, HierarchicalStore
 from agents.elder import audit_family_skill
+from core.store import HierarchicalStore, Store
 
 # 创建测试数据
 own_store = Store()

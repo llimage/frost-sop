@@ -3,33 +3,56 @@ V5.0 P3: 健康元数据层测试
 测试 HealthHistory / NaturalSelectionEngine / HealthRanker
 """
 
-import sys, os
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import pytest
 from datetime import datetime, timedelta
+
 from core.armory import (
-    WeaponMetadata, WeaponType, WeaponState, WeaponCategory, ArmoryRegistry,
+    ArmoryRegistry,
+    WeaponCategory,
+    WeaponMetadata,
+    WeaponState,
+    WeaponType,
 )
 from core.health_meta import (
-    HealthSnapshot, HealthHistory, HealthTrend,
-    NaturalSelectionEngine, SelectionDecision,
+    HealthHistory,
     HealthRanker,
+    HealthSnapshot,
+    HealthTrend,
+    NaturalSelectionEngine,
+    SelectionDecision,
 )
-
 
 # ── 辅助函数 ──────────────────────────────────────────────────────────────────
 
-def make_weapon(weapon_id="skill:test", score=50.0, usage=0, success=0, failure=0,
-                state=WeaponState.ACTIVE, preset=False, last_used=None):
+
+def make_weapon(
+    weapon_id="skill:test",
+    score=50.0,
+    usage=0,
+    success=0,
+    failure=0,
+    state=WeaponState.ACTIVE,
+    preset=False,
+    last_used=None,
+):
     """创建测试武器"""
     w = WeaponMetadata(
-        id=weapon_id, name=weapon_id, type=WeaponType.SKILL,
+        id=weapon_id,
+        name=weapon_id,
+        type=WeaponType.SKILL,
         category=WeaponCategory.COGNITIVE,
-        health_score=score, usage_count=usage,
-        success_count=success, failure_count=failure,
-        state=state, is_active=(state == WeaponState.ACTIVE),
-        is_preset=preset, last_used=last_used,
+        health_score=score,
+        usage_count=usage,
+        success_count=success,
+        failure_count=failure,
+        state=state,
+        is_active=(state == WeaponState.ACTIVE),
+        is_preset=preset,
+        last_used=last_used,
     )
     return w
 
@@ -44,12 +67,15 @@ def make_history(scores):
 
 # ── HealthSnapshot 测试 ───────────────────────────────────────────────────────
 
+
 class TestHealthSnapshot:
     def test_create(self):
         s = HealthSnapshot(
             timestamp="2026-06-29T00:00:00",
-            health_score=75.5, usage_count=100,
-            success_count=90, failure_count=10,
+            health_score=75.5,
+            usage_count=100,
+            success_count=90,
+            failure_count=10,
             weapon_state="active",
         )
         assert s.health_score == 75.5
@@ -59,8 +85,10 @@ class TestHealthSnapshot:
     def test_to_dict(self):
         s = HealthSnapshot(
             timestamp="2026-06-29T00:00:00",
-            health_score=50.0, usage_count=10,
-            success_count=8, failure_count=2,
+            health_score=50.0,
+            usage_count=10,
+            success_count=8,
+            failure_count=2,
             weapon_state="active",
         )
         d = s.to_dict()
@@ -70,6 +98,7 @@ class TestHealthSnapshot:
 
 
 # ── HealthHistory 测试 ────────────────────────────────────────────────────────
+
 
 class TestHealthHistory:
     def test_empty_history(self):
@@ -140,6 +169,7 @@ class TestHealthHistory:
 
 
 # ── NaturalSelectionEngine 测试 ───────────────────────────────────────────────
+
 
 class TestNaturalSelectionEngine:
     def test_retire_low_score(self):
@@ -238,6 +268,7 @@ class TestNaturalSelectionEngine:
 
 # ── HealthRanker 测试 ─────────────────────────────────────────────────────────
 
+
 class TestHealthRanker:
     def test_rank_basic(self):
         r = ArmoryRegistry()
@@ -262,10 +293,15 @@ class TestHealthRanker:
     def test_rank_by_type(self):
         r = ArmoryRegistry()
         r.register(make_weapon("skill:a", score=80.0))
-        r.register(WeaponMetadata(
-            id="sop:DEV-001", name="DEV-001", type=WeaponType.SOP,
-            category=WeaponCategory.EXECUTION, health_score=90.0,
-        ))
+        r.register(
+            WeaponMetadata(
+                id="sop:DEV-001",
+                name="DEV-001",
+                type=WeaponType.SOP,
+                category=WeaponCategory.EXECUTION,
+                health_score=90.0,
+            )
+        )
         ranked = HealthRanker.rank(r, weapon_type=WeaponType.SOP)
         assert len(ranked) == 1
         assert ranked[0]["weapon_id"] == "sop:DEV-001"
@@ -326,8 +362,12 @@ class TestHealthRanker:
 
     def test_selection_decision_to_dict(self):
         d = SelectionDecision(
-            weapon_id="test", action="keep", reason="OK",
-            current_score=50.0, trend="stable", recommended_state="active"
+            weapon_id="test",
+            action="keep",
+            reason="OK",
+            current_score=50.0,
+            trend="stable",
+            recommended_state="active",
         )
         result = d.to_dict()
         assert result["weapon_id"] == "test"

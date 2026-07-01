@@ -2,15 +2,15 @@
 FROST-SOP STR-002 自进化端到端验证
 验证父辈能基于历史任务数据生成 SOP 优化建议。
 """
-import sys
+
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from stores.asset import create_asset_store
 from agents.parent import create_parent
 from core.store import Store
-
+from stores.asset import create_asset_store
 
 # 预置任务数据（与规格书一致）
 PRESET_TASKS = [

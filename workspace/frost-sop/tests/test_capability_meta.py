@@ -3,22 +3,35 @@ V5.0 P1: 能力元数据层测试
 测试 CapabilityProfile / ScenarioMatcher / CapabilityComparator
 """
 
-import sys, os
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import pytest
 from core.armory import (
-    WeaponMetadata, WeaponType, WeaponState, WeaponCategory, ArmoryRegistry,
+    ArmoryRegistry,
+    WeaponCategory,
+    WeaponMetadata,
+    WeaponType,
 )
 from core.capability_meta import (
-    CapabilityProfile, ComplexityLevel, ScenarioMatcher, CapabilityComparator,
+    CapabilityComparator,
+    CapabilityProfile,
+    ComplexityLevel,
+    ScenarioMatcher,
 )
-
 
 # ── 辅助函数 ──────────────────────────────────────────────────────────────────
 
-def make_weapon(weapon_id="skill:test", name="test", scenarios=None,
-                not_scenarios=None, profile=None, category=WeaponCategory.COGNITIVE):
+
+def make_weapon(
+    weapon_id="skill:test",
+    name="test",
+    scenarios=None,
+    not_scenarios=None,
+    profile=None,
+    category=WeaponCategory.COGNITIVE,
+):
     """创建测试武器"""
     return WeaponMetadata(
         id=weapon_id,
@@ -31,8 +44,15 @@ def make_weapon(weapon_id="skill:test", name="test", scenarios=None,
     )
 
 
-def make_profile(inputs=None, outputs=None, context=None, complexity=ComplexityLevel.SIMPLE,
-                 keywords=None, resources=None, duration=None):
+def make_profile(
+    inputs=None,
+    outputs=None,
+    context=None,
+    complexity=ComplexityLevel.SIMPLE,
+    keywords=None,
+    resources=None,
+    duration=None,
+):
     """创建测试能力画像"""
     return CapabilityProfile(
         input_types=inputs or [],
@@ -46,6 +66,7 @@ def make_profile(inputs=None, outputs=None, context=None, complexity=ComplexityL
 
 
 # ── CapabilityProfile 测试 ───────────────────────────────────────────────────
+
 
 class TestCapabilityProfile:
     def test_create_default(self):
@@ -103,15 +124,20 @@ class TestCapabilityProfile:
 
     def test_complexity_levels(self):
         """所有复杂度等级都可创建"""
-        levels = [ComplexityLevel.TRIVIAL, ComplexityLevel.SIMPLE,
-                  ComplexityLevel.MODERATE, ComplexityLevel.COMPLEX,
-                  ComplexityLevel.ADVANCED]
+        levels = [
+            ComplexityLevel.TRIVIAL,
+            ComplexityLevel.SIMPLE,
+            ComplexityLevel.MODERATE,
+            ComplexityLevel.COMPLEX,
+            ComplexityLevel.ADVANCED,
+        ]
         for level in levels:
             p = CapabilityProfile(complexity=level)
             assert p.complexity == level
 
 
 # ── ScenarioMatcher 测试 ──────────────────────────────────────────────────────
+
 
 class TestScenarioMatcher:
     def test_exact_match(self):
@@ -187,6 +213,7 @@ class TestScenarioMatcher:
 
 # ── CapabilityComparator 测试 ─────────────────────────────────────────────────
 
+
 class TestCapabilityComparator:
     def test_jaccard_both_empty(self):
         """两个空列表 Jaccard=1.0"""
@@ -207,12 +234,17 @@ class TestCapabilityComparator:
         """部分重叠"""
         sim = CapabilityComparator._jaccard_similarity(["a", "b"], ["b", "c"])
         assert 0 < sim < 1.0
-        assert sim == 1/3  # 交集1，并集3
+        assert sim == 1 / 3  # 交集1，并集3
 
     def test_similarity_identical_profiles(self):
         """相同能力画像的武器相似度高"""
-        profile = make_profile(inputs=["text"], outputs=["json"], context=["cloud"],
-                               complexity=ComplexityLevel.COMPLEX, keywords=["llm"])
+        profile = make_profile(
+            inputs=["text"],
+            outputs=["json"],
+            context=["cloud"],
+            complexity=ComplexityLevel.COMPLEX,
+            keywords=["llm"],
+        )
         w1 = make_weapon("skill:a", "a", profile=profile)
         w2 = make_weapon("skill:b", "b", profile=profile)
         sim = CapabilityComparator.similarity(w1, w2)

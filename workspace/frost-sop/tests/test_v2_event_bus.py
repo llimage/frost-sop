@@ -13,12 +13,12 @@ V2.0 子阶段 4.1 + 4.2 验收测试：EventBus 核心 + 事件类型定义
 """
 
 import os
-import threading
 import tempfile
+import threading
 
-os.environ['FROST_TESTING'] = '1'
+os.environ["FROST_TESTING"] = "1"
 
-from core.event_bus import EventBus, Event, EventType, get_event_bus
+from core.event_bus import Event, EventBus, EventType, get_event_bus
 
 
 class TestEventBusCore:
@@ -154,7 +154,9 @@ class TestEventBusCore:
     def test_eb_13_get_event_log_returns_published_events(self):
         """publish 后 get_event_log 返回事件"""
         bus = EventBus()
-        bus.publish(Event(EventType.STAGE_COMPLETED, source="parent_dev", data={"stage": "需求分析"}))
+        bus.publish(
+            Event(EventType.STAGE_COMPLETED, source="parent_dev", data={"stage": "需求分析"})
+        )
         bus.publish(Event(EventType.TASK_COMPLETED, source="main"))
 
         log = bus.get_event_log()
@@ -246,8 +248,9 @@ class TestEventBusCore:
 
     def test_eb_20_publish_persists_to_db(self):
         """publish 将事件持久化到 event_log 表"""
-        import core.db as db_module
         import os as _os
+
+        import core.db as db_module
 
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             tmp_db = f.name
@@ -266,8 +269,9 @@ class TestEventBusCore:
             db_module._db_manager = test_db
 
             bus = EventBus()
-            event = Event(EventType.TASK_COMPLETED, source="test_main",
-                          data={"task_id": "t_persist"})
+            event = Event(
+                EventType.TASK_COMPLETED, source="test_main", data={"task_id": "t_persist"}
+            )
             bus.publish(event)
 
             # 检查 event_log 表
@@ -293,10 +297,15 @@ class TestEventTypes:
     def test_et_01_all_event_types_defined(self):
         """所有必需的事件类型常量已定义"""
         required = [
-            "TASK_DECOMPOSED", "TASK_COMPLETED", "TASK_FAILED",
-            "STAGE_STARTED", "STAGE_COMPLETED", "STAGE_FAILED",
+            "TASK_DECOMPOSED",
+            "TASK_COMPLETED",
+            "TASK_FAILED",
+            "STAGE_STARTED",
+            "STAGE_COMPLETED",
+            "STAGE_FAILED",
             "STEP_COMPLETED",
-            "AGENT_CREATED", "AGENT_DESTROYED",
+            "AGENT_CREATED",
+            "AGENT_DESTROYED",
         ]
         for attr in required:
             assert hasattr(EventType, attr), f"EventType.{attr} 未定义"
@@ -312,9 +321,11 @@ class TestEventTypes:
     def test_et_03_event_type_values_are_snake_case(self):
         """事件类型值符合 snake_case 规范"""
         import re
+
         attrs = [k for k in vars(EventType) if not k.startswith("_")]
         for attr in attrs:
             val = getattr(EventType, attr)
             if isinstance(val, str):
-                assert re.match(r'^[a-z][a-z_]+$', val), \
+                assert re.match(r"^[a-z][a-z_]+$", val), (
                     f"EventType.{attr}={val!r} 不符合 snake_case"
+                )

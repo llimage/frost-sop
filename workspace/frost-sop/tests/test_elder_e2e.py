@@ -2,14 +2,14 @@
 FROST-SOP 长老审计端到端验证
 验证 audit_family Skill 能正确读取资产Store数据并生成审计报告。
 """
-import sys
+
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from stores.asset import create_asset_store
 from agents.elder import create_elder
-
+from stores.asset import create_asset_store
 
 # 预置任务数据（修正规格书语法错误：移除最后一个逗号）
 PRESET_TASKS = [
@@ -122,7 +122,7 @@ def test_elder_e2e():
     failed_tasks = stats.get("failed_tasks")
     total_lessons = stats.get("total_lessons")
 
-    print(f"\n   统计数字：")
+    print("\n   统计数字：")
     print(f"     total_tasks = {total_tasks}")
     print(f"     successful_tasks = {successful_tasks}")
     print(f"     failed_tasks = {failed_tasks}")

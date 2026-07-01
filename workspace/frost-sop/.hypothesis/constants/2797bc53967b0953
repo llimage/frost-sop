@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\skills\route_platform.py
+# hypothesis_version: 6.145.0
+
+[0.0, '..', '_execution_plan', '_inputs', '_skill_id', '_target_platform', 'binding_type', 'bindings', 'config', 'dependencies', 'error', 'estimated_cost', 'estimated_time', 'inputs', 'missing_skill_id', 'native', 'note', 'platform', 'route_platform', 'skill_id', 'utf-8', '默认绑定（原生执行）']

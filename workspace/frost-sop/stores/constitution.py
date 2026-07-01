@@ -25,10 +25,10 @@ def create_constitution_store(rules: dict = None) -> HierarchicalStore:
             "compliance.required_stages": ["审查交付"],
             "compliance.forbidden_skills": ["direct_db_write"],
             # V2.0 新增：成本规则
-            "const.cost_alert_ratio": 0.8,        # 预警比例 80%
+            "const.cost_alert_ratio": 0.8,  # 预警比例 80%
             "const.cheap_model": "deepseek-chat",  # 默认模型
             "const.expensive_model": "deepseek-chat",  # 复杂任务模型（当前统一）
-            "const.max_cost_per_task": 50,        # 单任务成本上限 ¥50
+            "const.max_cost_per_task": 50,  # 单任务成本上限 ¥50
         }
 
     own = Store()

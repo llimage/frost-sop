@@ -2,14 +2,17 @@
 F5 深度质量测试 - STR-002 自进化
 EVO-01 至 EVO-06 共6个深度测试用例
 """
-import sys, os
+
+import os
+import sys
+
 # 把 frost-sop/ 目录加入 sys.path
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _PROJECT_ROOT)
 
-from stores.asset import create_asset_store
 from agents.parent import create_parent
 from core.store import Store
+from stores.asset import create_asset_store
 
 
 # ================================================================
@@ -37,16 +40,45 @@ def test_evo_01_data_integrity():
 
     asset_store = create_asset_store(backend="memory")
     tasks = [
-        {"task_id": "t01", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t02", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t03", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t04", "sop": "DEV-002", "status": "failed",
-         "stages": [{"name": "定位", "status": "success"}, {"name": "修复", "status": "failed"}]},
-        {"task_id": "t05", "sop": "DEV-001", "status": "failed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "failed"}]},
+        {
+            "task_id": "t01",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t02",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t03",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t04",
+            "sop": "DEV-002",
+            "status": "failed",
+            "stages": [{"name": "定位", "status": "success"}, {"name": "修复", "status": "failed"}],
+        },
+        {
+            "task_id": "t05",
+            "sop": "DEV-001",
+            "status": "failed",
+            "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "failed"}],
+        },
     ]
     _preset_tasks(asset_store, tasks)
 
@@ -68,7 +100,9 @@ def test_evo_01_data_integrity():
 
     # 验证趋势统计
     assert trends.get("total") == 5, f"trends.total 应为5，实际为 {trends.get('total')}"
-    assert trends.get("successful") == 3, f"trends.successful 应为3，实际为 {trends.get('successful')}"
+    assert trends.get("successful") == 3, (
+        f"trends.successful 应为3，实际为 {trends.get('successful')}"
+    )
     assert trends.get("failed") == 2, f"trends.failed 应为2，实际为 {trends.get('failed')}"
 
     print("✅ PASS")
@@ -85,12 +119,33 @@ def test_evo_02_semantic_correctness():
 
     asset_store = create_asset_store(backend="memory")
     tasks = [
-        {"task_id": "t01", "sop": "DEV-001", "status": "failed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "failed", "output": "合规校验未通过：缺少审查阶段"}]},
-        {"task_id": "t02", "sop": "DEV-001", "status": "failed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "failed", "output": "合规校验失败：包含禁止Skill"}]},
-        {"task_id": "t03", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
+        {
+            "task_id": "t01",
+            "sop": "DEV-001",
+            "status": "failed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "failed", "output": "合规校验未通过：缺少审查阶段"},
+            ],
+        },
+        {
+            "task_id": "t02",
+            "sop": "DEV-001",
+            "status": "failed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "failed", "output": "合规校验失败：包含禁止Skill"},
+            ],
+        },
+        {
+            "task_id": "t03",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
     ]
     _preset_tasks(asset_store, tasks)
 
@@ -126,17 +181,52 @@ def test_evo_03_logic_consistency():
     asset_store = create_asset_store(backend="memory")
     tasks = [
         # DEV-001: 4条，1条失败 → 失败率 25%
-        {"task_id": "t01", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t02", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t03", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t04", "sop": "DEV-001", "status": "failed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "failed", "output": "测试失败"}]},
+        {
+            "task_id": "t01",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t02",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t03",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t04",
+            "sop": "DEV-001",
+            "status": "failed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "failed", "output": "测试失败"},
+            ],
+        },
         # DEV-002: 1条，1条失败 → 失败率 100%
-        {"task_id": "t05", "sop": "DEV-002", "status": "failed",
-         "stages": [{"name": "定位", "status": "success"}, {"name": "修复", "status": "failed", "output": "合规校验未通过"}]},
+        {
+            "task_id": "t05",
+            "sop": "DEV-002",
+            "status": "failed",
+            "stages": [
+                {"name": "定位", "status": "success"},
+                {"name": "修复", "status": "failed", "output": "合规校验未通过"},
+            ],
+        },
     ]
     _preset_tasks(asset_store, tasks)
 
@@ -152,16 +242,18 @@ def test_evo_03_logic_consistency():
 
     # 验证：DEV-002 失败率 100% >= 0.5，应生成高优先级建议
     high_priority_targets = [s["target"] for s in suggestions if s.get("priority") == "high"]
-    assert "DEV-002" in high_priority_targets or any(s.get("priority") == "high" for s in suggestions), \
-        f"DEV-002 失败率100%应触发高优先级建议，实际建议: {suggestions}"
+    assert "DEV-002" in high_priority_targets or any(
+        s.get("priority") == "high" for s in suggestions
+    ), f"DEV-002 失败率100%应触发高优先级建议，实际建议: {suggestions}"
 
     # 验证：DEV-001 失败率 25% < 0.3，不应生成建议（或生成低优先级）
     dev001_suggestions = [s for s in suggestions if s.get("target") == "DEV-001"]
     if dev001_suggestions:
         # 如果生成了，优先级应为 low
         for s in dev001_suggestions:
-            assert s.get("priority") == "low", \
+            assert s.get("priority") == "low", (
                 f"DEV-001 失败率25%如生成建议，优先级应为low，实际为 {s.get('priority')}"
+            )
 
     print("✅ PASS")
     return True
@@ -177,8 +269,12 @@ def test_evo_04_boundary_single_task():
 
     asset_store = create_asset_store(backend="memory")
     tasks = [
-        {"task_id": "t01", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}]},
+        {
+            "task_id": "t01",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [{"name": "需求", "status": "success"}],
+        },
     ]
     _preset_tasks(asset_store, tasks)
 
@@ -231,8 +327,9 @@ def test_evo_05_boundary_empty_store():
     assert isinstance(suggestions, list), f"suggestions 应为 list，实际为 {type(suggestions)}"
     if len(suggestions) > 0:
         # 如果有建议，应为 no_action 类型
-        assert suggestions[0].get("type") == "no_action" or len(suggestions) == 0, \
+        assert suggestions[0].get("type") == "no_action" or len(suggestions) == 0, (
             f"空Store时建议应为 no_action 类型，实际为: {suggestions}"
+        )
 
     print("✅ PASS")
     return True
@@ -249,8 +346,15 @@ def test_evo_06_semantic_full_success():
 
     asset_store = create_asset_store(backend="memory")
     tasks = [
-        {"task_id": f"t0{i}", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]}
+        {
+            "task_id": f"t0{i}",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        }
         for i in range(3)
     ]
     _preset_tasks(asset_store, tasks)
@@ -271,8 +375,9 @@ def test_evo_06_semantic_full_success():
 
     # 验证：建议应为 no_action 类型（或为空）
     if len(suggestions) > 0:
-        assert suggestions[0].get("type") == "no_action", \
+        assert suggestions[0].get("type") == "no_action", (
             f"成功率100%时建议类型应为 no_action，实际为: {suggestions[0].get('type')}"
+        )
 
     print("✅ PASS")
     return True

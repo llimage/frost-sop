@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\dead_mans_switch.py
+# hypothesis_version: 6.145.0
+
+['CRITICAL', 'WARNING', '[DeadManSwitch] %s', 'agent_heartbeat', 'alert_level', 'alert_triggered', 'idle_minutes', 'idle_seconds', 'is_armed', 'last_event_time', 'message', 'timeout_minutes']

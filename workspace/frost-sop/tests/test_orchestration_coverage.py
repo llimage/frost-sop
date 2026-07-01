@@ -2,33 +2,42 @@
 FROST-SOP V3.1 测试覆盖率补充: skills/orchestration.py
 覆盖 internalize_sop, spawn, emit, validate_sop, merge_from, finalize_task
 """
-import sys
+
 import os
-sys.stdout.reconfigure(encoding='utf-8')
+import sys
+
+sys.stdout.reconfigure(encoding="utf-8")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.skill import Skill
 from core.agent import Agent
+from core.skill import Skill
 from core.store import Store
 from skills.orchestration import (
-    internalize_sop, spawn, emit, validate_sop, merge_from, finalize_task,
+    emit,
+    finalize_task,
+    internalize_sop,
+    merge_from,
+    spawn,
+    validate_sop,
 )
-
 
 # ============================================================
 # internalize_sop 测试
 # ============================================================
 
+
 def test_internalize_sop_with_stages():
     """内化有阶段的SOP模板"""
-    ctx = {"_sop_to_internalize": {
-        "sop_id": "TEST-001",
-        "stages": [
-            {"name": "需求分析", "agent": "analyst", "skills": ["analyze"]},
-            {"name": "开发", "agent": "dev", "skills": ["code"]},
-            {"name": "测试", "agent": "tester", "skills": ["test"]},
-        ]
-    }}
+    ctx = {
+        "_sop_to_internalize": {
+            "sop_id": "TEST-001",
+            "stages": [
+                {"name": "需求分析", "agent": "analyst", "skills": ["analyze"]},
+                {"name": "开发", "agent": "dev", "skills": ["code"]},
+                {"name": "测试", "agent": "tester", "skills": ["test"]},
+            ],
+        }
+    }
     result = internalize_sop(ctx)
     steps = result.get("_internalized_steps", [])
     assert len(steps) == 3
@@ -58,6 +67,7 @@ def test_internalize_sop_no_data():
 # spawn 测试
 # ============================================================
 
+
 def test_spawn_no_spec():
     """spawn无规格时跳过"""
     ctx = {}
@@ -75,9 +85,12 @@ def test_spawn_no_template():
 
 def test_spawn_with_template():
     """spawn有模板Agent时创建子Agent"""
-    template = Agent(name="template_agent", store=Store(),
+    template = Agent(
+        name="template_agent",
+        store=Store(),
         skills={"test_skill": Skill("test_skill", lambda c: c)},
-        sop_steps=["test_skill"])
+        sop_steps=["test_skill"],
+    )
     ctx = {
         "_spawn_spec": {
             "agent_id": "child_agent",
@@ -94,6 +107,7 @@ def test_spawn_with_template():
 # ============================================================
 # emit 测试
 # ============================================================
+
 
 def test_emit_default_keys():
     """emit默认导出_result键"""
@@ -114,6 +128,7 @@ def test_emit_custom_keys():
 # validate_sop 测试
 # ============================================================
 
+
 def test_validate_sop_no_sop():
     """validate_sop无SOP时返回错误"""
     ctx = {}
@@ -125,6 +140,7 @@ def test_validate_sop_no_sop():
 # ============================================================
 # merge_from 测试
 # ============================================================
+
 
 def test_merge_from_basic():
     """merge_from基本合并"""
@@ -166,6 +182,7 @@ def test_merge_from_missing_key():
 # finalize_task 测试
 # ============================================================
 
+
 def test_finalize_task_no_task_id():
     """finalize_task无task_id时跳过审计"""
     ctx = {"_task_id": "unknown"}
@@ -186,15 +203,22 @@ if __name__ == "__main__":
 # 非阻塞决策模式测试（V5.0 SOP 集成）
 # ============================================================
 
+
 def test_wait_for_decision_non_blocking():
     """
     测试 _wait_for_decision_and_continue 非阻塞模式。
     当 blocking=False 时，应设置 _awaiting_decision=True 并立即返回。
     """
     import os
+
     os.environ["FROST_TESTING"] = "1"
 
-    from core.panel import PanelDefinition, PanelComponent, ComponentType, PanelType, Layout, LayoutType
+    from core.panel import (
+        Layout,
+        LayoutType,
+        PanelDefinition,
+        PanelType,
+    )
     from skills.orchestration import _wait_for_decision_and_continue
 
     # 创建一个模拟的决策面板
@@ -228,9 +252,15 @@ def test_wait_for_decision_blocking_default():
     提交会失败，但函数应优雅处理（不抛异常）。
     """
     import os
+
     os.environ["FROST_TESTING"] = "1"
 
-    from core.panel import PanelDefinition, PanelComponent, ComponentType, PanelType, Layout, LayoutType
+    from core.panel import (
+        Layout,
+        LayoutType,
+        PanelDefinition,
+        PanelType,
+    )
     from skills.orchestration import _wait_for_decision_and_continue
 
     panel = PanelDefinition(
@@ -265,9 +295,10 @@ def test_execute_stage_non_blocking_decision(monkeypatch):
     当 _non_blocking_decision=True 时，execute_stage 应设置 _awaiting_decision=True 并返回。
     """
     import os
+
     os.environ["FROST_TESTING"] = "1"
 
-    from skills.orchestration import execute_stage, _check_decision_point
+    from skills.orchestration import execute_stage
 
     # 模拟一个会触发决策点的 context
     # 注意：这需要 _check_decision_point 返回 True

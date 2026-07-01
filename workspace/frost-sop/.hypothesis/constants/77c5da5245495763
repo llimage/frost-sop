@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\skills\search.py
+# hypothesis_version: 6.145.0
+
+[0.3, '_asset_store', '_llm_response', '_prompt', '_reason', '_search_external', '_search_query', '_search_results', '_system_prompt', '_temperature', 'asset_store', 'content', 'found', 'name', 'results', 'search_skill', 'search_sop', 'sop_id', 'sop_template:', 'source', 'web', '{', '}']

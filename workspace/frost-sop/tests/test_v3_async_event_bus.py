@@ -14,22 +14,20 @@ FROST-SOP V3.0 — AsyncEventBus 单元测试
 10. get_event_log / get_subscriber_count
 """
 
-import os
 import asyncio
+import os
+
 import pytest
 
 # 测试环境设置
-os.environ['FROST_TESTING'] = '1'
+os.environ["FROST_TESTING"] = "1"
 
-from core.event_bus import (
-    EventBus, AsyncEventBus, Event, EventType,
-    get_async_event_bus
-)
-
+from core.event_bus import AsyncEventBus, Event, EventBus, EventType, get_async_event_bus
 
 # ---------------------------------------------------------------------------
 # 测试 1: AsyncEventBus 不继承 EventBus
 # ---------------------------------------------------------------------------
+
 
 def test_01_async_bus_not_subclass_of_sync_bus():
     """AsyncEventBus 不是 EventBus 的子类"""
@@ -40,6 +38,7 @@ def test_01_async_bus_not_subclass_of_sync_bus():
 # ---------------------------------------------------------------------------
 # 测试 2: AsyncEventBus 单例
 # ---------------------------------------------------------------------------
+
 
 def test_02_async_bus_singleton():
     """AsyncEventBus 是单例"""
@@ -60,6 +59,7 @@ def test_03_get_async_event_bus_returns_singleton():
 # ---------------------------------------------------------------------------
 # 测试 3: 同步和异步订阅者共存
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_04_sync_and_async_subscribers_coexist():
@@ -93,6 +93,7 @@ async def test_04_sync_and_async_subscribers_coexist():
 # 测试 4: subscribe_async 注册异步订阅者
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_05_subscribe_async_registers_async_callback():
     """subscribe_async 正确注册异步回调"""
@@ -117,6 +118,7 @@ async def test_05_subscribe_async_registers_async_callback():
 # 测试 5: publish 异步分发
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_06_publish_returns_notified_count():
     """publish 返回实际通知的订阅者数量"""
@@ -135,6 +137,7 @@ async def test_06_publish_returns_notified_count():
 # ---------------------------------------------------------------------------
 # 测试 6: 循环事件防护
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_07_circular_event_protection():
@@ -166,6 +169,7 @@ async def test_07_circular_event_protection():
 # ---------------------------------------------------------------------------
 # 测试 7: 单个订阅者异常不影响其他
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_08_subscriber_exception_isolation():
@@ -200,15 +204,17 @@ async def test_08_subscriber_exception_isolation():
 # 测试 8: TASK_TIMEOUT 事件类型存在
 # ---------------------------------------------------------------------------
 
+
 def test_09_task_timeout_event_type_exists():
     """TASK_TIMEOUT 事件类型常量存在"""
-    assert hasattr(EventType, 'TASK_TIMEOUT')
+    assert hasattr(EventType, "TASK_TIMEOUT")
     assert EventType.TASK_TIMEOUT == "task_timeout"
 
 
 # ---------------------------------------------------------------------------
 # 测试 9: get_event_log 异步查询
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_10_get_event_log_async():
@@ -217,7 +223,12 @@ async def test_10_get_event_log_async():
     bus = AsyncEventBus()
     bus.clear_subscribers()
 
-    await bus.publish(Event(EventType.TASK_CREATED if hasattr(EventType, 'TASK_CREATED') else "task_created", source="test1"))
+    await bus.publish(
+        Event(
+            EventType.TASK_CREATED if hasattr(EventType, "TASK_CREATED") else "task_created",
+            source="test1",
+        )
+    )
     await bus.publish(Event(EventType.TASK_COMPLETED, source="test2"))
 
     log = await bus.get_event_log()
@@ -235,16 +246,14 @@ async def test_10_get_event_log_async():
 # 测试 10: 敏感数据过滤
 # ---------------------------------------------------------------------------
 
+
 def test_11_sanitize_data():
     """敏感数据被过滤"""
     bus = AsyncEventBus()
     data = {
         "api_key": "sk-12345",
         "task_name": "normal",
-        "nested": {
-            "password": "secret123",
-            "ok": "fine"
-        }
+        "nested": {"password": "secret123", "ok": "fine"},
     }
     sanitized = bus._sanitize_data(data)
     assert sanitized["api_key"] == "***REDACTED***"
@@ -256,6 +265,7 @@ def test_11_sanitize_data():
 # ---------------------------------------------------------------------------
 # 测试 11: unsubscribe
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_12_unsubscribe():

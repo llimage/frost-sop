@@ -5,18 +5,17 @@ PHILOSOPHY: 面板系统不是独立王国，它是FROST现有代码的延伸。
 通过适配器模式，面板系统与任务、事件、武器库无缝集成，不破坏现有代码。
 """
 
-from typing import Any, Dict, Optional
 from datetime import datetime
+from typing import Any
 
-from core.panel import PanelDefinition, PanelComponent, ComponentType
-from core.panel_renderer import DataProvider
+from core.event_bus import Event, EventBus
+from core.panel import ComponentType, PanelComponent, PanelDefinition
 from core.panel_data_provider import StoreDataProvider
-from core.event_bus import EventBus, Event
-
 
 # ────────────────────────────────────────────────────────────────────────────
 # 1. 任务数据适配器（TaskAdapter）
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class TaskAdapter:
     """
@@ -51,7 +50,7 @@ class TaskAdapter:
     """
 
     @staticmethod
-    def adapt(task_data: Dict[str, Any]) -> Dict[str, Any]:
+    def adapt(task_data: dict[str, Any]) -> dict[str, Any]:
         """
         将 FROST 任务数据适配为面板生成器期望的格式。
 
@@ -91,7 +90,9 @@ class TaskAdapter:
         # 计算是否处于决策点
         current_stage = adapted["current_stage"]
         adapted["is_decision_point"] = current_stage.get("is_decision_point", False)
-        adapted["decision_options"] = current_stage.get("decision_options", ["确认", "驳回", "修改"])
+        adapted["decision_options"] = current_stage.get(
+            "decision_options", ["确认", "驳回", "修改"]
+        )
 
         # 计算是否需要简报
         adapted["requires_briefing"] = adapted["status"] in ("completed", "failed")
@@ -102,15 +103,20 @@ class TaskAdapter:
         return adapted
 
     @staticmethod
-    def adapt_from_store(store, task_id: str) -> Dict[str, Any]:
+    def adapt_from_store(store, task_id: str) -> dict[str, Any]:
         """从 Store 读取任务并适配"""
-        task_data = store.load(f"task:{task_id}") if not task_id.startswith("task:") else store.load(task_id)
+        task_data = (
+            store.load(f"task:{task_id}")
+            if not task_id.startswith("task:")
+            else store.load(task_id)
+        )
         return TaskAdapter.adapt(task_data)
 
 
 # ────────────────────────────────────────────────────────────────────────────
 # 2. 事件系统适配器（EventAdapter）
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class EventAdapter:
     """
@@ -135,10 +141,10 @@ class EventAdapter:
     PANEL_DECISION_MADE = "panel.decision_made"
     PANEL_CLOSED = "panel.closed"
 
-    def __init__(self, event_bus: Optional[EventBus] = None):
+    def __init__(self, event_bus: EventBus | None = None):
         self.event_bus = event_bus or EventBus()
 
-    def emit_panel_loaded(self, panel_id: str, task_id: Optional[str] = None):
+    def emit_panel_loaded(self, panel_id: str, task_id: str | None = None):
         """触发面板加载事件"""
         event = Event(
             event_type=self.PANEL_LOADED,
@@ -147,8 +153,9 @@ class EventAdapter:
         )
         self.event_bus.publish(event)
 
-    def emit_component_changed(self, panel_id: str, component_id: str, value: Any,
-                                task_id: Optional[str] = None):
+    def emit_component_changed(
+        self, panel_id: str, component_id: str, value: Any, task_id: str | None = None
+    ):
         """触发面板组件变更事件"""
         event = Event(
             event_type=self.PANEL_COMPONENT_CHANGED,
@@ -163,8 +170,14 @@ class EventAdapter:
         )
         self.event_bus.publish(event)
 
-    def emit_decision_made(self, decision_id: str, decision: str, reason: str = "",
-                           task_id: Optional[str] = None, stage_id: Optional[str] = None):
+    def emit_decision_made(
+        self,
+        decision_id: str,
+        decision: str,
+        reason: str = "",
+        task_id: str | None = None,
+        stage_id: str | None = None,
+    ):
         """触发 Human Agent 决策事件"""
         event = Event(
             event_type=self.PANEL_DECISION_MADE,
@@ -180,7 +193,7 @@ class EventAdapter:
         )
         self.event_bus.publish(event)
 
-    def emit_panel_closed(self, panel_id: str, task_id: Optional[str] = None):
+    def emit_panel_closed(self, panel_id: str, task_id: str | None = None):
         """触发面板关闭事件"""
         event = Event(
             event_type=self.PANEL_CLOSED,
@@ -202,6 +215,7 @@ class EventAdapter:
 # ────────────────────────────────────────────────────────────────────────────
 # 3. 武器库适配器（ArmoryAdapter）
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class ArmoryAdapter:
     """
@@ -273,7 +287,7 @@ class ArmoryAdapter:
         Args:
             weapon: WeaponMetadata 实例
             panel_components: 面板组件声明列表
-            
+
             示例 panel_components:
             [
                 {
@@ -298,17 +312,18 @@ class ArmoryAdapter:
 # 4. 综合适配器（PanelSystemAdapter）——一键集成
 # ────────────────────────────────────────────────────────────────────────────
 
+
 class PanelSystemAdapter:
     """
     综合适配器——面板系统与 FROST 现有代码的一键集成。
 
     使用方式：
         adapter = PanelSystemAdapter(store, armory_registry)
-        
+
         # 为任务生成面板
         task = store.load("task:xxx")
         panel = adapter.generate_panel_for_task(task)
-        
+
         # 渲染面板
         renderer = adapter.create_renderer(task_id="task:xxx")
         renderer.render(panel)
@@ -335,8 +350,7 @@ class PanelSystemAdapter:
 
     def create_renderer(self, task_id: str = None, console=None):
         """创建渲染器（自动配置数据提供者）"""
-        from core.panel_renderer import PanelRenderer
-        from renderers.cli_renderer import CliRenderer, CliDataProvider
+        from renderers.cli_renderer import CliRenderer
 
         # 创建数据提供者
         data_provider = StoreDataProvider(
@@ -363,8 +377,11 @@ class PanelSystemAdapter:
                 method(panel_id, data.get("component_id"), data.get("value"), data.get("task_id"))
             elif event_type == "decision_made":
                 method(
-                    data.get("decision_id"), data.get("decision"), data.get("reason", ""),
-                    data.get("task_id"), data.get("stage_id"),
+                    data.get("decision_id"),
+                    data.get("decision"),
+                    data.get("reason", ""),
+                    data.get("task_id"),
+                    data.get("stage_id"),
                 )
             else:
                 method(panel_id, data.get("task_id"))

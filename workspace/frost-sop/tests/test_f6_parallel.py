@@ -5,8 +5,9 @@ F6 多任务并行测试（v3）
 不使用 patch_openai()（会导致多线程死锁），
 改为依赖 FROST_TESTING=1 环境变量（在进程启动前设置，所有线程共享）。
 """
-import sys
+
 import os
+import sys
 import threading
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,10 +15,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # DEFECT-002修复：不再导入 patch_openai，改为依赖 FROST_TESTING 环境变量
 # from tests.test_f6_mock_llm import patch_openai
 
-from core.sop import SOP
-from stores.asset import create_asset_store
 from agents.parent import create_parent
+from core.sop import SOP
 from core.store import Store
+from stores.asset import create_asset_store
 
 
 def _run_sop_task(sop_id: str, task_description: str, results: list, lock: threading.Lock):
@@ -41,12 +42,14 @@ def _run_sop_task(sop_id: str, task_description: str, results: list, lock: threa
 
         completed = sum(1 for r in stage_results if r.get("status") == "completed")
         with lock:
-            results.append({
-                "sop_id": sop_id,
-                "total_stages": len(sop.stages),
-                "completed": completed,
-                "success": completed == len(sop.stages),
-            })
+            results.append(
+                {
+                    "sop_id": sop_id,
+                    "total_stages": len(sop.stages),
+                    "completed": completed,
+                    "success": completed == len(sop.stages),
+                }
+            )
     except Exception as e:
         with lock:
             results.append({"sop_id": sop_id, "error": str(e), "success": False})
@@ -72,10 +75,12 @@ def test_par01_two_dev001():
 
     ok = len(results) == 2 and all(r.get("success") for r in results)
     if ok:
-        print(f"✅ 通过 (2个任务均完成)")
+        print("✅ 通过 (2个任务均完成)")
     else:
         failed = [r for r in results if not r.get("success")]
-        print(f"❌ 失败 (success={sum(r.get('success',False) for r in results)}/2, failed={failed})")
+        print(
+            f"❌ 失败 (success={sum(r.get('success', False) for r in results)}/2, failed={failed})"
+        )
     return ok, results
 
 
@@ -99,7 +104,7 @@ def test_par02_mixed_types():
 
     ok = len(results) == 2 and all(r.get("success") for r in results)
     if ok:
-        print(f"✅ 通过 (2个任务均完成)")
+        print("✅ 通过 (2个任务均完成)")
     else:
         print(f"❌ 失败 (results={results})")
     return ok, results
@@ -128,7 +133,7 @@ def test_par03_three_mixed():
 
     ok = len(results) == 3 and all(r.get("success") for r in results)
     if ok:
-        print(f"✅ 通过 (3个任务均完成)")
+        print("✅ 通过 (3个任务均完成)")
     else:
         print(f"❌ 失败 (results={results})")
     return ok, results
@@ -147,8 +152,10 @@ def _run_failing_task(sop_id: str, results: list, lock: threading.Lock):
         stage_results = []
         for stage in sop.stages:
             sc = {
-                "_current_stage": stage, "_parent_agent": parent,
-                "_asset_store": asset_store, "_stage_results": stage_results,
+                "_current_stage": stage,
+                "_parent_agent": parent,
+                "_asset_store": asset_store,
+                "_stage_results": stage_results,
                 "_output_type": "document",
             }
             sc = parent.run(["execute_stage"], sc)

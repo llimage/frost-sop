@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\agent.py
+# hypothesis_version: 6.145.0
+
+[100, 200, 'Agent', '[%s] 上报祖辈失败: %s', '[%s] 已上报祖辈 Agent', '[%s] 等待 %s秒后重试...', '_', '_reason', '_store', '_task_id', 'agent_created', 'agent_destroyed', 'agent_id', 'agent_name', 'agent_status', 'agent_type', 'agents', 'call_llm', 'call_llm_base', 'context', 'created_at', 'current_task_id', 'destroyed', 'destroyed_at', 'error', 'escalated_to_elder', 'generation', 'id', 'idle', 'last_heartbeat', 'max_retries', 'max_spawn_generation', 'name', 'overall_success', 'reason', 'retries', 'retry_delay_seconds', 'running', 'sop_steps', 'status', 'step', 'step_completed', 'step_name', 'step_records', 'success', 'task_id', 'timestamp', 'transient', 'unknown', 'unknown_agent', '事件发布失败 (%s, %s): %s']

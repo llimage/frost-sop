@@ -7,8 +7,8 @@ core/memory.py - 向量记忆管理模块
 """
 
 import logging
-from typing import Dict, Any, Optional, List
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -58,22 +58,16 @@ class MemoryStore:
             # 创建持久化客户端
             self.chroma_client = chromadb.PersistentClient(
                 path=self.persist_directory,
-                settings=Settings(
-                    allow_reset=True,
-                    anonymized_telemetry=False
-                )
+                settings=Settings(allow_reset=True, anonymized_telemetry=False),
             )
 
             # 获取或创建 Collection
             try:
-                self.collection = self.chroma_client.get_collection(
-                    name=self.collection_name
-                )
+                self.collection = self.chroma_client.get_collection(name=self.collection_name)
                 logger.info(f"✅ 已加载 ChromaDB Collection: {self.collection_name}")
             except Exception:
                 self.collection = self.chroma_client.create_collection(
-                    name=self.collection_name,
-                    metadata={"agent_id": self.agent_id}
+                    name=self.collection_name, metadata={"agent_id": self.agent_id}
                 )
                 logger.info(f"✅ 已创建 ChromaDB Collection: {self.collection_name}")
 
@@ -81,7 +75,7 @@ class MemoryStore:
             logger.warning(f"⚠️ ChromaDB 初始化失败，使用降级模式: {e}")
             self.fallback_mode = True
 
-    def add_memory(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> str:
+    def add_memory(self, text: str, metadata: dict[str, Any] | None = None) -> str:
         """
         添加记忆
 
@@ -95,16 +89,15 @@ class MemoryStore:
         if self.fallback_mode:
             # 降级模式：使用简单的关键词索引
             memory_id = f"mem_{len(self._memory_keywords)}"
-            self._memory_keywords.append({
-                "id": memory_id,
-                "text": text,
-                "metadata": metadata or {}
-            })
+            self._memory_keywords.append(
+                {"id": memory_id, "text": text, "metadata": metadata or {}}
+            )
             return memory_id
 
         try:
             # ChromaDB 模式
             import uuid
+
             memory_id = str(uuid.uuid4())
 
             # 准备元数据
@@ -112,11 +105,7 @@ class MemoryStore:
                 metadata = {}
 
             # 添加记忆
-            self.collection.add(
-                documents=[text],
-                metadatas=[metadata],
-                ids=[memory_id]
-            )
+            self.collection.add(documents=[text], metadatas=[metadata], ids=[memory_id])
 
             return memory_id
 
@@ -125,7 +114,7 @@ class MemoryStore:
             self.fallback_mode = True
             return self.add_memory(text, metadata)  # 递归调用，使用降级模式
 
-    def search_memory(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def search_memory(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
         """
         搜索记忆
 
@@ -145,12 +134,14 @@ class MemoryStore:
                 text_words = set(mem["text"].lower().split())
                 overlap = len(query_words & text_words)
                 if overlap > 0:
-                    results.append({
-                        "id": mem["id"],
-                        "text": mem["text"],
-                        "metadata": mem["metadata"],
-                        "score": overlap / len(query_words)
-                    })
+                    results.append(
+                        {
+                            "id": mem["id"],
+                            "text": mem["text"],
+                            "metadata": mem["metadata"],
+                            "score": overlap / len(query_words),
+                        }
+                    )
 
             # 按分数排序
             results.sort(key=lambda x: x["score"], reverse=True)
@@ -158,21 +149,20 @@ class MemoryStore:
 
         try:
             # ChromaDB 模式
-            results = self.collection.query(
-                query_texts=[query],
-                n_results=top_k
-            )
+            results = self.collection.query(query_texts=[query], n_results=top_k)
 
             # 格式化结果
             formatted = []
             if results and results["ids"]:
                 for i, doc in enumerate(results["documents"][0]):
-                    formatted.append({
-                        "id": results["ids"][0][i],
-                        "text": doc,
-                        "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
-                        "score": 1.0  # ChromaDB 不返回分数，这里使用默认值
-                    })
+                    formatted.append(
+                        {
+                            "id": results["ids"][0][i],
+                            "text": doc,
+                            "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
+                            "score": 1.0,  # ChromaDB 不返回分数，这里使用默认值
+                        }
+                    )
 
             return formatted
 
@@ -204,7 +194,7 @@ class MemoryStore:
             logger.warning(f"⚠️ ChromaDB 删除失败: {e}")
             return False
 
-    def get_all_memories(self) -> List[Dict[str, Any]]:
+    def get_all_memories(self) -> list[dict[str, Any]]:
         """
         获取所有记忆
 
@@ -219,11 +209,13 @@ class MemoryStore:
             formatted = []
             if results and results["ids"]:
                 for i, doc in enumerate(results["documents"]):
-                    formatted.append({
-                        "id": results["ids"][i],
-                        "text": doc,
-                        "metadata": results["metadatas"][i] if results["metadatas"] else {}
-                    })
+                    formatted.append(
+                        {
+                            "id": results["ids"][i],
+                            "text": doc,
+                            "metadata": results["metadatas"][i] if results["metadatas"] else {},
+                        }
+                    )
             return formatted
         except Exception as e:
             logger.warning(f"⚠️ ChromaDB 获取所有记忆失败: {e}")
@@ -240,8 +232,7 @@ class MemoryStore:
             self.chroma_client.delete_collection(name=self.collection_name)
             # 重新创建
             self.collection = self.chroma_client.create_collection(
-                name=self.collection_name,
-                metadata={"agent_id": self.agent_id}
+                name=self.collection_name, metadata={"agent_id": self.agent_id}
             )
         except Exception as e:
             logger.warning(f"⚠️ ChromaDB 清空失败: {e}")
@@ -278,13 +269,9 @@ def test_memory_store():
     # 添加记忆
     print("\n[1] 添加记忆...")
     id1 = memory.add_memory(
-        "完成了一个 Python 项目的开发",
-        {"project": "FROST-SOP", "type": "task"}
+        "完成了一个 Python 项目的开发", {"project": "FROST-SOP", "type": "task"}
     )
-    id2 = memory.add_memory(
-        "修复了登录页面的 Bug",
-        {"project": "FROST-SOP", "type": "bugfix"}
-    )
+    id2 = memory.add_memory("修复了登录页面的 Bug", {"project": "FROST-SOP", "type": "bugfix"})
     print(f"  添加记忆: {id1}, {id2}")
 
     # 搜索记忆

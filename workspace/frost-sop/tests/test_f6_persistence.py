@@ -6,16 +6,17 @@ F6 持久化恢复测试
 - 宪法Store只读规则在持久化后依然有效
 - 能力基因库持久化后完整恢复
 """
-import sys
-import os
+
 import json
-import tempfile
+import os
 import shutil
+import sys
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from stores.asset import create_asset_store, FileStore
 from core.store import HierarchicalStore, Store
+from stores.asset import FileStore, create_asset_store
 
 
 # ──────────────────────────────────────────────
@@ -33,23 +34,33 @@ def test_per01_store_persistence():
         # 1. 创建资产Store（文件后端）并写入数据
         store1 = create_asset_store(backend="file", path=asset_path)
         # 写入任务记录
-        store1.save("task:per01-001", {
-            "task_id": "per01-001",
-            "sop": "DEV-001",
-            "status": "completed",
-            "stages_completed": 5,
-        })
-        store1.save("task:per01-002", {
-            "task_id": "per01-002",
-            "sop": "MT-001",
-            "status": "completed",
-            "stages_completed": 4,
-        })
+        store1.save(
+            "task:per01-001",
+            {
+                "task_id": "per01-001",
+                "sop": "DEV-001",
+                "status": "completed",
+                "stages_completed": 5,
+            },
+        )
+        store1.save(
+            "task:per01-002",
+            {
+                "task_id": "per01-002",
+                "sop": "MT-001",
+                "status": "completed",
+                "stages_completed": 4,
+            },
+        )
         # 写入能力基因
-        store1.save("skill_gene:需求分析", {
-            "name": "需求分析", "type": "functional",
-            "description": "分析用户需求",
-        })
+        store1.save(
+            "skill_gene:需求分析",
+            {
+                "name": "需求分析",
+                "type": "functional",
+                "description": "分析用户需求",
+            },
+        )
         # FileStore 会在每次 save 时自动持久化
 
         # 2. 重新加载 Store
@@ -61,7 +72,9 @@ def test_per01_store_persistence():
         g1 = store2.load("skill_gene:需求分析")
 
         ok = (
-            t1 is not None and t2 is not None and g1 is not None
+            t1 is not None
+            and t2 is not None
+            and g1 is not None
             and t1.get("task_id") == "per01-001"
             and t2.get("sop") == "MT-001"
             and g1.get("name") == "需求分析"
@@ -163,7 +176,7 @@ def test_per03_constitution_readonly():
 
         # 重新加载（需要 ConstitutionStore 支持从文件加载 readonly 配置）
         # 简化验证：检查保存的文件包含预期数据
-        with open(const_file, "r", encoding="utf-8") as f:
+        with open(const_file, encoding="utf-8") as f:
             loaded_data = json.load(f)
 
         has_constitution = "constitution:text" in loaded_data

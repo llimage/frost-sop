@@ -2,21 +2,25 @@
 FROST-SOP V3.1 测试覆盖率补充: skills/evolution.py
 覆盖 load_task_history, analyze_trends, generate_suggestions, present_for_approval
 """
-import sys
+
 import os
-sys.stdout.reconfigure(encoding='utf-8')
+import sys
+
+sys.stdout.reconfigure(encoding="utf-8")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.store import Store
 from skills.evolution import (
-    load_task_history, analyze_trends, generate_suggestions,
+    analyze_trends,
+    generate_suggestions,
+    load_task_history,
     present_for_approval,
 )
-
 
 # ============================================================
 # load_task_history 测试
 # ============================================================
+
 
 def test_load_task_history_no_store():
     """无资产Store时返回空列表"""
@@ -29,12 +33,15 @@ def test_load_task_history_no_store():
 def test_load_task_history_with_tasks():
     """有任务记录时正确加载"""
     store = Store()
-    store.save("task:001", {"id": "001", "name": "test1",
-        "status": "completed", "timestamp": "2026-06-01"})
-    store.save("task:002", {"id": "002", "name": "test2",
-        "status": "failed", "timestamp": "2026-06-05"})
-    store.save("task:003", {"id": "003", "name": "test3",
-        "status": "completed", "timestamp": "2026-06-10"})
+    store.save(
+        "task:001", {"id": "001", "name": "test1", "status": "completed", "timestamp": "2026-06-01"}
+    )
+    store.save(
+        "task:002", {"id": "002", "name": "test2", "status": "failed", "timestamp": "2026-06-05"}
+    )
+    store.save(
+        "task:003", {"id": "003", "name": "test3", "status": "completed", "timestamp": "2026-06-10"}
+    )
     # 添加一个非task数据
     store.save("lesson:001", {"id": "lesson1"})
     ctx = {"_asset_store": store}
@@ -49,8 +56,9 @@ def test_load_task_history_with_limit():
     """limit限制正确生效"""
     store = Store()
     for i in range(30):
-        store.save(f"task:{i:03d}", {"id": str(i),
-            "status": "completed", "timestamp": f"2026-06-{i:02d}"})
+        store.save(
+            f"task:{i:03d}", {"id": str(i), "status": "completed", "timestamp": f"2026-06-{i:02d}"}
+        )
     ctx = {"_asset_store": store, "_history_limit": 5}
     result = load_task_history(ctx)
     assert len(result.get("_task_history", [])) == 5
@@ -59,6 +67,7 @@ def test_load_task_history_with_limit():
 # ============================================================
 # analyze_trends 测试
 # ============================================================
+
 
 def test_analyze_trends_empty():
     """空历史数据"""
@@ -73,11 +82,17 @@ def test_analyze_trends_mixed():
     tasks = [
         {"status": "completed", "sop": "DEV-001", "stages": []},
         {"status": "completed", "sop": "DEV-001", "stages": []},
-        {"status": "failed", "sop": "DEV-001", "stages": [
-            {"status": "failed", "output": "合规检查失败"}]},
+        {
+            "status": "failed",
+            "sop": "DEV-001",
+            "stages": [{"status": "failed", "output": "合规检查失败"}],
+        },
         {"status": "completed", "sop": "OPS-001", "stages": []},
-        {"status": "failed", "sop": "OPS-001", "stages": [
-            {"status": "error", "output": "执行错误"}]},
+        {
+            "status": "failed",
+            "sop": "OPS-001",
+            "stages": [{"status": "error", "output": "执行错误"}],
+        },
     ]
     ctx = {"_task_history": tasks}
     result = analyze_trends(ctx)
@@ -123,6 +138,7 @@ def test_analyze_trends_high_failure():
 # generate_suggestions 测试
 # ============================================================
 
+
 def test_generate_suggestions_no_trends():
     """无趋势数据时返回空"""
     ctx = {"_trends": {"total": 0}}
@@ -146,8 +162,7 @@ def test_generate_suggestions_high_failure_sop():
     suggestions = result.get("_suggestions", [])
     assert len(suggestions) >= 2
     # 应该有SOP优化建议和整体审查建议
-    sop_suggestions = [s for s in suggestions
-        if s["type"] in ("sop_optimization", "urgent_review")]
+    sop_suggestions = [s for s in suggestions if s["type"] in ("sop_optimization", "urgent_review")]
     assert len(sop_suggestions) >= 1
 
 
@@ -169,17 +184,19 @@ def test_generate_suggestions_healthy():
 # present_for_approval 测试
 # ============================================================
 
+
 def test_present_for_approval_basic():
     """生成审批报告"""
     ctx = {
         "_trends": {
-            "total": 5, "success_rate": 0.8,
-            "successful": 4, "failed": 1,
+            "total": 5,
+            "success_rate": 0.8,
+            "successful": 4,
+            "failed": 1,
             "insights": ["家族整体成功率 80%，运行状态良好"],
         },
         "_suggestions": [
-            {"type": "sop_review", "target": "DEV-001",
-             "reason": "失败率较高", "priority": "low"},
+            {"type": "sop_review", "target": "DEV-001", "reason": "失败率较高", "priority": "low"},
         ],
     }
     result = present_for_approval(ctx)

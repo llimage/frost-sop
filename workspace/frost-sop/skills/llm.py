@@ -4,15 +4,16 @@ PHILOSOPHY: LLM is the shared nervous system. It is called as a Skill,
 not hardwired into Agent. This preserves the fractal purity of the architecture.
 """
 
-import os
 import json
+import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 from openai import OpenAI
-from core.skill import Skill
 
 # F7 新增：导入成本追踪器
-from core.cost import get_cost_tracker, BudgetExceededError
+from core.cost import BudgetExceededError, get_cost_tracker
+from core.skill import Skill
 
 # 加载 .env 文件中的环境变量
 load_dotenv()
@@ -43,19 +44,13 @@ def _init_local_llm():
             print("[离线模式] 未找到 GGUF 模型文件，请放入 models/ 目录")
             return None
 
-    print("[离线模式] 正在加载模型: {} ...".format(model_path))
-    _local_llm = Llama(
-        model_path=model_path,
-        n_ctx=4096,
-        n_threads=4,
-        verbose=False
-    )
+    print(f"[离线模式] 正在加载模型: {model_path} ...")
+    _local_llm = Llama(model_path=model_path, n_ctx=4096, n_threads=4, verbose=False)
     print("[离线模式] 模型加载完成")
     return _local_llm
 
 
-def call_local_llm(prompt: str, max_tokens: int = 500,
-                   temperature: float = 0.7) -> dict:
+def call_local_llm(prompt: str, max_tokens: int = 500, temperature: float = 0.7) -> dict:
     """使用本地 GGUF 模型进行推理。
     返回: {"text": str} 或 {"error": str}
     """
@@ -66,7 +61,7 @@ def call_local_llm(prompt: str, max_tokens: int = 500,
         result = llm(prompt, max_tokens=max_tokens, temperature=temperature, echo=False)
         return {"text": result["choices"][0]["text"]}
     except Exception as e:
-        return {"error": "本地推理失败: {}".format(str(e))}
+        return {"error": f"本地推理失败: {str(e)}"}
 
 
 def _mock_response_for_prompt(prompt: str) -> str:
@@ -84,13 +79,16 @@ def _mock_response_for_prompt(prompt: str) -> str:
     # ── 优先级1：Agent 组装分析（assemble.py 第54行）──────────────────
     # prompt 开头是"分析以下Agent需求，返回JSON格式的配置方案："
     if "分析以下Agent需求" in prompt or "返回JSON格式的配置方案" in prompt:
-        return json.dumps({
-            "agent_name": "mock_assembled_agent",
-            "required_skills": ["执行任务"],
-            "sop_steps": ["执行任务"],
-            "system_prompt": "你是通用执行Agent，完成指定任务并输出结果。",
-            "output_type": "document"
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "agent_name": "mock_assembled_agent",
+                "required_skills": ["执行任务"],
+                "sop_steps": ["执行任务"],
+                "system_prompt": "你是通用执行Agent，完成指定任务并输出结果。",
+                "output_type": "document",
+            },
+            ensure_ascii=False,
+        )
 
     # ── 优先级2：Skill 合成分析（assemble.py synthesize_skill）──────────
     # prompt 格式："你是一个Skill设计助手。请为以下需求生成一个Skill的执行描述：\n\n需求：..."
@@ -101,21 +99,24 @@ def _mock_response_for_prompt(prompt: str) -> str:
             if "需要合成的Skill：" in line:
                 skill_name = line.split("：", 1)[-1].strip()
                 break
-        return json.dumps({
-            "name": skill_name,
-            "type": "functional",
-            "description": f"执行{skill_name}的能力，产出完整的工作成果。",
-            "input_keys": ["_task_description"],
-            "output_keys": ["_generated_content"]
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "name": skill_name,
+                "type": "functional",
+                "description": f"执行{skill_name}的能力，产出完整的工作成果。",
+                "input_keys": ["_task_description"],
+                "output_keys": ["_generated_content"],
+            },
+            ensure_ascii=False,
+        )
 
     # ── 优先级3：Skill 语义匹配（assemble.py 技能匹配专家）──────────────
     # prompt 包含"技能匹配专家"或"selected_templates"
     if "技能匹配专家" in prompt or "selected_templates" in prompt:
-        return json.dumps({
-            "selected_templates": [],
-            "reason": "测试模式：不匹配基因库，使用LLM合成"
-        }, ensure_ascii=False)
+        return json.dumps(
+            {"selected_templates": [], "reason": "测试模式：不匹配基因库，使用LLM合成"},
+            ensure_ascii=False,
+        )
 
     # ── 优先级4：LLM产出生成（tools.py call_llm_for_output）─────────────
     # prompt 格式："{task_description}\n\n请生成结构化的文档..." 或 "请生成完整的、可运行的代码..."
@@ -157,7 +158,14 @@ def _mock_response_for_prompt(prompt: str) -> str:
             "主要特性：分形治理、SOP驱动、基因传承。\n"
             "FROST让每个智能体都能像Agent一样自主演进，实现真正的分形智能。"
         )
-    if "财务" in prompt or "financial" in p or "报表" in prompt or "收支" in prompt or "月结" in prompt or "核算" in prompt:
+    if (
+        "财务" in prompt
+        or "financial" in p
+        or "报表" in prompt
+        or "收支" in prompt
+        or "月结" in prompt
+        or "核算" in prompt
+    ):
         return (
             "# 财务月结报告\n\n"
             "## 收支汇总\n"
@@ -207,12 +215,12 @@ def _call_online_llm(context: dict) -> dict:
         cost_tracker.check_and_throw(
             agent_id=context.get("_agent_id", "unknown"),
             tokens=estimated_tokens,
-            model=context.get("_model", "deepseek-chat")
+            model=context.get("_model", "deepseek-chat"),
         )
     except BudgetExceededError as e:
-        context["_llm_response"] = "预算已用完：{}".format(str(e))
+        context["_llm_response"] = f"预算已用完：{str(e)}"
         context["_llm_tokens"] = {"prompt": 0, "completion": 0, "total": 0}
-        context["_reason"] = "预算检查失败：{}".format(str(e))
+        context["_reason"] = f"预算检查失败：{str(e)}"
         return context
     except Exception:
         # 成本检查失败不影响 LLM 调用（容错）
@@ -223,6 +231,7 @@ def _call_online_llm(context: dict) -> dict:
     if not api_key:
         try:
             from core.secrets import get_decrypted_key
+
             api_key = get_decrypted_key("DEEPSEEK_API_KEY", prompt_if_missing=True)
         except ImportError:
             pass
@@ -239,10 +248,7 @@ def _call_online_llm(context: dict) -> dict:
     temperature = context.get("_temperature", 0.7)
     max_tokens = context.get("_max_tokens", 2048)
 
-    client = OpenAI(
-        api_key=api_key,
-        base_url="https://api.deepseek.com"
-    )
+    client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
 
     messages = []
     if system_prompt:
@@ -266,7 +272,7 @@ def _call_online_llm(context: dict) -> dict:
         "total": usage.total_tokens,
     }
     context["_llm_model"] = model
-    context["_reason"] = "LLM调用成功，消耗 {} tokens".format(usage.total_tokens)
+    context["_reason"] = f"LLM调用成功，消耗 {usage.total_tokens} tokens"
 
     # 追踪成本
     try:
@@ -318,8 +324,11 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
         prompt = context.get("_prompt", "")
         total_tokens = len(prompt) // 4 + 100
         context["_llm_response"] = _mock_response_for_prompt(prompt)
-        context["_llm_tokens"] = {"prompt": len(
-            prompt) // 4, "completion": 100, "total": total_tokens}
+        context["_llm_tokens"] = {
+            "prompt": len(prompt) // 4,
+            "completion": 100,
+            "total": total_tokens,
+        }
         context["_llm_model"] = context.get("_model", "deepseek-chat")
         context["_reason"] = "[TEST_MODE] LLM调用已跳过，使用mock响应"
         context["_llm_backend"] = "mock"
@@ -327,17 +336,21 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
         # F14: 即使在 mock 模式也写入 cost_log
         try:
             from core.db import get_db
+
             db = get_db()
             estimated_cost = (total_tokens / 1000) * 0.001
-            db.insert("cost_log", {
-                "task_id": context.get("_task_id") or None,
-                "agent_id": context.get("_agent_id", "mock_agent"),
-                "model": context.get("_model", "deepseek-chat"),
-                "input_tokens": len(prompt) // 4,
-                "output_tokens": 100,
-                "total_tokens": total_tokens,
-                "estimated_cost": estimated_cost,
-            })
+            db.insert(
+                "cost_log",
+                {
+                    "task_id": context.get("_task_id") or None,
+                    "agent_id": context.get("_agent_id", "mock_agent"),
+                    "model": context.get("_model", "deepseek-chat"),
+                    "input_tokens": len(prompt) // 4,
+                    "output_tokens": 100,
+                    "total_tokens": total_tokens,
+                    "estimated_cost": estimated_cost,
+                },
+            )
         except Exception:
             pass
 
@@ -348,7 +361,7 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
         resp = call_local_llm(
             context.get("_prompt", ""),
             max_tokens=context.get("_max_tokens", 500),
-            temperature=context.get("_temperature", 0.7)
+            temperature=context.get("_temperature", 0.7),
         )
         if "error" in resp:
             context["_llm_response"] = resp["error"]
@@ -369,9 +382,9 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
             context = _call_online_llm(context)
             context["_llm_backend"] = "online"
         except Exception as e:
-            context["_llm_response"] = "LLM调用失败：{}".format(str(e))
+            context["_llm_response"] = f"LLM调用失败：{str(e)}"
             context["_llm_tokens"] = {"prompt": 0, "completion": 0, "total": 0}
-            context["_reason"] = "LLM调用失败：{}".format(str(e))
+            context["_reason"] = f"LLM调用失败：{str(e)}"
             context["_llm_backend"] = "online"
         return context
 
@@ -381,11 +394,11 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
         context["_llm_backend"] = "online"
         return context
     except Exception as e:
-        print("Online LLM 失败，降级到离线模式: {}".format(e))
+        print(f"Online LLM 失败，降级到离线模式: {e}")
         resp = call_local_llm(
             context.get("_prompt", ""),
             max_tokens=context.get("_max_tokens", 500),
-            temperature=context.get("_temperature", 0.7)
+            temperature=context.get("_temperature", 0.7),
         )
         if "error" in resp:
             context["_llm_response"] = resp["error"]
@@ -401,8 +414,9 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
         return context
 
 
-def _call_llm_raw(system_prompt: str = "", prompt: str = "",
-                  temperature: float = 0.7, max_tokens: int = 2048) -> str:
+def _call_llm_raw(
+    system_prompt: str = "", prompt: str = "", temperature: float = 0.7, max_tokens: int = 2048
+) -> str:
     """
     简易 LLM 调用接口：直接传入参数，返回原始文本。
 

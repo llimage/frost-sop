@@ -5,7 +5,9 @@ Token通过环境变量读取，绝不硬编码。
 """
 
 import os
+
 import requests
+
 from core.skill import Skill
 
 
@@ -43,12 +45,14 @@ def search_gitee(context: dict) -> dict:
             data = resp.json()
             results = []
             for repo in data.get("content", data).get("repos", [])[:5]:
-                results.append({
-                    "source": "gitee",
-                    "name": repo.get("full_name", ""),
-                    "description": repo.get("description", ""),
-                    "url": repo.get("html_url", ""),
-                })
+                results.append(
+                    {
+                        "source": "gitee",
+                        "name": repo.get("full_name", ""),
+                        "description": repo.get("description", ""),
+                        "url": repo.get("html_url", ""),
+                    }
+                )
             context["_search_results"] = results
             context["_reason"] = f"Gitee搜索成功：找到 {len(results)} 个仓库"
         else:

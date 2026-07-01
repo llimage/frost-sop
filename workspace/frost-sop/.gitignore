@@ -43,3 +43,12 @@ skills/*_draft_*.md
 frontend/node_modules/
 frontend/.next/
 sop_ui/node_modules/
+
+# 审计报告/包（大文件，不进入版本控制）
+audit_package*/
+*.zip
+
+# 交接文档（临时文件，已归档到 docs/）
+HANDOFF_SUMMARY_*.md
+THIRD_PARTY_AUDIT_REPORT_*.md
+THIRD_PARTY_AUDIT_COMPREHENSIVE_*.md

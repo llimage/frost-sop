@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\notifier.py
+# hypothesis_version: 6.145.0
+
+[3600, '+00:00', '=', 'FROST-SOP 决策超时', 'FROST-SOP 测试通知', 'Z', '__main__', 'test_decision_001', 'test_stage_001', 'test_task_001', '测试 Windows 通知...', '🔔 桌面通知（降级模式）']

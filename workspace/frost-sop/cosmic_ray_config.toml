@@ -1,0 +1,11 @@
+[cosmic-ray]
+module-path = "core/monitor.py"
+timeout = 60.0
+test-command = "C:/Users/13810/.workbuddy/binaries/python/versions/3.13.12/python.exe -X utf8 -m pytest tests/test_core_monitor.py -x -q --tb=no -s"
+no-local-import = true
+
+[cosmic-ray.distributor]
+name = "local"
+
+[cosmic-ray.operators]
+operator-pragma-mutate = true

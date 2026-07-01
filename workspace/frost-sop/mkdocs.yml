@@ -1,0 +1,45 @@
+site_name: FROST-SOP
+site_description: Fractal Agents with Family Governance Model
+repo_url: https://gitee.com/liao_liang_7514/solo-ops-platform
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - search.suggest
+    - content.code.copy
+
+nav:
+  - 首页: index.md
+  - 快速开始: quickstart.md
+  - 架构设计:
+      - 分形治理模型: architecture/fractal-governance.md
+      - 武器库系统: architecture/armory.md
+      - 事件总线: architecture/event-bus.md
+      - 四层记忆: architecture/memory.md
+  - API 参考:
+      - 概述: api/overview.md
+  - 开发指南:
+      - 贡献指南: contributing.md
+      - CHANGELOG: CHANGELOG.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            show_source: true
+            heading_level: 3
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - admonition
+  - footnotes
+  - toc:
+      permalink: true

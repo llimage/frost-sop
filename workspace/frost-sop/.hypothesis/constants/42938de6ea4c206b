@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\capability_meta.py
+# hypothesis_version: 6.145.0
+
+[-0.5, 0.0, 0.1, 0.2, 0.25, 0.4, 0.5, 0.6, 1.0, 'advanced', 'capability_keywords', 'capability_profile', 'complex', 'complexity', 'estimated_duration', 'execution_context', 'input_types', 'moderate', 'output_types', 'overall', 'resource_tags', 'simple', 'trivial']

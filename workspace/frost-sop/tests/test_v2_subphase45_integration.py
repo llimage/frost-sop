@@ -2,6 +2,7 @@
 子阶段 4.5 集成验证测试
 验证 main.py 和 app.py 中长老订阅已正确集成。
 """
+
 import os
 import sys
 
@@ -10,25 +11,28 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["FROST_TESTING"] = "1"
 
 import pytest
-from agents.elder import subscribe_elder_to_events, create_elder
-from core.store import Store
-from core.event_bus import get_event_bus, EventType, Event
 
+from agents.elder import create_elder, subscribe_elder_to_events
+from core.event_bus import Event, EventType, get_event_bus
+from core.store import Store
 
 # ---------------------------------------------------------------------------
 # 测试：main.py 入口集成
 # ---------------------------------------------------------------------------
 
+
 def test_main_imports_elder_subscription():
     """验证 main.py 正确导入了 subscribe_elder_to_events"""
     import main
+
     # 检查模块中存在所需的 import
-    assert hasattr(main, 'subscribe_elder_to_events')
+    assert hasattr(main, "subscribe_elder_to_events")
 
 
 def test_main_creates_elder_in_function():
     """验证 main.py 中的 main() 可以正常导入（语法级）"""
     import main
+
     assert callable(main.main)
 
 
@@ -38,6 +42,7 @@ def test_main_can_init_without_eventbus():
     NOTE: main() 会执行完整 SOP 任务（调用 LLM），这里只验证函数可调用。
     """
     import main
+
     # 只验证函数存在且可调用，不实际执行
     assert main.main is not None
 
@@ -45,6 +50,7 @@ def test_main_can_init_without_eventbus():
 # ---------------------------------------------------------------------------
 # 测试：app.py 入口集成
 # ---------------------------------------------------------------------------
+
 
 def test_app_imports_elder_subscription():
     """验证 app.py 正确导入了 subscribe_elder_to_events"""
@@ -54,6 +60,7 @@ def test_app_imports_elder_subscription():
 # ---------------------------------------------------------------------------
 # 测试：幂等性——多次调用 subscribe_elder_to_events
 # ---------------------------------------------------------------------------
+
 
 def test_subscribe_is_idempotent():
     """多次调用 subscribe_elder_to_events 不应产生副作用"""
@@ -84,6 +91,7 @@ def test_subscribe_is_idempotent():
 # 测试：fail-safe——create_elder with broken EventBus
 # ---------------------------------------------------------------------------
 
+
 def test_subscribe_graceful_when_eventbus_unavailable(monkeypatch):
     """EventBus 抛异常时 subscribe_elder_to_events 应返回 False（不崩溃）"""
     store = Store()
@@ -91,6 +99,7 @@ def test_subscribe_graceful_when_eventbus_unavailable(monkeypatch):
 
     # 模拟 get_event_bus 抛异常
     import core.event_bus as eb
+
     original_get = eb.get_event_bus
 
     def broken_get():
@@ -109,6 +118,7 @@ def test_subscribe_graceful_when_eventbus_unavailable(monkeypatch):
 # 测试：端到端——TASK_COMPLETED 触发长老审计
 # ---------------------------------------------------------------------------
 
+
 def test_e2e_task_completed_triggers_elder_audit():
     """TASK_COMPLETED 事件应触发长老的 audit_family"""
     store = Store()
@@ -124,11 +134,13 @@ def test_e2e_task_completed_triggers_elder_audit():
     subscribe_elder_to_events(elder)
 
     # 发布 TASK_COMPLETED
-    bus.publish(Event(
-        event_type=EventType.TASK_COMPLETED,
-        source="test_e2e",
-        data={"task_id": "task_e2e_001"},
-    ))
+    bus.publish(
+        Event(
+            event_type=EventType.TASK_COMPLETED,
+            source="test_e2e",
+            data={"task_id": "task_e2e_001"},
+        )
+    )
 
     # 事件是同步分发的，audit_family 会直接执行
     # 验证事件已被记录
@@ -140,6 +152,7 @@ def test_e2e_task_completed_triggers_elder_audit():
 # ---------------------------------------------------------------------------
 # 测试：EventBus 持久化与订阅不冲突
 # ---------------------------------------------------------------------------
+
 
 def test_subscribe_does_not_break_persistence():
     """订阅长老后，事件持久化仍正常"""
@@ -160,6 +173,7 @@ def test_subscribe_does_not_break_persistence():
 
     # 检查持久化
     from core.db import get_db
+
     db = get_db()
-    rows = db.select_all("event_log", where=f"event_type = 'task_completed'")
+    rows = db.select_all("event_log", where="event_type = 'task_completed'")
     assert len(rows) >= 1, "事件应被持久化到 event_log 表"

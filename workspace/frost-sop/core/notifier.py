@@ -5,7 +5,6 @@ F8 新增：Windows 桌面通知模块
 """
 
 
-
 def send_windows_notification(title: str, message: str, duration: int = 5):
     """
     发送 Windows 桌面通知。
@@ -25,6 +24,7 @@ def send_windows_notification(title: str, message: str, duration: int = 5):
     # 方法1：尝试使用 win10toast
     try:
         from win10toast import ToastNotifier
+
         toaster = ToastNotifier()
         toaster.show_toast(title, message, duration=duration, threaded=True)
         return True
@@ -36,11 +36,12 @@ def send_windows_notification(title: str, message: str, duration: int = 5):
     # 方法2：尝试使用 plyer
     try:
         import plyer
+
         plyer.notification(
             title=title,
             message=message,
             app_icon=None,  # 可以指定图标路径
-            timeout=duration
+            timeout=duration,
         )
         return True
     except ImportError:
@@ -50,7 +51,7 @@ def send_windows_notification(title: str, message: str, duration: int = 5):
 
     # 方法3：降级为控制台输出（跨平台兼容）
     print("\n" + "=" * 60)
-    print(f"🔔 桌面通知（降级模式）")
+    print("🔔 桌面通知（降级模式）")
     print(f"标题: {title}")
     print(f"内容: {message}")
     print("=" * 60 + "\n")
@@ -115,20 +116,19 @@ if __name__ == "__main__":
     result = send_windows_notification(
         title="FROST-SOP 测试通知",
         message="这是一条测试通知，用于验证通知功能是否正常。",
-        duration=5
+        duration=5,
     )
     print(f"通知发送结果: {result}")
 
     # 测试2：检查超时
     from datetime import datetime, timedelta
+
     old_time = datetime.now() - timedelta(hours=2)  # 2小时前
     is_timeout = check_decision_timeout(old_time, timeout_seconds=3600)
     print(f"超时检查（2小时前创建，1小时超时）: {is_timeout}")
 
     # 测试3：发送超时通知
     result = send_timeout_notification(
-        decision_id="test_decision_001",
-        task_id="test_task_001",
-        stage_id="test_stage_001"
+        decision_id="test_decision_001", task_id="test_task_001", stage_id="test_stage_001"
     )
     print(f"超时通知发送结果: {result}")

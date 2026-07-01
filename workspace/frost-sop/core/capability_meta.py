@@ -12,27 +12,29 @@ PHILOSOPHY: 武器不只是有 ID 和类型，它还有"能力画像"——
 """
 
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Tuple
-from enum import Enum
 
+from dataclasses import dataclass, field
+from enum import Enum
 
 # ────────────────────────────────────────────────────────────────────────────
 # 复杂度等级
 # ────────────────────────────────────────────────────────────────────────────
 
+
 class ComplexityLevel(Enum):
     """武器复杂度等级"""
-    TRIVIAL = "trivial"      # 简单：单步操作，无依赖
-    SIMPLE = "simple"        # 简易：少量步骤，少量依赖
-    MODERATE = "moderate"    # 中等：多步骤，有依赖链
-    COMPLEX = "complex"      # 复杂：多阶段，跨域依赖
-    ADVANCED = "advanced"    # 高级：需要编排多个子武器
+
+    TRIVIAL = "trivial"  # 简单：单步操作，无依赖
+    SIMPLE = "simple"  # 简易：少量步骤，少量依赖
+    MODERATE = "moderate"  # 中等：多步骤，有依赖链
+    COMPLEX = "complex"  # 复杂：多阶段，跨域依赖
+    ADVANCED = "advanced"  # 高级：需要编排多个子武器
 
 
 # ────────────────────────────────────────────────────────────────────────────
 # 能力画像
 # ────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class CapabilityProfile:
@@ -42,22 +44,23 @@ class CapabilityProfile:
     这是武器元数据的"能力维度"，让军师能按能力相似度推荐武器，
     而非仅靠关键词匹配。
     """
+
     # 输入类型（如 "text", "json", "yaml", "file_path"）
-    input_types: List[str] = field(default_factory=list)
+    input_types: list[str] = field(default_factory=list)
     # 输出类型
-    output_types: List[str] = field(default_factory=list)
+    output_types: list[str] = field(default_factory=list)
     # 执行上下文（如 "local", "cloud", "sandbox", "offline"）
-    execution_context: List[str] = field(default_factory=list)
+    execution_context: list[str] = field(default_factory=list)
     # 复杂度
     complexity: ComplexityLevel = ComplexityLevel.SIMPLE
     # 预估执行时间（秒）
-    estimated_duration: Optional[float] = None
+    estimated_duration: float | None = None
     # 资源消耗标签（如 "cpu_heavy", "memory_light", "api_call"）
-    resource_tags: List[str] = field(default_factory=list)
+    resource_tags: list[str] = field(default_factory=list)
     # 能力关键词（用于能力匹配，不同于 tags）
-    capability_keywords: List[str] = field(default_factory=list)
+    capability_keywords: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """序列化为字典"""
         return {
             "input_types": self.input_types,
@@ -70,7 +73,7 @@ class CapabilityProfile:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> "CapabilityProfile":
+    def from_dict(cls, data: dict) -> CapabilityProfile:
         """从字典反序列化"""
         complexity_str = data.get("complexity", "simple")
         try:
@@ -91,6 +94,7 @@ class CapabilityProfile:
 # ────────────────────────────────────────────────────────────────────────────
 # 场景匹配引擎
 # ────────────────────────────────────────────────────────────────────────────
+
 
 class ScenarioMatcher:
     """
@@ -142,7 +146,7 @@ class ScenarioMatcher:
                 break
 
         # 4. 能力关键词加分
-        capability_profile = getattr(weapon, 'capability_profile', None)
+        capability_profile = getattr(weapon, "capability_profile", None)
         if capability_profile and isinstance(capability_profile, CapabilityProfile):
             for kw in capability_profile.capability_keywords:
                 if kw.lower() in scenario_lower:
@@ -152,8 +156,7 @@ class ScenarioMatcher:
         return round(score, 3)
 
     @classmethod
-    def match_multi_scenario(cls, weapon, scenarios: List[str],
-                             require_all: bool = False) -> float:
+    def match_multi_scenario(cls, weapon, scenarios: list[str], require_all: bool = False) -> float:
         """
         计算武器与多个场景的综合匹配分数。
 
@@ -178,8 +181,9 @@ class ScenarioMatcher:
             return round(sum(scores) / len(scores), 3)
 
     @classmethod
-    def best_matches(cls, registry, scenario: str, top_k: int = 5,
-                     min_score: float = 0.1) -> List[Tuple[object, float]]:
+    def best_matches(
+        cls, registry, scenario: str, top_k: int = 5, min_score: float = 0.1
+    ) -> list[tuple[object, float]]:
         """
         从注册表中找出与场景最匹配的武器。
 
@@ -208,6 +212,7 @@ class ScenarioMatcher:
 # 能力对比器
 # ────────────────────────────────────────────────────────────────────────────
 
+
 class CapabilityComparator:
     """
     能力对比器——计算两个武器的能力相似度。
@@ -230,7 +235,7 @@ class CapabilityComparator:
     }
 
     @staticmethod
-    def _jaccard_similarity(set_a: List[str], set_b: List[str]) -> float:
+    def _jaccard_similarity(set_a: list[str], set_b: list[str]) -> float:
         """计算两个列表的 Jaccard 相似度"""
         if not set_a and not set_b:
             return 1.0  # 两个都为空视为完全相似
@@ -253,14 +258,13 @@ class CapabilityComparator:
         Returns:
             相似度分数 0.0-1.0
         """
-        profile_a = getattr(weapon_a, 'capability_profile', None)
-        profile_b = getattr(weapon_b, 'capability_profile', None)
+        profile_a = getattr(weapon_a, "capability_profile", None)
+        profile_b = getattr(weapon_b, "capability_profile", None)
 
         # 如果都没有能力画像，退化为场景相似度
         if not profile_a and not profile_b:
             return cls._jaccard_similarity(
-                weapon_a.applicable_scenarios,
-                weapon_b.applicable_scenarios
+                weapon_a.applicable_scenarios, weapon_b.applicable_scenarios
             )
 
         # 如果一方有能力画像而另一方没有
@@ -270,8 +274,12 @@ class CapabilityComparator:
         # 计算各维度相似度
         input_sim = cls._jaccard_similarity(profile_a.input_types, profile_b.input_types)
         output_sim = cls._jaccard_similarity(profile_a.output_types, profile_b.output_types)
-        context_sim = cls._jaccard_similarity(profile_a.execution_context, profile_b.execution_context)
-        keyword_sim = cls._jaccard_similarity(profile_a.capability_keywords, profile_b.capability_keywords)
+        context_sim = cls._jaccard_similarity(
+            profile_a.execution_context, profile_b.execution_context
+        )
+        keyword_sim = cls._jaccard_similarity(
+            profile_a.capability_keywords, profile_b.capability_keywords
+        )
 
         # 复杂度相似度：相同=1.0，差一级=0.5，差两级+=0.0
         complexity_levels = list(ComplexityLevel)
@@ -292,8 +300,9 @@ class CapabilityComparator:
         return round(total, 3)
 
     @classmethod
-    def find_similar(cls, registry, weapon_id: str, top_k: int = 5,
-                     min_similarity: float = 0.1) -> List[Tuple[object, float]]:
+    def find_similar(
+        cls, registry, weapon_id: str, top_k: int = 5, min_similarity: float = 0.1
+    ) -> list[tuple[object, float]]:
         """
         从注册表中找出与指定武器最相似的其他武器。
 
@@ -324,25 +333,40 @@ class CapabilityComparator:
         return results[:top_k]
 
     @classmethod
-    def capability_gap(cls, weapon_a, weapon_b) -> Dict[str, float]:
+    def capability_gap(cls, weapon_a, weapon_b) -> dict[str, float]:
         """
         分析两个武器的能力差距（各维度分别计算）。
 
         Returns:
             {维度: 差距分数} 差距=1.0-相似度
         """
-        profile_a = getattr(weapon_a, 'capability_profile', None)
-        profile_b = getattr(weapon_b, 'capability_profile', None)
+        profile_a = getattr(weapon_a, "capability_profile", None)
+        profile_b = getattr(weapon_b, "capability_profile", None)
 
         if not profile_a or not profile_b:
             return {"overall": 1.0 - cls.similarity(weapon_a, weapon_b)}
 
         return {
-            "input_types": 1.0 - cls._jaccard_similarity(profile_a.input_types, profile_b.input_types),
-            "output_types": 1.0 - cls._jaccard_similarity(profile_a.output_types, profile_b.output_types),
-            "execution_context": 1.0 - cls._jaccard_similarity(profile_a.execution_context, profile_b.execution_context),
-            "capability_keywords": 1.0 - cls._jaccard_similarity(profile_a.capability_keywords, profile_b.capability_keywords),
-            "complexity": 1.0 - (1.0 if profile_a.complexity == profile_b.complexity else
-                                 (0.5 if abs(list(ComplexityLevel).index(profile_a.complexity) -
-                                            list(ComplexityLevel).index(profile_b.complexity)) == 1 else 0.0)),
+            "input_types": 1.0
+            - cls._jaccard_similarity(profile_a.input_types, profile_b.input_types),
+            "output_types": 1.0
+            - cls._jaccard_similarity(profile_a.output_types, profile_b.output_types),
+            "execution_context": 1.0
+            - cls._jaccard_similarity(profile_a.execution_context, profile_b.execution_context),
+            "capability_keywords": 1.0
+            - cls._jaccard_similarity(profile_a.capability_keywords, profile_b.capability_keywords),
+            "complexity": 1.0
+            - (
+                1.0
+                if profile_a.complexity == profile_b.complexity
+                else (
+                    0.5
+                    if abs(
+                        list(ComplexityLevel).index(profile_a.complexity)
+                        - list(ComplexityLevel).index(profile_b.complexity)
+                    )
+                    == 1
+                    else 0.0
+                )
+            ),
         }

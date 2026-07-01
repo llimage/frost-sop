@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\armory.py
+# hypothesis_version: 6.145.0
+
+[0.0, 0.1, 0.3, 0.4, 0.5, 1.0, 30.0, 50.0, 100, 101, '.', '1.0', '_skill_instance', '_sop_instance', 'active', 'archived', 'armory:registry', 'avg_health_score', 'bind', 'by_category', 'by_state', 'by_type', 'card', 'category', 'cognitive', 'comm', 'deprecated', 'description', 'discovered', 'execution', 'gene', 'governance', 'immun', 'immune', 'intel', 'manual', 'orchestrate', 'retired', 'search', 'skill', 'sop', 'state', 'strategy', 'top_weapons', 'total_weapons', 'trialed', 'type', 'unknown', 'validated']

@@ -6,25 +6,52 @@ core/db.py - 数据库管理模块
 提供 DBManager 单例类，负责连接管理和表初始化。
 """
 
-import sqlite3
 import re
+import sqlite3
 from datetime import datetime
-from typing import Dict, Any, Optional, List
 from pathlib import Path
+from typing import Any
 
 # S-001/S-002 修复：表名白名单（与 init_tables 的 CREATE TABLE 一致）
 ALLOWED_TABLES = {
-    "config", "projects", "tasks", "task_stages", "agents",
-    "agent_status", "sop_templates", "sop_executions", "audit_log",
-    "cost_log", "schedule", "energy_log", "knowledge", "knowledge_tags",
-    "skills", "skill_versions", "tool_calls", "decision_points",
-    "kv_store", "event_log",
+    "config",
+    "projects",
+    "tasks",
+    "task_stages",
+    "agents",
+    "agent_status",
+    "sop_templates",
+    "sop_executions",
+    "audit_log",
+    "cost_log",
+    "schedule",
+    "energy_log",
+    "knowledge",
+    "knowledge_tags",
+    "skills",
+    "skill_versions",
+    "tool_calls",
+    "decision_points",
+    "kv_store",
+    "event_log",
 }
 
 # S-001 修复：WHERE 子句危险关键字（用于非参数化部分的检测）
 _WHERE_DANGEROUS_KEYWORDS = [
-    ";", "--", "/*", "*/", "UNION", "DROP", "DELETE", "INSERT",
-    "UPDATE", "ALTER", "CREATE", "EXEC", "EXECUTE", "TRUNCATE",
+    ";",
+    "--",
+    "/*",
+    "*/",
+    "UNION",
+    "DROP",
+    "DELETE",
+    "INSERT",
+    "UPDATE",
+    "ALTER",
+    "CREATE",
+    "EXEC",
+    "EXECUTE",
+    "TRUNCATE",
 ]
 
 
@@ -72,8 +99,10 @@ class DBManager:
     def get_connection(self) -> sqlite3.Connection:
         """获取数据库连接"""
         if self._connection is None:
-            self.__init__(self.db_path)
-        return self._connection
+            self._connection = sqlite3.connect(self.db_path)
+            self._connection.row_factory = sqlite3.Row
+            self._connection.execute("PRAGMA journal_mode=WAL")
+        return self._connection  # type: ignore[return-value]
 
     def close(self):
         """关闭数据库连接"""
@@ -381,15 +410,12 @@ class DBManager:
         """)
 
         # V2.2: event_log 查询索引
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_event_log_type ON event_log(event_type)"
-        )
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_event_log_source ON event_log(source)"
-        )
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_event_log_timestamp ON event_log(timestamp)"
-        )
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_event_log_type ON event_log(event_type)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_event_log_source ON event_log(source)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_event_log_timestamp ON event_log(timestamp)")
+
+        # A-007: 性能索引优化（高频查询列）
+        self._create_performance_indexes(cursor)
 
         conn.commit()
         print("✅ 19张表初始化完成")
@@ -411,113 +437,156 @@ class DBManager:
 
         conn.commit()
 
-    def _migrate_energy_log_table(self, cursor):
-        """F9: 为 energy_log 表添加创始人需要的列"""
-        needed = {
-            "level": "INTEGER DEFAULT 50",
-            "emotion": "TEXT DEFAULT ''",
-            "user_note": "TEXT DEFAULT ''",
+    def _migrate_table(self, cursor, table_name: str, needed_columns: dict[str, str]):
+        """通用表迁移：为指定表添加缺失列（S-003 安全加固）。
+
+        Args:
+            cursor: SQLite cursor
+            table_name: 表名（必须在 ALLOWED_TABLES 中）
+            needed_columns: {列名: 列定义} 字典
+        """
+        existing = {
+            col["name"]
+            for col in cursor.execute(f"PRAGMA table_info({table_name})").fetchall()
         }
-        existing = {col["name"]
-            for col in cursor.execute("PRAGMA table_info(energy_log)").fetchall()}
-        for col_name, col_def in needed.items():
+        for col_name, col_def in needed_columns.items():
             if col_name not in existing:
                 # S-003 修复：列名/列定义安全验证
-                if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col_name):
+                if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", col_name):
                     continue
-                if not re.match(r'^[A-Z]+\s*(DEFAULT\s+[^;\-]*|)$', col_def, re.IGNORECASE):
+                if not re.match(
+                    r"^[A-Z]+\s*(DEFAULT\s+[^;\-]*|)$", col_def, re.IGNORECASE
+                ):
                     continue
                 try:
-                    cursor.execute(f"ALTER TABLE energy_log ADD COLUMN {col_name} {col_def}")
+                    cursor.execute(
+                        f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def}"
+                    )
                 except Exception:
                     pass  # 列可能已存在
 
+    def _migrate_energy_log_table(self, cursor):
+        """F9: 为 energy_log 表添加创始人需要的列"""
+        self._migrate_table(
+            cursor,
+            "energy_log",
+            {
+                "level": "INTEGER DEFAULT 50",
+                "emotion": "TEXT DEFAULT ''",
+                "user_note": "TEXT DEFAULT ''",
+            },
+        )
+
     def _migrate_schedule_table(self, cursor):
         """F9: 为 schedule 表添加日程管理需要的列"""
-        needed = {
-            "title": "TEXT DEFAULT ''",
-            "description": "TEXT DEFAULT ''",
-            "start_time": "TIMESTAMP",
-            "end_time": "TIMESTAMP",
-            "repeat_type": "TEXT DEFAULT 'none'",
-            "repeat_end": "TEXT DEFAULT ''",
-            "notified": "BOOLEAN DEFAULT 0",
-        }
-        existing = {col["name"] for col in cursor.execute("PRAGMA table_info(schedule)").fetchall()}
-        for col_name, col_def in needed.items():
-            if col_name not in existing:
-                # S-003 修复：列名/列定义安全验证
-                if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col_name):
-                    continue
-                if not re.match(r'^[A-Z]+\s*(DEFAULT\s+[^;\-]*|)$', col_def, re.IGNORECASE):
-                    continue
-                try:
-                    cursor.execute(f"ALTER TABLE schedule ADD COLUMN {col_name} {col_def}")
-                except Exception:
-                    pass
+        self._migrate_table(
+            cursor,
+            "schedule",
+            {
+                "title": "TEXT DEFAULT ''",
+                "description": "TEXT DEFAULT ''",
+                "start_time": "TIMESTAMP",
+                "end_time": "TIMESTAMP",
+                "repeat_type": "TEXT DEFAULT 'none'",
+                "repeat_end": "TEXT DEFAULT ''",
+                "notified": "BOOLEAN DEFAULT 0",
+            },
+        )
 
     def _migrate_skills_table(self, cursor):
         """F10: 为 skills 表添加 SkillExtractor 需要的列"""
-        needed = {
-            "trigger_keywords": "TEXT DEFAULT '[]'",
-            "success_rate": "REAL DEFAULT 0.0",
-            "status": "TEXT DEFAULT 'active'",
-            "task_type": "TEXT DEFAULT ''",
-        }
-        existing = {col["name"] for col in cursor.execute("PRAGMA table_info(skills)").fetchall()}
-        for col_name, col_def in needed.items():
-            if col_name not in existing:
-                # S-003 修复：列名/列定义安全验证
-                if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col_name):
-                    continue
-                if not re.match(r'^[A-Z]+\s*(DEFAULT\s+[^;\-]*|)$', col_def, re.IGNORECASE):
-                    continue
-                try:
-                    cursor.execute(f"ALTER TABLE skills ADD COLUMN {col_name} {col_def}")
-                except Exception:
-                    pass
+        self._migrate_table(
+            cursor,
+            "skills",
+            {
+                "trigger_keywords": "TEXT DEFAULT '[]'",
+                "success_rate": "REAL DEFAULT 0.0",
+                "status": "TEXT DEFAULT 'active'",
+                "task_type": "TEXT DEFAULT ''",
+            },
+        )
 
     def _migrate_skill_versions_table(self, cursor):
         """F10: 为 skill_versions 表添加 file_path 列"""
-        existing = {col["name"] for col in cursor.execute(
-            "PRAGMA table_info(skill_versions)").fetchall()}
-        if "file_path" not in existing:
-            try:
-                cursor.execute("ALTER TABLE skill_versions ADD COLUMN file_path TEXT DEFAULT ''")
-            except Exception:
-                pass
+        self._migrate_table(cursor, "skill_versions", {"file_path": "TEXT DEFAULT ''"})
 
     def _migrate_decision_points_table(self, cursor):
         """F8: 为 decision_points 表添加决策管理需要的列"""
-        needed = {
-            "stage_id": "TEXT DEFAULT ''",
-            "question": "TEXT DEFAULT ''",
-            "options_json": "TEXT DEFAULT '[]'",
-            "status": "TEXT DEFAULT 'pending'",
-            "user_decision": "TEXT DEFAULT ''",
-            "user_note": "TEXT DEFAULT ''",
-            "created_at": "TIMESTAMP",
-            "responded_at": "TIMESTAMP",
-        }
-        existing = {col["name"] for col in cursor.execute(
-            "PRAGMA table_info(decision_points)").fetchall()}
-        for col_name, col_def in needed.items():
-            if col_name not in existing:
-                # S-003 修复：列名/列定义安全验证
-                if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col_name):
-                    continue
-                if not re.match(r'^[A-Z]+\s*(DEFAULT\s+[^;\-]*|)$', col_def, re.IGNORECASE):
-                    continue
-                try:
-                    cursor.execute(f"ALTER TABLE decision_points ADD COLUMN {col_name} {col_def}")
-                except Exception:
-                    pass
+        self._migrate_table(
+            cursor,
+            "decision_points",
+            {
+                "stage_id": "TEXT DEFAULT ''",
+                "question": "TEXT DEFAULT ''",
+                "options_json": "TEXT DEFAULT '[]'",
+                "status": "TEXT DEFAULT 'pending'",
+                "user_decision": "TEXT DEFAULT ''",
+                "user_note": "TEXT DEFAULT ''",
+                "created_at": "TIMESTAMP",
+                "responded_at": "TIMESTAMP",
+            },
+        )
 
     # ============================================================
     # 通用 CRUD 操作
     # ============================================================
 
-    def insert(self, table: str, data: Dict[str, Any]) -> Any:
+    @staticmethod
+    def _create_performance_indexes(cursor):
+        """A-007: 为高频查询列创建性能索引"""
+        indexes = [
+            # tasks: id 已是 PRIMARY KEY，补充 status 和 project_id
+            ("idx_tasks_status", "tasks", "status"),
+            ("idx_tasks_project_id", "tasks", "project_id"),
+            # task_stages: 按 task_id 和 status 频繁查询
+            ("idx_task_stages_task_id", "task_stages", "task_id"),
+            ("idx_task_stages_status", "task_stages", "status"),
+            # agents: 按 agent_type 和 parent_id 过滤
+            ("idx_agents_type", "agents", "agent_type"),
+            ("idx_agents_parent_id", "agents", "parent_id"),
+            # agent_status: 按状态和当前任务查询
+            ("idx_agent_status_status", "agent_status", "status"),
+            ("idx_agent_status_task_id", "agent_status", "current_task_id"),
+            # sop_executions: 按 task_id 和状态查询
+            ("idx_sop_exec_task_id", "sop_executions", "task_id"),
+            ("idx_sop_exec_status", "sop_executions", "status"),
+            # cost_log: 月度成本统计高频列
+            ("idx_cost_log_agent_id", "cost_log", "agent_id"),
+            ("idx_cost_log_task_id", "cost_log", "task_id"),
+            ("idx_cost_log_timestamp", "cost_log", "timestamp"),
+            # audit_log: 按 agent_id 和时间查询
+            ("idx_audit_log_agent_id", "audit_log", "agent_id"),
+            ("idx_audit_log_timestamp", "audit_log", "timestamp"),
+            # energy_log: 按 agent_id 和时间查询
+            ("idx_energy_log_agent_id", "energy_log", "agent_id"),
+            ("idx_energy_log_timestamp", "energy_log", "timestamp"),
+            # tool_calls: 失败复盘查询
+            ("idx_tool_calls_agent_id", "tool_calls", "agent_id"),
+            ("idx_tool_calls_task_id", "tool_calls", "task_id"),
+            ("idx_tool_calls_status", "tool_calls", "status"),
+            # decision_points: 决策查询
+            ("idx_decisions_agent_id", "decision_points", "agent_id"),
+            ("idx_decisions_task_id", "decision_points", "task_id"),
+            ("idx_decisions_status", "decision_points", "status"),
+            # schedule: 日程提醒查询
+            ("idx_schedule_start_time", "schedule", "start_time"),
+            ("idx_schedule_enabled", "schedule", "enabled"),
+            # skills: 活跃技能查询
+            ("idx_skills_active", "skills", "is_active"),
+            ("idx_skills_status", "skills", "status"),
+        ]
+
+        for idx_name, table, column in indexes:
+            try:
+                cursor.execute(f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table}({column})")
+            except Exception:
+                pass  # 索引可能已存在或不兼容
+
+    # ============================================================
+    # 通用 CRUD 操作
+    # ============================================================
+
+    def insert(self, table: str, data: dict[str, Any]) -> Any:
         """
         插入记录
 
@@ -532,15 +601,15 @@ class DBManager:
         if table not in ALLOWED_TABLES:
             raise ValueError(f"Security: Invalid table name '{table}'")
         # S-002 修复：列名安全验证（只允许字母、数字、下划线）
-        for col in data.keys():
-            if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col):
+        for col in data:
+            if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", col):
                 raise ValueError(f"Security: Invalid column name '{col}'")
 
         conn = self.get_connection()
         cursor = conn.cursor()
 
-        columns = ', '.join(data.keys())
-        placeholders = ', '.join(['?'] * len(data))
+        columns = ", ".join(data.keys())
+        placeholders = ", ".join(["?"] * len(data))
         values = list(data.values())
 
         sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
@@ -549,7 +618,7 @@ class DBManager:
 
         return cursor.lastrowid
 
-    def update(self, table: str, id_column: str, id_value: Any, data: Dict[str, Any]) -> int:
+    def update(self, table: str, id_column: str, id_value: Any, data: dict[str, Any]) -> int:
         """
         更新记录
 
@@ -567,13 +636,13 @@ class DBManager:
             raise ValueError(f"Security: Invalid table name '{table}'")
         # S-002 修复：列名安全验证
         for col in list(data.keys()) + [id_column]:
-            if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col):
+            if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", col):
                 raise ValueError(f"Security: Invalid column name '{col}'")
 
         conn = self.get_connection()
         cursor = conn.cursor()
 
-        set_clause = ', '.join([f"{k} = ?" for k in data.keys()])
+        set_clause = ", ".join([f"{k} = ?" for k in data])
         values = list(data.values()) + [id_value]
 
         sql = f"UPDATE {table} SET {set_clause} WHERE {id_column} = ?"
@@ -598,7 +667,7 @@ class DBManager:
         if table not in ALLOWED_TABLES:
             raise ValueError(f"Security: Invalid table name '{table}'")
         # S-002 修复：列名安全验证
-        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', id_column):
+        if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", id_column):
             raise ValueError(f"Security: Invalid column name '{id_column}'")
 
         conn = self.get_connection()
@@ -610,7 +679,7 @@ class DBManager:
 
         return cursor.rowcount
 
-    def select_one(self, table: str, id_column: str, id_value: Any) -> Optional[Dict[str, Any]]:
+    def select_one(self, table: str, id_column: str, id_value: Any) -> dict[str, Any] | None:
         """
         查询单条记录
 
@@ -626,7 +695,7 @@ class DBManager:
         if table not in ALLOWED_TABLES:
             raise ValueError(f"Security: Invalid table name '{table}'")
         # S-002 修复：列名安全验证
-        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', id_column):
+        if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", id_column):
             raise ValueError(f"Security: Invalid column name '{id_column}'")
 
         conn = self.get_connection()
@@ -640,7 +709,9 @@ class DBManager:
             return dict(row)
         return None
 
-    def select_all(self, table: str, where: str = None, params: List[Any] = None) -> List[Dict[str, Any]]:
+    def select_all(
+        self, table: str, where: str | None = None, params: list[Any] | None = None
+    ) -> list[dict[str, Any]]:
         """
         查询多条记录
 
@@ -677,7 +748,7 @@ class DBManager:
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
-    def execute_sql(self, sql: str, params: List[Any] = None) -> Any:
+    def execute_sql(self, sql: str, params: list[Any] | None = None) -> Any:
         """
         执行自定义SQL
 
@@ -709,7 +780,7 @@ class DBManager:
     # 特定业务操作
     # ============================================================
 
-    def save_task(self, task_data: Dict[str, Any]) -> str:
+    def save_task(self, task_data: dict[str, Any]) -> str:
         """
         保存任务（如果已存在则更新）
 
@@ -723,16 +794,16 @@ class DBManager:
 
         if existing:
             # 更新
-            self.update("tasks", "id", task_data["id"], {
-                k: v for k, v in task_data.items() if k != "id"
-            })
+            self.update(
+                "tasks", "id", task_data["id"], {k: v for k, v in task_data.items() if k != "id"}
+            )
         else:
             # 插入
             self.insert("tasks", task_data)
 
-        return task_data["id"]
+        return task_data["id"]  # type: ignore[no-any-return]
 
-    def save_agent(self, agent_data: Dict[str, Any]) -> str:
+    def save_agent(self, agent_data: dict[str, Any]) -> str:
         """
         保存Agent（如果已存在则更新）
 
@@ -745,15 +816,15 @@ class DBManager:
         existing = self.select_one("agents", "id", agent_data["id"])
 
         if existing:
-            self.update("agents", "id", agent_data["id"], {
-                k: v for k, v in agent_data.items() if k != "id"
-            })
+            self.update(
+                "agents", "id", agent_data["id"], {k: v for k, v in agent_data.items() if k != "id"}
+            )
         else:
             self.insert("agents", agent_data)
 
-        return agent_data["id"]
+        return agent_data["id"]  # type: ignore[no-any-return]
 
-    def log_cost(self, cost_data: Dict[str, Any]) -> int:
+    def log_cost(self, cost_data: dict[str, Any]) -> int:
         """
         记录成本日志
 
@@ -763,9 +834,9 @@ class DBManager:
         Returns:
             插入的日志ID
         """
-        return self.insert("cost_log", cost_data)
+        return self.insert("cost_log", cost_data)  # type: ignore[no-any-return]
 
-    def log_audit(self, audit_data: Dict[str, Any]) -> int:
+    def log_audit(self, audit_data: dict[str, Any]) -> int:
         """
         记录审计日志
 
@@ -775,7 +846,7 @@ class DBManager:
         Returns:
             插入的日志ID
         """
-        return self.insert("audit_log", audit_data)
+        return self.insert("audit_log", audit_data)  # type: ignore[no-any-return]
 
     def get_monthly_cost(self, year: int, month: int) -> float:
         """
@@ -798,7 +869,7 @@ class DBManager:
             return float(result[0]["total"])
         return 0.0
 
-    def get_table_counts(self) -> Dict[str, int]:
+    def get_table_counts(self) -> dict[str, int]:
         """
         获取所有表的记录数
 
@@ -806,11 +877,24 @@ class DBManager:
             表名 -> 记录数的字典
         """
         tables = [
-            "config", "projects", "tasks", "task_stages", "agents",
-            "agent_status", "sop_templates", "sop_executions",
-            "audit_log", "cost_log", "schedule", "energy_log",
-            "knowledge", "knowledge_tags", "skills", "skill_versions",
-            "tool_calls", "decision_points"
+            "config",
+            "projects",
+            "tasks",
+            "task_stages",
+            "agents",
+            "agent_status",
+            "sop_templates",
+            "sop_executions",
+            "audit_log",
+            "cost_log",
+            "schedule",
+            "energy_log",
+            "knowledge",
+            "knowledge_tags",
+            "skills",
+            "skill_versions",
+            "tool_calls",
+            "decision_points",
         ]
 
         counts = {}
@@ -842,24 +926,31 @@ class DBManager:
         # 确保 founder agent 存在
         existing = self.select_one("agents", "id", "founder")
         if not existing:
-            self.insert("agents", {
-                "id": "founder",
-                "name": "创始人",
-                "agent_type": "human",
-                "generation": 0,
-                "created_at": datetime.now().isoformat()
-            })
+            self.insert(
+                "agents",
+                {
+                    "id": "founder",
+                    "name": "创始人",
+                    "agent_type": "human",
+                    "generation": 0,
+                    "created_at": datetime.now().isoformat(),
+                },
+            )
 
-        return self.insert("energy_log", {
-            "agent_id": "founder",
-            "energy_level": float(level),
-            "health_score": float(level),
-            "level": level,
-            "emotion": emotion,
-            "notes": note,
-            "user_note": note,
-            "timestamp": datetime.now().isoformat()
-        })
+        result: int = self.insert(  # type: ignore[no-any-return,assignment]
+            "energy_log",
+            {
+                "agent_id": "founder",
+                "energy_level": float(level),
+                "health_score": float(level),
+                "level": level,
+                "emotion": emotion,
+                "notes": note,
+                "user_note": note,
+                "timestamp": datetime.now().isoformat(),
+            },
+        )
+        return result  # type: ignore[no-any-return]
 
     def get_energy_history(self, days: int = 30) -> list:
         """
@@ -877,7 +968,7 @@ class DBManager:
         WHERE timestamp >= datetime('now', '-' || ? || ' days', 'localtime')
         ORDER BY timestamp ASC
         """
-        return self.execute_sql(sql, [str(days)])
+        return self.execute_sql(sql, [str(days)])  # type: ignore[no-any-return]
 
     def get_latest_energy(self) -> dict:
         """
@@ -892,15 +983,21 @@ class DBManager:
         ORDER BY timestamp DESC LIMIT 1
         """
         result = self.execute_sql(sql)
-        return result[0] if result else None
+        return result[0] if result else None  # type: ignore[return-value]
 
     # ============================================================
     # F9 创始人工具 - 私人日程管理
     # ============================================================
 
-    def add_schedule(self, title: str, start_time: str, end_time: str,
-                     repeat_type: str = "none", repeat_end: str = "",
-                     description: str = "") -> int:
+    def add_schedule(
+        self,
+        title: str,
+        start_time: str,
+        end_time: str,
+        repeat_type: str = "none",
+        repeat_end: str = "",
+        description: str = "",
+    ) -> int:
         """
         添加日程
 
@@ -915,20 +1012,24 @@ class DBManager:
         Returns:
             日程ID
         """
-        return self.insert("schedule", {
-            "name": title,
-            "title": title,
-            "description": description,
-            "start_time": start_time,
-            "end_time": end_time,
-            "repeat_type": repeat_type,
-            "repeat_end": repeat_end,
-            "notified": 0,
-            "enabled": 1,
-            "cron_expression": "",
-            "task_template": "",
-            "created_at": datetime.now().isoformat()
-        })
+        result: int = self.insert(  # type: ignore[no-any-return,assignment]
+            "schedule",
+            {
+                "name": title,
+                "title": title,
+                "description": description,
+                "start_time": start_time,
+                "end_time": end_time,
+                "repeat_type": repeat_type,
+                "repeat_end": repeat_end,
+                "notified": 0,
+                "enabled": 1,
+                "cron_expression": "",
+                "task_template": "",
+                "created_at": datetime.now().isoformat(),
+            },
+        )
+        return result
 
     def get_schedules(self, date_from: str = "", date_to: str = "") -> list:
         """
@@ -954,11 +1055,18 @@ class DBManager:
             sql += " AND start_time <= ?"
             params.append(date_to)
         sql += " ORDER BY start_time ASC"
-        return self.execute_sql(sql, params if params else None)
+        return self.execute_sql(sql, params if params else None)  # type: ignore[no-any-return]
 
-    def update_schedule(self, schedule_id: int, title: str, start_time: str,
-                        end_time: str, repeat_type: str, repeat_end: str,
-                        description: str) -> bool:
+    def update_schedule(
+        self,
+        schedule_id: int,
+        title: str,
+        start_time: str,
+        end_time: str,
+        repeat_type: str,
+        repeat_end: str,
+        description: str,
+    ) -> bool:
         """
         更新日程
 
@@ -974,15 +1082,20 @@ class DBManager:
         Returns:
             是否成功
         """
-        affected = self.update("schedule", "id", schedule_id, {
-            "name": title,
-            "title": title,
-            "description": description,
-            "start_time": start_time,
-            "end_time": end_time,
-            "repeat_type": repeat_type,
-            "repeat_end": repeat_end
-        })
+        affected = self.update(
+            "schedule",
+            "id",
+            schedule_id,
+            {
+                "name": title,
+                "title": title,
+                "description": description,
+                "start_time": start_time,
+                "end_time": end_time,
+                "repeat_type": repeat_type,
+                "repeat_end": repeat_end,
+            },
+        )
         return affected > 0
 
     def delete_schedule(self, schedule_id: int) -> bool:
@@ -1016,7 +1129,7 @@ class DBManager:
             AND datetime('now', 'localtime', '+' || ? || ' minutes')
         ORDER BY start_time ASC
         """
-        return self.execute_sql(sql, [str(minutes)])
+        return self.execute_sql(sql, [str(minutes)])  # type: ignore[no-any-return]
 
     def mark_schedule_notified(self, schedule_id: int) -> None:
         """
@@ -1051,6 +1164,7 @@ def close_db():
     if _db_manager:
         _db_manager.close()
         _db_manager = None
+
 
 # F9: 辅助函数，供外部模块使用
 

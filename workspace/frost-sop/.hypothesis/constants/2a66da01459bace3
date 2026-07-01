@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\skills\intent.py
+# hypothesis_version: 6.145.0
+
+[0.1, 0.3, 0.5, 1.0, 5.0, 256, '1', 'Bug修复', 'DEV-001', 'DEV-002', 'FROST_TESTING', 'MT-001', 'OPS-001', 'OPS-006', 'STR-001', 'STR-002', 'bug', 'complexity', 'confidence', 'estimated_stages', 'id', 'keyword', 'llm', 'matched_keywords', 'method', 'name', 'sop_id', 'task_summary', 'task_type', 'trigger_keywords', '中', '优化', '低', '修bug', '修复', '内容', '内容发布', '写一篇', '写代码', '分类', '创建', '发布', '发票', '可行性', '实现', '对账', '崩溃', '开发', '开发功能', '异常', '归档', '报销', '推广', '推文', '提升', '改进', '文案', '文档', '文章', '新功能开发', '新增', '新项目', '方案', '月结', '构建', '核算', '添加功能', '知识', '知识库', '知识资产管理', '立项', '结算', '缺陷', '自学习', '自进化验证', '营销', '规划', '解决bug', '调研', '财务', '财务月结', '资产', '进化', '选题', '通用任务', '错误', '项目立项']

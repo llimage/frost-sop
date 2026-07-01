@@ -3,11 +3,8 @@ FROST V5.0 面板生成器测试
 
 测试目标：core/panel_generator.py 中的 PanelGenerator
 """
-import pytest
-from datetime import datetime
-from core.panel import (
-    PanelDefinition, PanelType, ComponentType, PanelComponent, LayoutType
-)
+
+from core.panel import ComponentType, LayoutType, PanelDefinition, PanelType
 from core.panel_generator import PanelGenerator, generate_panel
 
 

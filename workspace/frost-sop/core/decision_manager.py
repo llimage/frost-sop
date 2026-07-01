@@ -2,10 +2,11 @@
 F8 子任务1：决策管理器
 实现后端决策暂停与恢复机制
 """
-from datetime import datetime
+
 import json
 import logging
-from typing import Dict, List, Optional, Any, Union
+from datetime import datetime
+from typing import Any
 
 from core.db import DBManager
 
@@ -25,7 +26,7 @@ class DecisionManager:
           user_decision, user_note, created_at, responded_at
     """
 
-    def __init__(self, db: Optional[DBManager] = None):
+    def __init__(self, db: DBManager | None = None):
         """
         初始化决策管理器
 
@@ -33,15 +34,9 @@ class DecisionManager:
             db: 数据库管理器实例（可选，默认使用单例）
         """
         self._db = db if db else DBManager()
-        self._lock = __import__('threading').Lock()  # P0-2: 线程安全
+        self._lock = __import__("threading").Lock()  # P0-2: 线程安全
 
-    def pause_decision(
-        self,
-        task_id: str,
-        stage_id: str,
-        question: str,
-        options: List[str]
-    ) -> int:
+    def pause_decision(self, task_id: str, stage_id: str, question: str, options: list[str]) -> int:
         """
         暂停任务并等待用户决策
 
@@ -71,12 +66,12 @@ class DecisionManager:
         cursor.execute(
             "INSERT OR IGNORE INTO projects (id, name, description, status) "
             "VALUES (?, ?, ?, 'active')",
-            (auto_project_id, f"自动项目-{task_id}", "由决策管理器自动创建")
+            (auto_project_id, f"自动项目-{task_id}", "由决策管理器自动创建"),
         )
         cursor.execute(
             "INSERT OR IGNORE INTO tasks (id, title, description, project_id, status) "
             "VALUES (?, ?, ?, ?, 'pending')",
-            (task_id, f"自动任务-{task_id}", "由决策管理器自动创建", auto_project_id)
+            (task_id, f"自动任务-{task_id}", "由决策管理器自动创建", auto_project_id),
         )
         conn.commit()
 
@@ -92,8 +87,8 @@ class DecisionManager:
                 stage_id,
                 question,
                 json.dumps(options, ensure_ascii=False),
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            )
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ),
         )
 
         # 获取自动生成的 integer decision_id
@@ -108,10 +103,7 @@ class DecisionManager:
         return decision_id
 
     def resume_decision(
-        self,
-        decision_id: Union[int, str],
-        user_choice: str,
-        user_note: str = ""
+        self, decision_id: int | str, user_choice: str, user_note: str = ""
     ) -> bool:
         """
         恢复决策点（用户已做出选择）
@@ -138,12 +130,7 @@ class DecisionManager:
                     responded_at = ?
                 WHERE id = ?
                 """,
-                (
-                    user_choice,
-                    user_note,
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    decision_id
-                )
+                (user_choice, user_note, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), decision_id),
             )
 
             if cursor.rowcount == 0:
@@ -159,7 +146,7 @@ class DecisionManager:
 
         return True
 
-    def reject_decision(self, decision_id: Union[int, str], reason: str = "") -> bool:
+    def reject_decision(self, decision_id: int | str, reason: str = "") -> bool:
         """
         拒绝决策点（P0-2 新增：显式拒绝操作）
 
@@ -172,7 +159,7 @@ class DecisionManager:
         """
         return self.resume_decision(decision_id, "reject", reason)
 
-    def get_pending_decision(self) -> Optional[Dict[str, Any]]:
+    def get_pending_decision(self) -> dict[str, Any] | None:
         """
         获取当前待处理的决策点
 
@@ -203,10 +190,10 @@ class DecisionManager:
         decision = dict(zip(columns, row))
 
         # 解析 JSON 字段
-        if decision.get('options_json'):
-            decision['options'] = json.loads(decision['options_json'])
+        if decision.get("options_json"):
+            decision["options"] = json.loads(decision["options_json"])
         else:
-            decision['options'] = []
+            decision["options"] = []
 
         return decision
 
@@ -219,7 +206,7 @@ class DecisionManager:
         """
         return self.get_pending_decision() is not None
 
-    def get_decision_by_id(self, decision_id: Union[int, str]) -> Optional[Dict[str, Any]]:
+    def get_decision_by_id(self, decision_id: int | str) -> dict[str, Any] | None:
         """
         根据ID获取决策点详情
 
@@ -242,14 +229,14 @@ class DecisionManager:
         decision = dict(zip(columns, row))
 
         # 解析 JSON 字段
-        if decision.get('options_json'):
-            decision['options'] = json.loads(decision['options_json'])
+        if decision.get("options_json"):
+            decision["options"] = json.loads(decision["options_json"])
         else:
-            decision['options'] = []
+            decision["options"] = []
 
         return decision
 
-    def get_decisions_by_task(self, task_id: str) -> List[Dict[str, Any]]:
+    def get_decisions_by_task(self, task_id: str) -> list[dict[str, Any]]:
         """
         获取某个任务的所有决策点
 
@@ -263,8 +250,7 @@ class DecisionManager:
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT * FROM decision_points WHERE task_id = ? ORDER BY created_at ASC",
-            (task_id,)
+            "SELECT * FROM decision_points WHERE task_id = ? ORDER BY created_at ASC", (task_id,)
         )
 
         rows = cursor.fetchall()
@@ -274,20 +260,20 @@ class DecisionManager:
         for row in rows:
             decision = dict(zip(columns, row))
             # 解析 JSON 字段
-            if decision.get('options_json'):
-                decision['options'] = json.loads(decision['options_json'])
+            if decision.get("options_json"):
+                decision["options"] = json.loads(decision["options_json"])
             else:
-                decision['options'] = []
+                decision["options"] = []
             decisions.append(decision)
 
         return decisions
 
 
 # 全局单例
-_default_manager: Optional[DecisionManager] = None
+_default_manager: DecisionManager | None = None
 
 
-def get_decision_manager(db: Optional[DBManager] = None) -> DecisionManager:
+def get_decision_manager(db: DBManager | None = None) -> DecisionManager:
     """
     获取全局决策管理器单例
 

@@ -3,10 +3,13 @@ V3.0 缺失测试 3.2：事件循环阻塞测试
 
 验证 asyncio.to_thread() 正确解除事件循环阻塞。
 """
+
 import asyncio
 import time
+
 import pytest
-from core.event_bus import get_async_event_bus, Event, EventType, AsyncEventBus
+
+from core.event_bus import AsyncEventBus, Event, EventType, get_async_event_bus
 
 
 @pytest.fixture(autouse=True)
@@ -46,8 +49,7 @@ async def test_no_blocking_during_async_call():
 
     # 同时启动 fast_task 和发布事件
     await asyncio.gather(
-        fast_task(),
-        bus.publish(Event(event_type=EventType.TASK_CREATED, source="test", data={}))
+        fast_task(), bus.publish(Event(event_type=EventType.TASK_CREATED, source="test", data={}))
     )
 
     # 等待 to_thread 完成
@@ -58,8 +60,7 @@ async def test_no_blocking_during_async_call():
     assert len(results) >= 1
     # 最严格验证：如果 fast_done 是第一个，说明事件循环没被阻塞
     if len(results) >= 2:
-        assert results[0] == "fast_done", \
-            f"事件循环被阻塞！执行顺序: {results}"
+        assert results[0] == "fast_done", f"事件循环被阻塞！执行顺序: {results}"
 
 
 async def test_concurrent_async_events_dont_block():
@@ -74,6 +75,7 @@ async def test_concurrent_async_events_dont_block():
             start = time.monotonic()
             await asyncio.to_thread(_blocking_sync_fn, block_time)
             completion_order.append((name, time.monotonic() - start))
+
         return callback
 
     # 注册 3 个回调，分别阻塞 0.1s, 0.2s, 0.15s
@@ -113,11 +115,13 @@ async def test_p1_1_fix_ancestor_run_not_blocking():
 
     # 发布 TASK_CREATED，验证不阻塞
     start = time.monotonic()
-    await bus.publish(Event(
-        event_type=EventType.TASK_CREATED,
-        source="test",
-        data={"task_description": "test task", "task_id": "test-001"}
-    ))
+    await bus.publish(
+        Event(
+            event_type=EventType.TASK_CREATED,
+            source="test",
+            data={"task_description": "test task", "task_id": "test-001"},
+        )
+    )
     elapsed = time.monotonic() - start
 
     # 验证：发布操作本身应该很快返回（不等待 to_thread 完成）

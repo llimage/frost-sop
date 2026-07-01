@@ -11,33 +11,58 @@ F16 FastAPI — REST API 层封装
     curl -X POST http://localhost:8000/api/tasks -H "Content-Type: application/json" -d '{"description":"test"}'
 """
 
+import asyncio
+import json
 import os
 import sys
-import json
 import uuid
 from datetime import datetime
-from typing import Optional, List
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-import asyncio
 
 # Ensure frost-sop root is on path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from api.models import (
-    ProjectResponse, TaskCreateRequest, TaskResponse, TaskStageResponse,
-    TaskExecuteResponse, AgentResponse, CostSummaryResponse, ChatRequest,
-    ChatResponse, SkillResponse, ScheduleCreateRequest, ScheduleResponse,
-    PanelGenerateRequest, DecisionSubmitRequest, DecisionResponse,
+    AgentResponse,
+    ChatRequest,
+    ChatResponse,
+    CostSummaryResponse,
+    DecisionResponse,
+    DecisionSubmitRequest,
+    PanelGenerateRequest,
+    ProjectResponse,
+    ScheduleCreateRequest,
+    ScheduleResponse,
+    SkillResponse,
+    TaskCreateRequest,
+    TaskExecuteResponse,
+    TaskResponse,
+    TaskStageResponse,
 )
 from core.db import get_db
 
 app = FastAPI(
     title="FROST-SOP API",
-    description="FROST 家族AI指挥平台 REST API",
-    version="1.0.0",
+    description="FROST 家族AI指挥平台 REST API — 项目/任务/Agent/Skill 全生命周期管理",
+    version="3.0.1",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_tags=[
+        {"name": "项目", "description": "项目管理 — 创建/查看项目"},
+        {"name": "任务", "description": "任务管理 — 创建/执行/查看任务及阶段"},
+        {"name": "Agent", "description": "Agent管理 — 查看Agent状态和生命周期"},
+        {"name": "技能", "description": "技能管理 — Skill 注册表和基因库"},
+        {"name": "SOP", "description": "SOP管理 — 标准操作程序模板查询"},
+        {"name": "成本", "description": "成本管理 — Token消耗和费用统计"},
+        {"name": "日程", "description": "日程管理 — 创始人日程增删查"},
+        {"name": "对话", "description": "对话接口 — LLM 对话和上下文管理"},
+        {"name": "面板", "description": "V5.0面板 — 可视化数据面板生成"},
+        {"name": "决策", "description": "决策管理 — 任务决策点创建和提交"},
+        {"name": "系统", "description": "系统管理 — 健康检查、日志查询"},
+    ],
 )
 
 # CORS — S-004 修复：限制为特定域名
@@ -82,21 +107,24 @@ def _ensure_project_exists(db, project_id="default"):
     """Ensure a default project exists."""
     existing = db.select_one("projects", "id", project_id)
     if not existing:
-        db.insert("projects", {
-            "id": project_id,
-            "name": "默认项目",
-            "description": "FROST-SOP 默认项目",
-            "status": "active",
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-        })
+        db.insert(
+            "projects",
+            {
+                "id": project_id,
+                "name": "默认项目",
+                "description": "FROST-SOP 默认项目",
+                "status": "active",
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+            },
+        )
     return project_id
 
 
 # ═══════════════════════════════════════════════════════════════
 # 1. GET /api/projects — 项目列表
 # ═══════════════════════════════════════════════════════════════
-@app.get("/api/projects", response_model=List[ProjectResponse])
+@app.get("/api/projects", response_model=list[ProjectResponse], tags=["项目"])
 def list_projects():
     db = get_db()
     rows = db.select_all("projects", "status = 'active'")
@@ -106,7 +134,7 @@ def list_projects():
 # ═══════════════════════════════════════════════════════════════
 # 2. GET /api/projects/{id} — 项目详情
 # ═══════════════════════════════════════════════════════════════
-@app.get("/api/projects/{project_id}", response_model=ProjectResponse)
+@app.get("/api/projects/{project_id}", response_model=ProjectResponse, tags=["项目"])
 def get_project(project_id: str):
     db = get_db()
     row = db.select_one("projects", "id", project_id)
@@ -119,7 +147,7 @@ def get_project(project_id: str):
 # ═══════════════════════════════════════════════════════════════
 # 3. POST /api/tasks — 执行任务（触发 SOP）
 # ═══════════════════════════════════════════════════════════════
-@app.post("/api/tasks", response_model=TaskExecuteResponse)
+@app.post("/api/tasks", response_model=TaskExecuteResponse, tags=["任务"])
 def create_and_run_task(req: TaskCreateRequest):
     """
     创建并执行一个 SOP 任务。
@@ -130,51 +158,63 @@ def create_and_run_task(req: TaskCreateRequest):
     _ensure_project_exists(db, req.project_id)
 
     # 初始化任务记录
-    db.insert("tasks", {
-        "id": task_id,
-        "title": req.description[:60],
-        "description": req.description,
-        "project_id": req.project_id,
-        "status": "running",
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-    })
+    db.insert(
+        "tasks",
+        {
+            "id": task_id,
+            "title": req.description[:60],
+            "description": req.description,
+            "project_id": req.project_id,
+            "status": "running",
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+        },
+    )
 
     # 加载 SOP 模板并记录（使用请求中的 sop_id）
     from core.sop import SOP
+
     sop = SOP.load_from_yaml(f"sops/templates/{req.sop_id}.yaml")
 
     sop_template_id = f"sop_template:{sop.sop_id}"
     existing_sop = db.select_one("sop_templates", "id", sop_template_id)
     if not existing_sop:
-        db.insert("sop_templates", {
-            "id": sop_template_id,
-            "sop_id": sop.sop_id,
-            "name": sop.name,
-            "version": sop.version,
-            "content": json.dumps(sop.stages if hasattr(sop, "stages") else {}, ensure_ascii=False),
-            "is_preset": 1,
-            "is_validated": 1,
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-        })
+        db.insert(
+            "sop_templates",
+            {
+                "id": sop_template_id,
+                "sop_id": sop.sop_id,
+                "name": sop.name,
+                "version": sop.version,
+                "content": json.dumps(
+                    sop.stages if hasattr(sop, "stages") else {}, ensure_ascii=False
+                ),
+                "is_preset": 1,
+                "is_validated": 1,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+            },
+        )
 
-    sop_execution_id = db.insert("sop_executions", {
-        "task_id": task_id,
-        "sop_template_id": sop_template_id,
-        "started_at": datetime.now().isoformat(),
-        "status": "running",
-        "total_stages": len(sop.stages) if hasattr(sop, "stages") else 5,
-        "completed_stages": 0,
-    })
+    sop_execution_id = db.insert(
+        "sop_executions",
+        {
+            "task_id": task_id,
+            "sop_template_id": sop_template_id,
+            "started_at": datetime.now().isoformat(),
+            "status": "running",
+            "total_stages": len(sop.stages) if hasattr(sop, "stages") else 5,
+            "completed_stages": 0,
+        },
+    )
 
     # 执行 SOP（使用 FROST 家族体系）
     stages_result = []
     try:
-        from stores.constitution import create_constitution_store
-        from stores.asset import create_asset_store
         from agents.ancestor import create_ancestor
         from agents.parent import create_parent
+        from stores.asset import create_asset_store
+        from stores.constitution import create_constitution_store
 
         constitution_store = create_constitution_store()
         asset_store = create_asset_store()
@@ -185,54 +225,66 @@ def create_and_run_task(req: TaskCreateRequest):
         stage_context = {"_stage_results": [], "_parent_agent": parent}
 
         for i, phase in enumerate(phases):
-            stage_name = phase.get("name", phase.get("phase_id", f"阶段{i+1}"))
+            stage_name = phase.get("name", phase.get("phase_id", f"阶段{i + 1}"))
             stage_order = i + 1
             started = datetime.now().isoformat()
 
             stage_context["_current_stage"] = phase
-            stage_context = parent.run(
-                sop_steps=["execute_stage"],
-                initial_context=stage_context
-            )
+            stage_context = parent.run(sop_steps=["execute_stage"], initial_context=stage_context)
 
             result = stage_context.get("_current_stage_result", {})
             output = str(result.get("output", ""))[:500]
             completed = datetime.now().isoformat()
 
             # 写入 task_stages
-            stage_id = db.insert("task_stages", {
-                "task_id": task_id,
-                "stage_name": stage_name,
-                "stage_order": stage_order,
-                "status": "completed",
-                "output": output,
-                "started_at": started,
-                "completed_at": completed,
-            })
+            stage_id = db.insert(
+                "task_stages",
+                {
+                    "task_id": task_id,
+                    "stage_name": stage_name,
+                    "stage_order": stage_order,
+                    "status": "completed",
+                    "output": output,
+                    "started_at": started,
+                    "completed_at": completed,
+                },
+            )
 
-            stages_result.append(TaskStageResponse(
-                id=stage_id,
-                task_id=task_id,
-                stage_name=stage_name,
-                stage_order=stage_order,
-                status="completed",
-                output=output,
-                started_at=started,
-                completed_at=completed,
-            ))
+            stages_result.append(
+                TaskStageResponse(
+                    id=stage_id,
+                    task_id=task_id,
+                    stage_name=stage_name,
+                    stage_order=stage_order,
+                    status="completed",
+                    output=output,
+                    started_at=started,
+                    completed_at=completed,
+                )
+            )
 
         # 标记任务完成
-        db.update("tasks", "id", task_id, {
-            "status": "completed",
-            "completed_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-            "result_summary": f"SOP {sop.name} 执行完成，{len(phases)} 个阶段全部通过",
-        })
-        db.update("sop_executions", "id", sop_execution_id, {
-            "status": "completed",
-            "completed_stages": len(phases),
-            "completed_at": datetime.now().isoformat(),
-        })
+        db.update(
+            "tasks",
+            "id",
+            task_id,
+            {
+                "status": "completed",
+                "completed_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+                "result_summary": f"SOP {sop.name} 执行完成，{len(phases)} 个阶段全部通过",
+            },
+        )
+        db.update(
+            "sop_executions",
+            "id",
+            sop_execution_id,
+            {
+                "status": "completed",
+                "completed_stages": len(phases),
+                "completed_at": datetime.now().isoformat(),
+            },
+        )
 
         return TaskExecuteResponse(
             task_id=task_id,
@@ -242,15 +294,25 @@ def create_and_run_task(req: TaskCreateRequest):
         )
 
     except Exception as e:
-        db.update("tasks", "id", task_id, {
-            "status": "failed",
-            "updated_at": datetime.now().isoformat(),
-            "result_summary": str(e)[:200],
-        })
-        db.update("sop_executions", "id", sop_execution_id, {
-            "status": "failed",
-            "error": str(e)[:200],
-        })
+        db.update(
+            "tasks",
+            "id",
+            task_id,
+            {
+                "status": "failed",
+                "updated_at": datetime.now().isoformat(),
+                "result_summary": str(e)[:200],
+            },
+        )
+        db.update(
+            "sop_executions",
+            "id",
+            sop_execution_id,
+            {
+                "status": "failed",
+                "error": str(e)[:200],
+            },
+        )
         return TaskExecuteResponse(
             task_id=task_id,
             status="failed",
@@ -262,10 +324,10 @@ def create_and_run_task(req: TaskCreateRequest):
 # ═══════════════════════════════════════════════════════════════
 # 4. GET /api/tasks — 任务列表
 # ═══════════════════════════════════════════════════════════════
-@app.get("/api/tasks", response_model=List[TaskResponse])
+@app.get("/api/tasks", response_model=list[TaskResponse], tags=["任务"])
 def list_tasks(
-    project_id: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
+    project_id: str | None = Query(None),
+    status: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
 ):
     db = get_db()
@@ -287,7 +349,7 @@ def list_tasks(
 # ═══════════════════════════════════════════════════════════════
 # 5. GET /api/tasks/{id}/stages — 任务阶段详情
 # ═══════════════════════════════════════════════════════════════
-@app.get("/api/tasks/{task_id}/stages", response_model=List[TaskStageResponse])
+@app.get("/api/tasks/{task_id}/stages", response_model=list[TaskStageResponse], tags=["任务"])
 def get_task_stages(task_id: str):
     db = get_db()
     rows = db.select_all("task_stages", "task_id = ? ORDER BY stage_order ASC", [task_id])
@@ -297,9 +359,9 @@ def get_task_stages(task_id: str):
 # ═══════════════════════════════════════════════════════════════
 # 6. GET /api/costs — 成本统计
 # ═══════════════════════════════════════════════════════════════
-@app.get("/api/costs", response_model=CostSummaryResponse)
+@app.get("/api/costs", response_model=CostSummaryResponse, tags=["成本"])
 def get_costs(
-    month: Optional[str] = Query(None, description="YYYY-MM"),
+    month: str | None = Query(None, description="YYYY-MM"),
 ):
     db = get_db()
     now = datetime.now()
@@ -328,15 +390,14 @@ def get_costs(
         }
 
     # 最近日志
-    recent = db.execute_sql(
-        "SELECT * FROM cost_log ORDER BY id DESC LIMIT 20"
-    )
+    recent = db.execute_sql("SELECT * FROM cost_log ORDER BY id DESC LIMIT 20")
     recent_logs = _rows_to_list(recent)
 
     # 预算限制
     budget_limit = None
     try:
         from core.config import get_config
+
         budget_limit = float(get_config("budget_limit", "50.0"))
     except Exception:
         budget_limit = 50.0
@@ -352,7 +413,7 @@ def get_costs(
 # ═══════════════════════════════════════════════════════════════
 # 7. GET /api/agents — Agent 状态列表
 # ═══════════════════════════════════════════════════════════════
-@app.get("/api/agents", response_model=List[AgentResponse])
+@app.get("/api/agents", response_model=list[AgentResponse], tags=["Agent"])
 def list_agents():
     db = get_db()
     agents = db.select_all("agents")
@@ -377,7 +438,7 @@ def list_agents():
 # ═══════════════════════════════════════════════════════════════
 # 8. POST /api/chat — CEO 对话
 # ═══════════════════════════════════════════════════════════════
-@app.post("/api/chat", response_model=ChatResponse)
+@app.post("/api/chat", response_model=ChatResponse, tags=["对话"])
 def chat(req: ChatRequest):
     from skills.llm import call_llm
 
@@ -408,7 +469,7 @@ def chat(req: ChatRequest):
 # ═══════════════════════════════════════════════════════════════
 # 9. GET /api/logs — 实时日志 (SSE 流式输出)
 # ═══════════════════════════════════════════════════════════════
-@app.get("/api/logs")
+@app.get("/api/logs", tags=["系统"])
 async def stream_logs():
     db = get_db()
 
@@ -417,8 +478,7 @@ async def stream_logs():
         while True:
             try:
                 rows = db.execute_sql(
-                    "SELECT * FROM audit_log WHERE id > ? ORDER BY id DESC LIMIT 10",
-                    [last_id]
+                    "SELECT * FROM audit_log WHERE id > ? ORDER BY id DESC LIMIT 10", [last_id]
                 )
                 if rows:
                     for row in reversed(rows):
@@ -443,10 +503,10 @@ async def stream_logs():
 # ═══════════════════════════════════════════════════════════════
 # 10. GET /api/skills — Skill 列表
 # ═══════════════════════════════════════════════════════════════
-@app.get("/api/skills", response_model=List[SkillResponse])
+@app.get("/api/skills", response_model=list[SkillResponse], tags=["技能"])
 def list_skills(
-    status_filter: Optional[str] = Query(None, alias="status"),
-    skill_type: Optional[str] = Query(None),
+    status_filter: str | None = Query(None, alias="status"),
+    skill_type: str | None = Query(None),
 ):
     db = get_db()
     where = []
@@ -466,10 +526,10 @@ def list_skills(
 # ═══════════════════════════════════════════════════════════════
 # 11. GET /api/schedule — 日程列表
 # ═══════════════════════════════════════════════════════════════
-@app.get("/api/schedule", response_model=List[ScheduleResponse])
+@app.get("/api/schedule", response_model=list[ScheduleResponse], tags=["日程"])
 def list_schedules(
-    date_from: Optional[str] = Query(None),
-    date_to: Optional[str] = Query(None),
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
 ):
     db = get_db()
     rows = db.get_schedules(date_from or "", date_to or "")
@@ -492,7 +552,7 @@ def list_schedules(
 # ═══════════════════════════════════════════════════════════════
 # 12. POST /api/schedule — 新增日程
 # ═══════════════════════════════════════════════════════════════
-@app.post("/api/schedule", response_model=ScheduleResponse)
+@app.post("/api/schedule", response_model=ScheduleResponse, tags=["日程"])
 def create_schedule(req: ScheduleCreateRequest):
     db = get_db()
     sid = db.add_schedule(
@@ -519,49 +579,56 @@ def create_schedule(req: ScheduleCreateRequest):
 # ═══════════════════════════════════════════════════════════════
 # SOPs — list all available SOP templates
 # ═══════════════════════════════════════════════════════════════
-@app.get("/api/sops")
+@app.get("/api/sops", tags=["SOP"])
 def list_sops():
     """
     List all available SOP templates.
     Reads from sops/templates/ directory.
     """
-    import yaml
     from pathlib import Path
-    
+
+    import yaml
+
     sops_dir = Path(__file__).parent.parent / "sops" / "templates"
     sops = []
-    
+
     if sops_dir.exists():
         for yaml_file in sorted(sops_dir.glob("*.yaml")):
             try:
-                with open(yaml_file, "r", encoding="utf-8") as f:
+                from core.path_safety import safe_open
+
+                with safe_open(yaml_file, encoding="utf-8") as f:
                     data = yaml.safe_load(f)
                 sop_id = data.get("sop_id", yaml_file.stem)
                 stages = data.get("stages", [])
-                sops.append({
-                    "id": sop_id,
-                    "name": data.get("name", sop_id),
-                    "version": data.get("version", "1.0"),
-                    "stage_count": len(stages),
-                    "stages": [s.get("name", "?") for s in stages],
-                    "description": data.get("description", ""),
-                    "required_stages": data.get("required_stages", []),
-                    "category": data.get("category", "general"),
-                })
+                sops.append(
+                    {
+                        "id": sop_id,
+                        "name": data.get("name", sop_id),
+                        "version": data.get("version", "1.0"),
+                        "stage_count": len(stages),
+                        "stages": [s.get("name", "?") for s in stages],
+                        "description": data.get("description", ""),
+                        "required_stages": data.get("required_stages", []),
+                        "category": data.get("category", "general"),
+                    }
+                )
             except Exception as e:
-                sops.append({
-                    "id": yaml_file.stem,
-                    "name": yaml_file.stem,
-                    "error": str(e),
-                })
-    
+                sops.append(
+                    {
+                        "id": yaml_file.stem,
+                        "name": yaml_file.stem,
+                        "error": str(e),
+                    }
+                )
+
     return sops
 
 
 # ═══════════════════════════════════════════════════════════════
 # Health check
 # ═══════════════════════════════════════════════════════════════
-@app.get("/api/health")
+@app.get("/api/health", tags=["系统"])
 def health():
     db = get_db()
     counts = db.get_table_counts()
@@ -575,9 +642,11 @@ def health():
 
 # ── Helper — Panel JSON 序列化 ──────────────────────────────
 
+
 def _enum_to_str(v):
     """递归把 Enum / dataclass 转换成可 JSON 序列化的结构。"""
     from enum import Enum as EnumType
+
     if isinstance(v, EnumType):
         return v.value
     if hasattr(v, "__dataclass_fields__"):
@@ -596,7 +665,7 @@ def panel_to_json(panel) -> dict:
 
 
 # ── 13. POST /api/panels/generate — 生成 Panel JSON ─────
-@app.post("/api/panels/generate")
+@app.post("/api/panels/generate", tags=["面板"])
 def generate_panel(req: PanelGenerateRequest):
     """
     根据任务和 SOP 生成 Panel 定义，返回 JSON。
@@ -608,6 +677,7 @@ def generate_panel(req: PanelGenerateRequest):
     task_row = db.select_one("tasks", "id", req.task_id)
     if not task_row:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail=f"Task {req.task_id} not found")
     task = _row_to_dict(task_row)
 
@@ -616,7 +686,7 @@ def generate_panel(req: PanelGenerateRequest):
     if not sop_id:
         exec_row = db.execute_sql(
             "SELECT sop_template_id FROM sop_executions WHERE task_id = ? ORDER BY id DESC LIMIT 1",
-            [req.task_id]
+            [req.task_id],
         )
         if exec_row:
             raw = exec_row[0]["sop_template_id"]
@@ -626,6 +696,7 @@ def generate_panel(req: PanelGenerateRequest):
     if sop_id:
         try:
             from core.sop import SOP
+
             sop = SOP.load_from_yaml(f"sops/templates/{sop_id}.yaml")
         except Exception:
             pass
@@ -636,6 +707,7 @@ def generate_panel(req: PanelGenerateRequest):
 
     # 4. 生成 Panel
     from core.panel_generator import PanelGenerator
+
     generator = PanelGenerator()
     panel = generator.generate(task, sop)
 
@@ -643,14 +715,15 @@ def generate_panel(req: PanelGenerateRequest):
 
 
 # ── 14. POST /api/decisions/submit — 提交决策 ───────────
-@app.post("/api/decisions/submit", response_model=DecisionResponse)
+@app.post("/api/decisions/submit", response_model=DecisionResponse, tags=["决策"])
 def submit_decision(req: DecisionSubmitRequest):
     """
     Human Agent 通过前端提交决策。
     写入 decision_points 表，触发 DecisionFlow 状态推进。
     """
-    from core.panel_decision import get_decision_flow
     from fastapi import HTTPException
+
+    from core.panel_decision import get_decision_flow
 
     flow = get_decision_flow()
     try:
@@ -672,11 +745,12 @@ def submit_decision(req: DecisionSubmitRequest):
 
 
 # ── 15. GET /api/decisions/{decision_id} ───────────────────
-@app.get("/api/decisions/{decision_id}")
+@app.get("/api/decisions/{decision_id}", tags=["决策"])
 def get_decision(decision_id: str):
     """获取单个决策的状态。"""
-    from core.panel_decision import get_decision_flow
     from fastapi import HTTPException
+
+    from core.panel_decision import get_decision_flow
 
     flow = get_decision_flow()
     record = flow.get_decision(decision_id)
@@ -695,9 +769,9 @@ def get_decision(decision_id: str):
 
 
 # ── 16. GET /api/decisions — 列出 pending 决策 ───────────
-@app.get("/api/decisions")
+@app.get("/api/decisions", tags=["决策"])
 def list_pending_decisions(
-    task_id: Optional[str] = Query(None),
+    task_id: str | None = Query(None),
 ):
     """
     列出等待 Human Agent 决策的 pending 记录。

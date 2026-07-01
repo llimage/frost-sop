@@ -3,17 +3,18 @@ F6 深度质量验证测试（v3 - 简化DQ-02/DQ-04）
 
 验证8个DQ用例。
 """
-import sys
+
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tests.test_f6_mock_llm import patch_openai
-from core.sop import SOP
-from stores.asset import create_asset_store
-from agents.parent import create_parent
 from agents.elder import create_elder
+from agents.parent import create_parent
+from core.sop import SOP
 from core.store import Store
+from stores.asset import create_asset_store
+from tests.test_f6_mock_llm import patch_openai
 
 
 # ──────────────────────────────────────────────
@@ -29,7 +30,9 @@ def test_dq01_data_integrity():
         sop = SOP.load_from_yaml("sops/templates/DEV-001.yaml")
         context = {
             "_sop_to_internalize": {
-                "sop_id": sop.sop_id, "name": sop.name, "stages": sop.stages,
+                "sop_id": sop.sop_id,
+                "name": sop.name,
+                "stages": sop.stages,
             },
             "_asset_store": asset_store,
             "_parent_agent": parent,
@@ -38,8 +41,10 @@ def test_dq01_data_integrity():
         stage_results = []
         for stage in sop.stages:
             sc = {
-                "_current_stage": stage, "_parent_agent": parent,
-                "_asset_store": asset_store, "_stage_results": stage_results,
+                "_current_stage": stage,
+                "_parent_agent": parent,
+                "_asset_store": asset_store,
+                "_stage_results": stage_results,
                 "_output_type": stage.get("output_type", "document"),
             }
             sc = parent.run(["execute_stage"], sc)
@@ -50,7 +55,9 @@ def test_dq01_data_integrity():
         "sop": "DEV-001",
         "stages_completed": len(sop.stages),
         "stage_results": stage_results,
-        "status": "completed" if all(r.get("status") == "completed" for r in stage_results) else "failed",
+        "status": "completed"
+        if all(r.get("status") == "completed" for r in stage_results)
+        else "failed",
     }
     asset_store.save("task:task-dq01", task_record)
 
@@ -60,7 +67,7 @@ def test_dq01_data_integrity():
     has_correct_stage_count = len(loaded.get("stage_results", [])) == len(sop.stages)
 
     ok = (len(missing) == 0) and has_correct_stage_count
-    print(f"✅ 通过" if ok else f"❌ 失败 (缺失={missing})")
+    print("✅ 通过" if ok else f"❌ 失败 (缺失={missing})")
     return ok, loaded
 
 
@@ -79,8 +86,10 @@ def test_dq02_semantic_correctness():
         stage_results = []
         for stage in sop.stages:
             sc = {
-                "_current_stage": stage, "_parent_agent": parent,
-                "_asset_store": asset_store, "_stage_results": stage_results,
+                "_current_stage": stage,
+                "_parent_agent": parent,
+                "_asset_store": asset_store,
+                "_stage_results": stage_results,
                 "_output_type": stage.get("output_type", "document"),
             }
             sc = parent.run(["execute_stage"], sc)
@@ -92,7 +101,7 @@ def test_dq02_semantic_correctness():
     all_non_empty = all(len(o) > 30 for o in outputs)  # 至少30字符（含阶段名+内容摘要）
 
     ok = all_completed and all_non_empty
-    print(f"✅ 通过" if ok else f"❌ 失败 (完成={all_completed}, 非空={all_non_empty})")
+    print("✅ 通过" if ok else f"❌ 失败 (完成={all_completed}, 非空={all_non_empty})")
     return ok, {"outputs": outputs}
 
 
@@ -103,17 +112,23 @@ def test_dq03_logic_consistency():
     print("  DQ-03 逻辑一致性 (STR-002统计) ... ", end="")
     asset_store = create_asset_store(backend="memory")
     for i in range(5):
-        asset_store.save(f"task:dq03-{i:03d}", {
-            "task_id": f"dq03-{i:03d}",
-            "sop": "DEV-001",
-            "status": "completed" if i < 3 else "failed",
-            "stage_results": [{"name": f"阶段{j}", "status": "success" if i < 3 else "failed"} for j in range(5)],
-        })
+        asset_store.save(
+            f"task:dq03-{i:03d}",
+            {
+                "task_id": f"dq03-{i:03d}",
+                "sop": "DEV-001",
+                "status": "completed" if i < 3 else "failed",
+                "stage_results": [
+                    {"name": f"阶段{j}", "status": "success" if i < 3 else "failed"}
+                    for j in range(5)
+                ],
+            },
+        )
 
     elder = create_elder("elder_dq03", asset_store=asset_store)
     result = elder.run(["audit_family"], {"_asset_store": asset_store, "_constitution_store": None})
     report = result.get("_audit_report", {})
-    stats  = report.get("statistics", {})
+    stats = report.get("statistics", {})
 
     ok = (
         stats.get("total_tasks", -1) == 5
@@ -139,15 +154,17 @@ def test_dq04_financial_terms():
         stage_results = []
         for stage in sop.stages:
             sc = {
-                "_current_stage": stage, "_parent_agent": parent,
-                "_asset_store": asset_store, "_stage_results": stage_results,
+                "_current_stage": stage,
+                "_parent_agent": parent,
+                "_asset_store": asset_store,
+                "_stage_results": stage_results,
                 "_output_type": stage.get("output_type", "document"),
             }
             sc = parent.run(["execute_stage"], sc)
             stage_results = sc.get("_stage_results", stage_results)
 
     all_completed = all(r.get("status") == "completed" for r in stage_results)
-    print(f"✅ 通过" if all_completed else f"❌ 失败 (完成={all_completed})")
+    print("✅ 通过" if all_completed else f"❌ 失败 (完成={all_completed})")
     return all_completed, {"stage_results": stage_results}
 
 
@@ -157,15 +174,18 @@ def test_dq04_financial_terms():
 def test_dq05_task_isolation():
     print("  DQ-05 数据完整性 (多SOP任务记录隔离) ... ", end="")
     asset_store = create_asset_store(backend="memory")
-    asset_store.save("task:dq05-dev", {"task_id": "dq05-dev",
-                     "sop": "DEV-001", "status": "completed"})
-    asset_store.save("task:dq05-ops", {"task_id": "dq05-ops",
-                     "sop": "OPS-001", "status": "completed"})
+    asset_store.save(
+        "task:dq05-dev", {"task_id": "dq05-dev", "sop": "DEV-001", "status": "completed"}
+    )
+    asset_store.save(
+        "task:dq05-ops", {"task_id": "dq05-ops", "sop": "OPS-001", "status": "completed"}
+    )
 
     dev_task = asset_store.load("task:dq05-dev")
     ops_task = asset_store.load("task:dq05-ops")
     ok = (
-        dev_task is not None and ops_task is not None
+        dev_task is not None
+        and ops_task is not None
         and dev_task["sop"] == "DEV-001"
         and ops_task["sop"] == "OPS-001"
     )
@@ -199,6 +219,7 @@ def test_dq06_missing_sop():
 def test_dq07_no_genes():
     print("  DQ-07 边界健壮性 (无能力基因) ... ", end="")
     from skills.assemble import assemble_agent
+
     empty_store = Store()
     context = {
         "_agent_requirement": "角色：开发者。任务：Hello World",
@@ -224,9 +245,12 @@ def test_dq08_empty_task():
             sop = SOP.load_from_yaml("sops/templates/DEV-001.yaml")
             stage = sop.stages[0]
             sc = {
-                "_current_stage": stage, "_parent_agent": parent,
-                "_asset_store": asset_store, "_stage_results": [],
-                "_output_type": "document", "_task_description": "",
+                "_current_stage": stage,
+                "_parent_agent": parent,
+                "_asset_store": asset_store,
+                "_stage_results": [],
+                "_output_type": "document",
+                "_task_description": "",
             }
             sc = parent.run(["execute_stage"], sc)
         print("✅ 通过 (优雅处理)")

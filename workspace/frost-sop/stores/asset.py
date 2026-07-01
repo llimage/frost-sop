@@ -6,7 +6,8 @@ It persists project assets (SOPs, Skills, task records).
 
 import json
 import os
-from core.store import Store, HierarchicalStore
+
+from core.store import HierarchicalStore, Store
 
 
 class FileStore(Store):
@@ -18,7 +19,7 @@ class FileStore(Store):
         super().__init__()
         self.filepath = filepath
         if os.path.exists(filepath):
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, encoding="utf-8") as f:
                 self._memory = json.load(f)
         else:
             self._memory = {}
@@ -26,7 +27,7 @@ class FileStore(Store):
     def save(self, key: str, value):
         """Save to memory and persist to file."""
         super().save(key, value)
-        with open(self.filepath, 'w', encoding='utf-8') as f:
+        with open(self.filepath, "w", encoding="utf-8") as f:
             json.dump(self._memory, f, ensure_ascii=False, indent=2)
 
 

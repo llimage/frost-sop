@@ -1,0 +1,33 @@
+# FROST-SOP Pre-commit Hooks
+# 每次 git commit 时自动运行，拦截不合格代码
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.20
+    hooks:
+      # Layer 1: 代码检查（<1秒）
+      - id: ruff
+        args: [--fix]
+      # Layer 2: 代码格式化（替代 Black + isort）
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # 基础检查
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: debug-statements
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.15.0
+    hooks:
+      # Layer 3: 类型检查（较慢，只在新代码变更时跑）
+      - id: mypy
+        additional_dependencies: [types-pyyaml, types-requests]
+        args: [--ignore-missing-imports]

@@ -3,30 +3,45 @@ V5.0 P4: 生命周期元数据层测试
 测试 LifecycleEventLog / TransitionGuard / BatchLifecycleManager
 """
 
-import sys, os
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import pytest
 from core.armory import (
-    WeaponMetadata, WeaponType, WeaponState, WeaponCategory, ArmoryRegistry,
+    ArmoryRegistry,
+    WeaponCategory,
+    WeaponMetadata,
+    WeaponState,
+    WeaponType,
 )
 from core.lifecycle_meta import (
-    LifecycleEvent, LifecycleEventType, LifecycleEventLog,
-    TransitionGuard, GuardResult,
-    BatchLifecycleManager, BatchResult,
+    BatchLifecycleManager,
+    BatchResult,
+    GuardResult,
+    LifecycleEvent,
+    LifecycleEventLog,
+    LifecycleEventType,
+    TransitionGuard,
 )
-
 
 # ── 辅助函数 ──────────────────────────────────────────────────────────────────
 
-def make_weapon(weapon_id="skill:test", state=WeaponState.ACTIVE, score=50.0,
-                preset=False, usage=10):
+
+def make_weapon(
+    weapon_id="skill:test", state=WeaponState.ACTIVE, score=50.0, preset=False, usage=10
+):
     """创建测试武器"""
     return WeaponMetadata(
-        id=weapon_id, name=weapon_id, type=WeaponType.SKILL,
+        id=weapon_id,
+        name=weapon_id,
+        type=WeaponType.SKILL,
         category=WeaponCategory.COGNITIVE,
-        state=state, is_active=(state == WeaponState.ACTIVE),
-        is_preset=preset, health_score=score, usage_count=usage,
+        state=state,
+        is_active=(state == WeaponState.ACTIVE),
+        is_preset=preset,
+        health_score=score,
+        usage_count=usage,
     )
 
 
@@ -45,14 +60,18 @@ def make_registry_with_states():
 
 # ── LifecycleEvent 测试 ───────────────────────────────────────────────────────
 
+
 class TestLifecycleEvent:
     def test_create(self):
         e = LifecycleEvent(
-            event_id="evt_001", weapon_id="skill:test",
+            event_id="evt_001",
+            weapon_id="skill:test",
             event_type=LifecycleEventType.STATE_TRANSITION,
             timestamp="2026-06-29T00:00:00",
-            from_state="active", to_state="deprecated",
-            reason="low usage", operator="system",
+            from_state="active",
+            to_state="deprecated",
+            reason="low usage",
+            operator="system",
         )
         assert e.event_id == "evt_001"
         assert e.from_state == "active"
@@ -60,7 +79,8 @@ class TestLifecycleEvent:
 
     def test_to_dict(self):
         e = LifecycleEvent(
-            event_id="evt_001", weapon_id="skill:test",
+            event_id="evt_001",
+            weapon_id="skill:test",
             event_type=LifecycleEventType.REGISTERED,
             timestamp="2026-06-29T00:00:00",
         )
@@ -71,6 +91,7 @@ class TestLifecycleEvent:
 
 
 # ── LifecycleEventLog 测试 ────────────────────────────────────────────────────
+
 
 class TestLifecycleEventLog:
     def test_empty_log(self):
@@ -98,8 +119,12 @@ class TestLifecycleEventLog:
         log = LifecycleEventLog()
         log.log(weapon_id="skill:a", event_type=LifecycleEventType.REGISTERED)
         log.log(weapon_id="skill:b", event_type=LifecycleEventType.REGISTERED)
-        log.log(weapon_id="skill:a", event_type=LifecycleEventType.STATE_TRANSITION,
-                from_state="discovered", to_state="validated")
+        log.log(
+            weapon_id="skill:a",
+            event_type=LifecycleEventType.STATE_TRANSITION,
+            from_state="discovered",
+            to_state="validated",
+        )
         events = log.get_by_weapon("skill:a")
         assert len(events) == 2
 
@@ -122,18 +147,30 @@ class TestLifecycleEventLog:
     def test_get_timeline(self):
         log = LifecycleEventLog()
         log.log(weapon_id="skill:a", event_type=LifecycleEventType.REGISTERED)
-        log.log(weapon_id="skill:a", event_type=LifecycleEventType.STATE_TRANSITION,
-                from_state="discovered", to_state="validated")
+        log.log(
+            weapon_id="skill:a",
+            event_type=LifecycleEventType.STATE_TRANSITION,
+            from_state="discovered",
+            to_state="validated",
+        )
         timeline = log.get_timeline("skill:a")
         assert len(timeline) == 2
         assert timeline[0]["event_type"] == "registered"
 
     def test_get_state_history(self):
         log = LifecycleEventLog()
-        log.log(weapon_id="skill:a", event_type=LifecycleEventType.STATE_TRANSITION,
-                from_state="discovered", to_state="validated")
-        log.log(weapon_id="skill:a", event_type=LifecycleEventType.STATE_TRANSITION,
-                from_state="validated", to_state="trialed")
+        log.log(
+            weapon_id="skill:a",
+            event_type=LifecycleEventType.STATE_TRANSITION,
+            from_state="discovered",
+            to_state="validated",
+        )
+        log.log(
+            weapon_id="skill:a",
+            event_type=LifecycleEventType.STATE_TRANSITION,
+            from_state="validated",
+            to_state="trialed",
+        )
         history = log.get_state_history("skill:a")
         assert len(history) == 2
         assert history[0] == (history[0][0], "discovered", "validated")
@@ -168,6 +205,7 @@ class TestLifecycleEventLog:
 
 
 # ── TransitionGuard 测试 ──────────────────────────────────────────────────────
+
 
 class TestTransitionGuard:
     def test_valid_transition(self):
@@ -258,11 +296,13 @@ class TestTransitionGuard:
     def test_check_batch(self):
         r = make_registry_with_states()
         guard = TransitionGuard(r)
-        results = guard.check_batch([
-            ("skill:discovered", "validated"),
-            ("skill:active", "discovered"),  # invalid
-            ("skill:retired", "active"),     # terminal
-        ])
+        results = guard.check_batch(
+            [
+                ("skill:discovered", "validated"),
+                ("skill:active", "discovered"),  # invalid
+                ("skill:retired", "active"),  # terminal
+            ]
+        )
         assert len(results) == 3
         assert results["skill:discovered"].allowed is True
         assert results["skill:active"].allowed is False
@@ -276,6 +316,7 @@ class TestTransitionGuard:
 
 
 # ── BatchLifecycleManager 测试 ────────────────────────────────────────────────
+
 
 class TestBatchLifecycleManager:
     def test_batch_transition_success(self):
@@ -318,7 +359,9 @@ class TestBatchLifecycleManager:
         r.register(make_weapon("skill:low1", state=WeaponState.ACTIVE, score=15.0))
         r.register(make_weapon("skill:low2", state=WeaponState.ACTIVE, score=10.0))
         r.register(make_weapon("skill:ok", state=WeaponState.ACTIVE, score=50.0))
-        r.register(make_weapon("skill:preset_low", state=WeaponState.ACTIVE, score=5.0, preset=True))
+        r.register(
+            make_weapon("skill:preset_low", state=WeaponState.ACTIVE, score=5.0, preset=True)
+        )
         mgr = BatchLifecycleManager(r)
         result = mgr.batch_retire_low_health(threshold=20.0)
         # low1 and low2 are retired (non-preset, score < 20)
@@ -336,7 +379,7 @@ class TestBatchLifecycleManager:
         # arch1 and arch2 activated (health >= 30)
         # arch_low filtered out by batch_activate_archived (health < 30)
         assert result.succeeded == 2  # arch1 and arch2
-        assert result.total == 2      # arch_low not in candidates
+        assert result.total == 2  # arch_low not in candidates
 
     def test_batch_logs_events(self):
         r = ArmoryRegistry()
@@ -367,8 +410,12 @@ class TestBatchLifecycleManager:
 
     def test_batch_result_to_dict(self):
         result = BatchResult(
-            operation="test", total=10, succeeded=8, failed=1, skipped=1,
-            details=[{"weapon_id": "skill:a", "status": "succeeded"}]
+            operation="test",
+            total=10,
+            succeeded=8,
+            failed=1,
+            skipped=1,
+            details=[{"weapon_id": "skill:a", "status": "succeeded"}],
         )
         d = result.to_dict()
         assert d["operation"] == "test"

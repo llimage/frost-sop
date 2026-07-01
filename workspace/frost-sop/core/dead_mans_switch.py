@@ -12,8 +12,8 @@ INTEGRATION:
 """
 
 import logging
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Callable
+from collections.abc import Callable
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +36,11 @@ class DeadManSwitch:
     - on_alert: 可选回调函数，触发告警时调用
     """
 
-    def __init__(self,
-                 timeout_minutes: int = DEFAULT_TIMEOUT_MINUTES,
-                 on_alert: Optional[Callable[[Dict], None]] = None):
+    def __init__(
+        self,
+        timeout_minutes: int = DEFAULT_TIMEOUT_MINUTES,
+        on_alert: Callable[[dict], None] | None = None,
+    ):
         """
         初始化死人开关。
 
@@ -51,10 +53,7 @@ class DeadManSwitch:
         self.is_armed = True
         self.on_alert = on_alert
         self._alert_triggered = False  # 防止重复告警
-        logger.info(
-            "[DeadManSwitch] 初始化：超时阈值 %s 分钟",
-            timeout_minutes
-        )
+        logger.info("[DeadManSwitch] 初始化：超时阈值 %s 分钟", timeout_minutes)
 
     def on_any_event(self, event=None):
         """
@@ -74,12 +73,12 @@ class DeadManSwitch:
             logger.debug(
                 "[DeadManSwitch] 收到事件 %s，重置计时器（上次 %s 秒前）",
                 event.event_type,
-                int((self.last_event_time - old_time).total_seconds())
+                int((self.last_event_time - old_time).total_seconds()),
             )
         else:
             logger.debug("[DeadManSwitch] 收到事件，重置计时器")
 
-    def check(self) -> Optional[Dict]:
+    def check(self) -> dict | None:
         """
         检查是否超时。
 
@@ -142,7 +141,7 @@ class DeadManSwitch:
         self._alert_triggered = False
         logger.info("[DeadManSwitch] 死人开关已重新武装")
 
-    def get_status(self) -> Dict:
+    def get_status(self) -> dict:
         """获取当前状态（供监控面板使用）"""
         now = datetime.now()
         idle_seconds = (now - self.last_event_time).total_seconds()
@@ -160,6 +159,7 @@ class DeadManSwitch:
 # 便捷函数: 创建 EventBus 订阅回调
 # ============================================================
 
+
 def create_event_subscribe_callback(dead_man_switch: DeadManSwitch):
     """
     创建 EventBus 订阅回调函数。
@@ -167,14 +167,16 @@ def create_event_subscribe_callback(dead_man_switch: DeadManSwitch):
     Returns:
         callback(event): 可传递给 event_bus.subscribe() 的回调函数
     """
+
     def _callback(event):
         dead_man_switch.on_any_event(event)
+
     return _callback
 
 
-def setup_dead_man_switch(timeout_minutes: int = DEFAULT_TIMEOUT_MINUTES,
-                          event_bus=None,
-                          verbose: bool = True):
+def setup_dead_man_switch(
+    timeout_minutes: int = DEFAULT_TIMEOUT_MINUTES, event_bus=None, verbose: bool = True
+):
     """
     一键设置死人开关：创建实例并订阅 EventBus 关键事件。
 
@@ -186,7 +188,7 @@ def setup_dead_man_switch(timeout_minutes: int = DEFAULT_TIMEOUT_MINUTES,
     Returns:
         DeadManSwitch 实例
     """
-    from core.event_bus import get_event_bus, EventType
+    from core.event_bus import EventType, get_event_bus
 
     dms = DeadManSwitch(timeout_minutes=timeout_minutes)
 
@@ -215,15 +217,13 @@ def setup_dead_man_switch(timeout_minutes: int = DEFAULT_TIMEOUT_MINUTES,
         try:
             event_bus.subscribe(event_type, callback)
         except Exception as e:
-            logger.warning(
-                "[DeadManSwitch] 订阅事件 %s 失败: %s",
-                event_type, e
-            )
+            logger.warning("[DeadManSwitch] 订阅事件 %s 失败: %s", event_type, e)
 
     if verbose:
         logger.info(
             "[DeadManSwitch] 已订阅 %s 种事件类型，超时阈值 %s 分钟",
-            len(event_types_to_subscribe), timeout_minutes
+            len(event_types_to_subscribe),
+            timeout_minutes,
         )
 
     return dms

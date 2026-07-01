@@ -3,14 +3,12 @@ FROST V5.0 CLI 渲染引擎测试
 
 测试目标：renderers/cli_renderer.py 中的 CliRenderer
 """
-import pytest
-from io import StringIO
-from contextlib import redirect_stdout
 
-from core.panel import (
-    PanelDefinition, PanelType, ComponentType, PanelComponent, LayoutType, Theme
-)
-from renderers.cli_renderer import CliRenderer, CliDataProvider
+from contextlib import redirect_stdout
+from io import StringIO
+
+from core.panel import ComponentType, PanelComponent, PanelDefinition, PanelType
+from renderers.cli_renderer import CliDataProvider, CliRenderer
 
 
 class TestCliDataProvider:
@@ -127,7 +125,7 @@ class TestCliRenderer:
                     type=ComponentType.TEXT_DISPLAY,
                     data_source="task.status",
                 )
-            ]
+            ],
         )
 
         provider = CliDataProvider(data={"task.status": "running"})

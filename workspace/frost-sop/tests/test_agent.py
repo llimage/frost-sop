@@ -1,10 +1,11 @@
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.store import Store
-from core.skill import Skill
 from core.agent import Agent
+from core.skill import Skill
+from core.store import Store
 
 
 def test_agent_run():

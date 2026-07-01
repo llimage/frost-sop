@@ -13,15 +13,14 @@ FROST V5.0 Panel 端到端演示
 """
 
 import sys
-from datetime import datetime
 
 # 添加项目路径
-sys.path.insert(0, '.')
+sys.path.insert(0, ".")
 
-from core.panel import PanelDefinition, PanelType, ComponentType
+from core.panel import PanelType
+from core.panel_decision import DecisionFlow
 from core.panel_generator import generate_panel
-from renderers.cli_renderer import CliRenderer, CliDataProvider
-from core.panel_decision import DecisionFlow, DecisionStatus
+from renderers.cli_renderer import CliDataProvider, CliRenderer
 
 
 def create_mock_task():
@@ -41,26 +40,20 @@ def create_mock_task():
         "current_stage": {
             "name": "质量审核",
             "is_decision_point": True,
-            "inputs": [
-                {"label": "审核意见", "required": True, "type": "textarea"}
-            ],
+            "inputs": [{"label": "审核意见", "required": True, "type": "textarea"}],
             "outputs": [
                 {"name": "审核报告", "type": "document"},
-                {"name": "代码覆盖率", "type": "code", "language": "python"}
+                {"name": "代码覆盖率", "type": "code", "language": "python"},
             ],
-            "decision_options": ["确认", "驳回", "修改"]
+            "decision_options": ["确认", "驳回", "修改"],
         },
         "stages": [
             {"name": "需求分析", "status": "completed"},
             {"name": "代码实现", "status": "completed"},
             {"name": "质量审核", "status": "waiting"},
-            {"name": "部署", "status": "pending"}
+            {"name": "部署", "status": "pending"},
         ],
-        "quality_score": {
-            "customer": 85,
-            "parent": 80,
-            "child": 70
-        },
+        "quality_score": {"customer": 85, "parent": 80, "child": 70},
         "cost": 0.15,
         "requires_briefing": True,
     }
@@ -73,21 +66,13 @@ def create_mock_data():
         "task.status": "waiting",
         "task.quality_score": {"customer": 85, "parent": 80, "child": 70},
         "task.cost": 0.15,
-
         # 家族健康度
-        "family:health_overview": {
-            "财务": 85,
-            "运营": 72,
-            "治理": 90,
-            "客户": 68
-        },
-
+        "family:health_overview": {"财务": 85, "运营": 72, "治理": 90, "客户": 68},
         # 待审批任务
         "family:pending_decisions": [
             {"任务名称": "auth_001", "阶段": "质量审核", "等待时长": "30分钟", "紧急度": "高"},
-            {"任务名称": "api_002", "阶段": "代码审查", "等待时长": "2小时", "紧急度": "中"}
+            {"任务名称": "api_002", "阶段": "代码审查", "等待时长": "2小时", "紧急度": "中"},
         ],
-
         # 军师简报
         "intel:latest_strategist_brief": """
 ## 军师简报（2026-06-28）
@@ -100,13 +85,11 @@ def create_mock_data():
 - auth_001 建议 **确认**，质量评分达标
 - api_002 建议 **修改**，先修复安全漏洞
 """,
-
         # 告警
         "immune:active_alerts": [
             {"level": "high", "message": "api_002 发现安全漏洞 CVE-2026-1234"},
-            {"level": "medium", "message": "任务 auth_001 等待决策超过 30 分钟"}
+            {"level": "medium", "message": "任务 auth_001 等待决策超过 30 分钟"},
         ],
-
         # 最近任务
         "family:recent_tasks": [
             {"timestamp": "2026-06-28 09:00", "description": "创建任务 auth_001"},
@@ -168,7 +151,6 @@ def demo_cockpit_panel():
     }
 
     # 2. 手动创建驾驶舱面板
-    from core.panel import LayoutType, Region, Theme
     from core.panel_generator import PanelGenerator
 
     generator = PanelGenerator()
@@ -213,7 +195,7 @@ def demo_decision_flow():
         context_before={
             "outputs": task["current_stage"]["outputs"],
             "quality_score": task["quality_score"],
-        }
+        },
     )
 
     print(f"  决策 ID: {record.decision_id}")
@@ -227,9 +209,7 @@ def demo_decision_flow():
     print()
 
     updated = flow.submit_decision(
-        decision_id=record.decision_id,
-        decision="确认",
-        human_agent_id="monarch"
+        decision_id=record.decision_id, decision="确认", human_agent_id="monarch"
     )
 
     print(f"  更新后状态: {updated.status.value}")

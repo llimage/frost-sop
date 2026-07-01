@@ -1,0 +1,4 @@
+# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\event_bus.py
+# hypothesis_version: 6.145.0
+
+[500, '***REDACTED***', '<lambda>', 'AsyncEventBus', 'EventBus', '__name__', 'access_token', 'agent_created', 'agent_destroyed', 'api_key', 'authorization', 'credential', 'data', 'event_id', 'event_log', 'event_log 清理失败: %s', 'event_type', 'password', 'private_key', 'refresh_token', 'secret', 'source', 'stage_completed', 'stage_failed', 'stage_started', 'step_completed', 'task_completed', 'task_created', 'task_decomposed', 'task_failed', 'task_timeout', 'timestamp', 'token', 'unknown', '事件持久化失败 (%s): %s']

@@ -5,8 +5,8 @@ PHILOSOPHY: 雇佣兵是有确定输入输出公式的Agent。
 """
 
 from core.agent import Agent
-from core.store import Store
 from core.skill import Skill
+from core.store import Store
 
 
 def create_mercenary(name: str, skill_func, skill_name: str = None) -> Agent:
@@ -37,12 +37,14 @@ def create_mercenary(name: str, skill_func, skill_name: str = None) -> Agent:
 # 预置雇佣兵Skill（确定性函数）
 # ================================================================
 
+
 def markdown_to_html(context: dict) -> dict:
     """
     Markdown转HTML（简化版）。
     支持：标题(#)、粗体(**)、斜体(*)、段落、换行。
     """
     import re
+
     text = context.get("_content", context.get("_task_description", ""))
 
     # 逐行处理
@@ -65,17 +67,17 @@ def markdown_to_html(context: dict) -> dict:
             if in_paragraph:
                 html_lines.append("</p>")
                 in_paragraph = False
-            html_lines.append("<h1>{}</h1>".format(line[2:]))
+            html_lines.append(f"<h1>{line[2:]}</h1>")
         elif line.startswith("## "):
             if in_paragraph:
                 html_lines.append("</p>")
                 in_paragraph = False
-            html_lines.append("<h2>{}</h2>".format(line[3:]))
+            html_lines.append(f"<h2>{line[3:]}</h2>")
         elif line.startswith("### "):
             if in_paragraph:
                 html_lines.append("</p>")
                 in_paragraph = False
-            html_lines.append("<h3>{}</h3>".format(line[4:]))
+            html_lines.append(f"<h3>{line[4:]}</h3>")
         else:
             # 段落文本
             if not in_paragraph:
@@ -84,8 +86,8 @@ def markdown_to_html(context: dict) -> dict:
             else:
                 html_lines.append("<br>")
             # 行内格式：粗体和斜体
-            line = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', line)
-            line = re.sub(r'\*(.+?)\*', r'<em>\1</em>', line)
+            line = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", line)
+            line = re.sub(r"\*(.+?)\*", r"<em>\1</em>", line)
             html_lines.append(line)
 
     # 关闭最后的段落
@@ -106,17 +108,104 @@ def extract_keywords(context: dict) -> dict:
 
     # 通用词（停用词）列表，这些词不会被提取为关键词
     stopwords = {
-        "一个", "一种", "这个", "那个", "什么", "怎么", "如何", "为什么",
-        "可以", "能够", "应该", "需要", "已经", "正在", "将", "会", "是",
-        "的", "了", "在", "和", "与", "或", "但", "而", "且", "也", "都",
-        "这", "那", "它", "他", "她", "我", "你", "我们", "你们", "他们",
-        "有", "没有", "被", "把", "让", "对", "从", "到", "向", "用",
-        "the", "a", "an", "is", "are", "was", "were", "be", "been",
-        "have", "has", "had", "do", "does", "did", "will", "would",
-        "can", "could", "may", "might", "shall", "should", "must",
-        "this", "that", "these", "those", "it", "its", "of", "in",
-        "on", "at", "to", "for", "with", "by", "from", "as", "and",
-        "or", "but", "not", "no", "so", "if", "then", "than", "too",
+        "一个",
+        "一种",
+        "这个",
+        "那个",
+        "什么",
+        "怎么",
+        "如何",
+        "为什么",
+        "可以",
+        "能够",
+        "应该",
+        "需要",
+        "已经",
+        "正在",
+        "将",
+        "会",
+        "是",
+        "的",
+        "了",
+        "在",
+        "和",
+        "与",
+        "或",
+        "但",
+        "而",
+        "且",
+        "也",
+        "都",
+        "这",
+        "那",
+        "它",
+        "他",
+        "她",
+        "我",
+        "你",
+        "我们",
+        "你们",
+        "他们",
+        "有",
+        "没有",
+        "被",
+        "把",
+        "让",
+        "对",
+        "从",
+        "到",
+        "向",
+        "用",
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "can",
+        "could",
+        "may",
+        "might",
+        "shall",
+        "should",
+        "must",
+        "this",
+        "that",
+        "these",
+        "those",
+        "it",
+        "its",
+        "of",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "with",
+        "by",
+        "from",
+        "as",
+        "and",
+        "or",
+        "but",
+        "not",
+        "no",
+        "so",
+        "if",
+        "then",
+        "than",
+        "too",
     }
 
     # 先按标点和空格分割
@@ -127,11 +216,11 @@ def extract_keywords(context: dict) -> dict:
     for seg in segments:
         seg = seg.strip()
         # 中文词：长度2-6个字符，包含中文，不是停用词
-        if 2 <= len(seg) <= 6 and re.search(r'[\u4e00-\u9fa5]', seg):
+        if 2 <= len(seg) <= 6 and re.search(r"[\u4e00-\u9fa5]", seg):
             if seg not in stopwords:
                 keywords.append(seg)
         # 英文词：长度3-20个字符，纯字母，不是停用词
-        elif 3 <= len(seg) <= 20 and re.match(r'^[a-zA-Z]+$', seg):
+        elif 3 <= len(seg) <= 20 and re.match(r"^[a-zA-Z]+$", seg):
             if seg.lower() not in stopwords:
                 keywords.append(seg)
 
@@ -141,16 +230,16 @@ def extract_keywords(context: dict) -> dict:
         for seg in segments:
             seg = seg.strip()
             if len(seg) > 6:
-                sub_segments = re.split(r'(和|与|及|之|是|的)', seg)
+                sub_segments = re.split(r"(和|与|及|之|是|的)", seg)
                 for sub in sub_segments:
                     sub = sub.strip()
-                    if 2 <= len(sub) <= 6 and re.search(r'[\u4e00-\u9fa5]', sub):
+                    if 2 <= len(sub) <= 6 and re.search(r"[\u4e00-\u9fa5]", sub):
                         if sub not in stopwords and sub not in keywords:
                             keywords.append(sub)
 
         # 方法2：提取英文单词
         if len(keywords) <= 2:
-            english_words = re.findall(r'[a-zA-Z]+', text)
+            english_words = re.findall(r"[a-zA-Z]+", text)
             for word in english_words:
                 if 3 <= len(word) <= 20 and word.lower() not in stopwords:
                     if word not in keywords:
@@ -158,7 +247,7 @@ def extract_keywords(context: dict) -> dict:
 
         # 方法3：提取中文词组（按非中文字符分割后取2-6字片段）
         if len(keywords) <= 2:
-            chinese_segments = re.split(r'[^\u4e00-\u9fa5]+', text)
+            chinese_segments = re.split(r"[^\u4e00-\u9fa5]+", text)
             for seg in chinese_segments:
                 seg = seg.strip()
                 if 2 <= len(seg) <= 6 and seg not in stopwords and seg not in keywords:
@@ -167,7 +256,7 @@ def extract_keywords(context: dict) -> dict:
                     # 尝试滑动窗口提取2-4字词组
                     for n in [2, 3, 4]:
                         for i in range(len(seg) - n + 1):
-                            word = seg[i:i + n]
+                            word = seg[i : i + n]
                             if word not in stopwords and word not in keywords:
                                 keywords.append(word)
 
@@ -187,6 +276,7 @@ def extract_keywords(context: dict) -> dict:
 def format_date(context: dict) -> dict:
     """日期格式化"""
     from datetime import datetime
+
     date_str = context.get("_content", str(datetime.now()))
 
     try:

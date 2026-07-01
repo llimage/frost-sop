@@ -3,8 +3,8 @@ F10 - Skill 提取 CLI 入口
 用法：python scripts/extract_skills.py
 """
 
-import sys
 import os
+import sys
 
 # 确保项目根目录在 sys.path 中
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
