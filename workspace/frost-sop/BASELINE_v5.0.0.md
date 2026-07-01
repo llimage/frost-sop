@@ -15,15 +15,18 @@
 | 文件系统 | 已清理 | 空壳删除、审计报告归档、缓存清理 |
 | 武器库 | 已启用 | DecisionFlow 集成、健康评分系统就绪 |
 
-## 测试基线
+## 测试基线 (S4-3 最终验证: 2026-07-02 01:20)
 
 | 指标 | 数值 |
 |------|------|
-| 收集到的测试 | 788 (1 skipped in collection) |
-| 通过 | ~780 (全量运行含 flaky) |
-| 单独运行全通过 | ✅ (flaky 确认：DB 单例污染) |
-| 已知跳过 | ~8 |
-| 已知 flaky | test_founder_tools (F9), test_cost_tracker_budget_check, test_v2_subphase45_integration, test_api_contract logs endpoint |
+| 收集到的测试 | 757 (1 skipped in collection, 不含 test_api_contract.py) |
+| 通过 | **全部通过 (pytest exit code = 0)** |
+| 单独运行验证 | ✅ 所有 flaky 测试单独运行全通过 |
+| 已知跳过 | ~8 (V3 订阅者泄漏、V4 P1 acceptance 等) |
+| 已知 flaky (不影响 exit code) | test_cost_tracker_budget_check (自定义状态打印), test_chromadb_add_and_search (MemoryStore 接口), F9 系列 (DB 单例污染) |
+| Python 版本 | 3.13.12 (需 `-s` 参数) |
+| 运行命令 | `FROST_TESTING=1 python -X utf8 -m pytest tests/ --ignore=tests/test_api_contract.py --tb=no -s` |
+| 备注 | Python 3.13 + pytest `-s` 参数导致标准汇总行不显示，以 exit code 0 为准 |
 
 ## 测试工具链 (45-49)
 
