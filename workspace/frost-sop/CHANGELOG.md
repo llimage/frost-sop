@@ -30,6 +30,19 @@ All notable changes to FROST-SOP are documented in this file.
 - Root .md count: 37 -> 3 (README, AUDIT_REPORT, BASELINE)
 - `.gitignore` updated with .coverage, __pycache__, etc.
 
+### Repo Cleanup
+- Removed 1GB model file (SmolLM2-1.7B-Q4_K_M.gguf) from git history via filter-branch
+- `.git` directory: 997MB -> 4.8MB (99.5% reduction)
+- Deleted legacy tag `v1.0.0-f10-baseline` (non-standard naming)
+- Deleted 3 stale feature branches
+- Added `*.gguf`, `*.bin`, `models/`, test artifacts to `.gitignore`
+- Line-ending normalization across all tracked files
+
+### Dual-Platform Remote
+- Gitee: `liao_liang_7514/frost-sop` (origin)
+- GitHub: `llimage/frost-sop` (github)
+- Push script: `push_v5_final.bat`
+
 ### Test Baseline
 - Main suite: **1006 passed**, 7 skipped, 0 failed (exit code 0)
 - Property + Benchmark: 24 passed, 0 failed
@@ -49,11 +62,3 @@ All notable changes to FROST-SOP are documented in this file.
 - EventBus event bus (sync + async)
 - Three-layer event subscription: ancestor/parent/elder
 - Event persistence to event_log table
-
-## [v1.0.0-f10-baseline] - 2026-06-24
-
-### Features
-- F1-F10 complete: three-generation Agent architecture
-- SOP-driven execution (7 YAML templates)
-- Skill gene library + armory system
-- Store persistence (task/constitution/lesson prefixes)
