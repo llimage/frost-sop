@@ -66,3 +66,37 @@ audit_package*/
 
 # 交接文档（临时文件）
 HANDOFF_SUMMARY_*.md
+
+# === v5.0.0 cleanup additions ===
+# Archive directories
+archive/
+docs/archive/
+
+# Coverage and build
+htmlcov/
+.coverage
+coverage.xml
+
+# Additional caches
+.mypy_cache/
+.ruff_cache/
+
+# Databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Logs (rotated)
+logs/*.log.*
+
+# Experiments
+experiments/
+
+# Environment
+.env
+.env.local
+
+# Benchmark cache
+.benchmarks/
+.hypothesis/
