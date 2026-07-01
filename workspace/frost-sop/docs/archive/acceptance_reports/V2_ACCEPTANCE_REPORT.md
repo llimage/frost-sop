@@ -1,7 +1,7 @@
 # FROST-SOP V2.0 整体验收报告
 
-> 生成日期：2026-06-26  
-> 分支：`feature/v2-event-driven`  
+> 生成日期：2026-06-26
+> 分支：`feature/v2-event-driven`
 > V1.0 基线：`v1.0.0-f10-baseline`（133 passed）
 
 ---

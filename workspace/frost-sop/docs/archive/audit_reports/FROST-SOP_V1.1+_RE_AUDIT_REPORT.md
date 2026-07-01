@@ -120,7 +120,7 @@
 ### P0-1: SOP 真实执行（最复杂验证）
 
 **代码验证**:
-- `skills/llm.py` 在 `FROST_TESTING != 
+- `skills/llm.py` 在 `FROST_TESTING !=
 "1"` 时调用真实 OpenAI 客户端（DeepSeek API），这是原有设计
 - `skills/tools.py` 的 `call_llm_for_output` 在获得 LLM 响应后，如果提供了 `_output_path` 会调用 `write_file` 写入文件
 - `output/` 目录确实存在 181 个文件（从 `ls -la output/` 验证），时间戳从 6-20 到 6-25，说明持续有文件产出

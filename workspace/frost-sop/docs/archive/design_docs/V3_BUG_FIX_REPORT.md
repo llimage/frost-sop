@@ -1,7 +1,7 @@
 # FROST-SOP V3.0 阻塞项修复 + 真实模式验证 — 执行报告
 
-**日期**：2026-06-27  
-**执行者**：WorkBuddy  
+**日期**：2026-06-27
+**执行者**：WorkBuddy
 **任务状态**：部分完成（Phase 1 ✅ / Phase 2 ❌）
 
 ---
@@ -131,12 +131,12 @@ def unsubscribe(self, event_type: str, callback: Callable) -> bool:
 def unsubscribe(self, event_type: str, callback: Callable, is_async: bool = None) -> int:
     """
     取消订阅。
-    
+
     Args:
         event_type: 事件类型
         callback: 回调函数
         is_async: 是否异步回调（None=匹配所有，True=只匹配异步，False=只匹配同步）
-    
+
     Returns:
         实际移除的订阅数量
     """

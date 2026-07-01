@@ -1,9 +1,9 @@
 # FROST-SOP V3.0 第三方审计材料包
 
-**版本**: V3.0.0-beta  
-**审计日期**: 2026-06-27  
-**审计范围**: 完整系统（核心引擎 + 事件驱动架构 + Agent 系统）  
-**准备人**: AI Agent (WorkBuddy)  
+**版本**: V3.0.0-beta
+**审计日期**: 2026-06-27
+**审计范围**: 完整系统（核心引擎 + 事件驱动架构 + Agent 系统）
+**准备人**: AI Agent (WorkBuddy)
 
 ---
 
@@ -24,7 +24,7 @@
 - [ ] **集成测试覆盖率** - 关键路径覆盖
 - [ ] **缺失测试识别** - 未覆盖的代码路径
 
-**目标**: 
+**目标**:
 - 核心模块 (`core/`): ≥ 90%
 - Agent 模块 (`agents/`): ≥ 85%
 - Skill 模块 (`skills/`): ≥ 80%
@@ -44,7 +44,7 @@
 - [ ] **requirements.txt 依赖检查** - CVE 漏洞数据库比对
 - [ ] ** transitive 依赖检查** - 间接依赖漏洞
 
-**工具**: 
+**工具**:
 - `safety check` (PyUp.io CVE 数据库)
 - `pip-audit` (Python Packaging Advisory Database)
 
@@ -239,11 +239,11 @@ def run_command(cmd, output_file):
     """运行命令并保存输出"""
     print(f"[AUDIT] 运行: {' '.join(cmd)}")
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(result.stdout)
         f.write(result.stderr)
-    
+
     print(f"[AUDIT] 结果已保存到: {output_file}")
     return result.returncode
 
@@ -253,25 +253,25 @@ def main():
         ['pylint', 'core/', 'agents/', 'skills/', '--output-format=json'],
         'audit_pylint.json'
     )
-    
+
     # 2. Flake8 检查
     run_command(
         ['flake8', 'core/', 'agents/', 'skills/', '--format=json'],
         'audit_flake8.json'
     )
-    
+
     # 3. MyPy 类型检查
     run_command(
         ['mypy', 'core/', 'agents/', 'skills/', '--ignore-missing-imports'],
         'audit_mypy.txt'
     )
-    
+
     # 4. Radon 复杂度分析
     run_command(
         ['radon', 'cc', 'core/', 'agents/', 'skills/', '-j'],
         'audit_complexity.json'
     )
-    
+
     print("\n✅ 代码质量审计完成！")
     print("📊 查看结果:")
     print("   - audit_pylint.json (Pylint)")
@@ -296,18 +296,18 @@ def run_security_scan():
     # 1. 依赖漏洞扫描
     print("[AUDIT] 1. 依赖漏洞扫描 (safety)...")
     subprocess.run(['safety', 'check', '-r', 'requirements.txt', '--full-report'])
-    
+
     print("\n[AUDIT] 2. 依赖漏洞扫描 (pip-audit)...")
     subprocess.run(['pip-audit', '-r', 'requirements.txt', '--format', 'json', '--output', 'audit_dependency_vuln.json'])
-    
+
     # 2. 静态安全分析 (Bandit)
     print("\n[AUDIT] 3. 静态安全分析 (Bandit)...")
     subprocess.run(['bandit', '-r', 'core/', 'agents/', 'skills/', '-f', 'json', '-o', 'audit_security_bandit.json'])
-    
+
     # 3. 敏感信息扫描 (detect-secrets)
     print("\n[AUDIT] 4. 敏感信息扫描 (detect-secrets)...")
     subprocess.run(['detect-secrets', 'scan', '--all-files'], capture_output=True)
-    
+
     print("\n✅ 安全审计完成！")
     print("📊 查看结果:")
     print("   - audit_dependency_vuln.json (依赖漏洞)")
@@ -341,7 +341,7 @@ def run_coverage():
         '--cov-report=json:audit_coverage.json',
         '-v'
     ])
-    
+
     print("\n✅ 覆盖率审计完成！")
     print("📊 查看结果:")
     print("   - terminal output (命令行)")
@@ -425,7 +425,7 @@ python generate_audit_report.py
 1. **Python 版本**: 3.13+ (推荐 3.13.12)
 2. **操作系统**: Windows 10/11 (Git Bash)
 3. **依赖安装**: `pip install -r requirements.txt`
-4. **环境变量**: 
+4. **环境变量**:
    - `DEEPSEEK_API_KEY`: 真实 LLM 测试需要
    - `FROST_TESTING=1`: Mock 模式测试
 
@@ -459,14 +459,14 @@ python generate_audit_report.py
 - **项目负责人**: 瑞思 (Ruisi)
 - **技术负责人**: AI Agent (WorkBuddy)
 - **项目仓库**: `D:\my_ai\Solo-Ops-Platform\workspace\frost-sop`
-- **审计时间表**: 
+- **审计时间表**:
   - 审计开始: 2026-06-27
   - 审计报告交付: **待定** (由第三方审计人员确认)
 
 ---
 
-**附录 A: 详细审计脚本** (见单独文件 `audit_scripts.zip`)  
-**附录 B: 测试用例清单** (见 `tests/` 目录)  
+**附录 A: 详细审计脚本** (见单独文件 `audit_scripts.zip`)
+**附录 B: 测试用例清单** (见 `tests/` 目录)
 **附录 C: 已知问题清单** (见 `V3_BUG_FIX_REPORT.md`)
 
 ---

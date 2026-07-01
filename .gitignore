@@ -68,9 +68,9 @@ audit_package*/
 HANDOFF_SUMMARY_*.md
 
 # === v5.0.0 cleanup additions ===
-# Archive directories (project-level)
-workspace/frost-sop/archive/
-workspace/frost-sop/docs/archive/
+# Archive directories (project-level) — keep tracked for historical reference
+# workspace/frost-sop/archive/  (uncomment to ignore)
+# workspace/frost-sop/docs/archive/  (uncomment to ignore)
 
 # Coverage and build
 htmlcov/
