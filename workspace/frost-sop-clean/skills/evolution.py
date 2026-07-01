@@ -45,7 +45,11 @@ def analyze_trends(context: dict) -> dict:
         return context
 
     total = len(tasks)
-    successful = sum(1 for t in tasks if isinstance(t, dict) and t.get("status") in ("completed", "success"))
+    successful = sum(
+        1
+        for t in tasks
+        if isinstance(t, dict) and t.get("status") in ("completed", "success")
+    )
     failed = total - successful
     success_rate = successful / max(total, 1)
 
@@ -66,7 +70,10 @@ def analyze_trends(context: dict) -> dict:
             # 兼容两种字段名：stages / stage_results
             stages = task.get("stages", task.get("stage_results", []))
             for stage in stages:
-                if isinstance(stage, dict) and stage.get("status") in ("failed", "error"):
+                if isinstance(stage, dict) and stage.get("status") in (
+                    "failed",
+                    "error",
+                ):
                     error_msg = stage.get("output", stage.get("error", "未知错误"))
                     error_type = "compliance" if "合规" in error_msg else "execution"
                     error_types[error_type] = error_types.get(error_type, 0) + 1
@@ -86,7 +93,9 @@ def analyze_trends(context: dict) -> dict:
         if stats["failed"] > 0:
             sop_failure_rate = stats["failed"] / max(stats["total"], 1)
             if sop_failure_rate >= 0.3:
-                insights.append(f"SOP '{sop_name}' 失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议优化")
+                insights.append(
+                    f"SOP '{sop_name}' 失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议优化"
+                )
 
     # 洞察3：主要错误类型
     if error_types:
@@ -102,7 +111,9 @@ def analyze_trends(context: dict) -> dict:
         "error_types": error_types,
         "insights": insights,
     }
-    context["_reason"] = f"分析 {total} 条任务，成功率 {success_rate:.0%}，生成 {len(insights)} 条洞察"
+    context["_reason"] = (
+        f"分析 {total} 条任务，成功率 {success_rate:.0%}，生成 {len(insights)} 条洞察"
+    )
     return context
 
 
@@ -124,46 +135,56 @@ def generate_suggestions(context: dict) -> dict:
         if stats["failed"] > 0:
             sop_failure_rate = stats["failed"] / max(stats["total"], 1)
             if sop_failure_rate >= 0.5:
-                suggestions.append({
-                    "type": "sop_optimization",
-                    "target": sop_name,
-                    "reason": f"失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议重新设计 SOP 阶段",
-                    "priority": "high" if sop_failure_rate >= 0.7 else "medium",
-                })
+                suggestions.append(
+                    {
+                        "type": "sop_optimization",
+                        "target": sop_name,
+                        "reason": f"失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议重新设计 SOP 阶段",
+                        "priority": "high" if sop_failure_rate >= 0.7 else "medium",
+                    }
+                )
             elif sop_failure_rate >= 0.3:
-                suggestions.append({
-                    "type": "sop_review",
-                    "target": sop_name,
-                    "reason": f"失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议审查失败阶段",
-                    "priority": "low",
-                })
+                suggestions.append(
+                    {
+                        "type": "sop_review",
+                        "target": sop_name,
+                        "reason": f"失败率 {sop_failure_rate:.0%}（{stats['failed']}/{stats['total']}），建议审查失败阶段",
+                        "priority": "low",
+                    }
+                )
 
     # 建议2：基于错误类型
     error_types = trends.get("error_types", {})
     if error_types.get("compliance", 0) >= 2:
-        suggestions.append({
-            "type": "constitution_review",
-            "target": "compliance_rules",
-            "reason": f"合规错误 {error_types['compliance']} 次，建议审查合规规则是否过严",
-            "priority": "medium",
-        })
+        suggestions.append(
+            {
+                "type": "constitution_review",
+                "target": "compliance_rules",
+                "reason": f"合规错误 {error_types['compliance']} 次，建议审查合规规则是否过严",
+                "priority": "medium",
+            }
+        )
 
     # 建议3：基于成功率
     if trends.get("success_rate", 1.0) < 0.5:
-        suggestions.append({
-            "type": "urgent_review",
-            "target": "family_health",
-            "reason": f"整体成功率 {trends['success_rate']:.0%}，建议创始人介入审查",
-            "priority": "high",
-        })
+        suggestions.append(
+            {
+                "type": "urgent_review",
+                "target": "family_health",
+                "reason": f"整体成功率 {trends['success_rate']:.0%}，建议创始人介入审查",
+                "priority": "high",
+            }
+        )
 
     if not suggestions:
-        suggestions.append({
-            "type": "no_action",
-            "target": "family_health",
-            "reason": "家族运行状态良好，暂无优化建议",
-            "priority": "low",
-        })
+        suggestions.append(
+            {
+                "type": "no_action",
+                "target": "family_health",
+                "reason": "家族运行状态良好，暂无优化建议",
+                "priority": "low",
+            }
+        )
 
     context["_suggestions"] = suggestions
     context["_reason"] = f"生成 {len(suggestions)} 条优化建议"
@@ -179,7 +200,9 @@ def present_for_approval(context: dict) -> dict:
     report_lines.append("## 数据概览")
     report_lines.append(f"- 分析任务数：{trends.get('total', 0)}")
     report_lines.append(f"- 成功率：{trends.get('success_rate', 0):.0%}")
-    report_lines.append(f"- 成功：{trends.get('successful', 0)}，失败：{trends.get('failed', 0)}")
+    report_lines.append(
+        f"- 成功：{trends.get('successful', 0)}，失败：{trends.get('failed', 0)}"
+    )
     report_lines.append("")
 
     if trends.get("insights"):

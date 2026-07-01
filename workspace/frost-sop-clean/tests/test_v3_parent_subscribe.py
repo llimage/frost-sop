@@ -16,13 +16,10 @@ import os
 import asyncio
 import pytest
 
-os.environ['FROST_TESTING'] = '1'
+os.environ["FROST_TESTING"] = "1"
 
-from core.event_bus import (
-    AsyncEventBus, Event, EventType, get_async_event_bus
-)
+from core.event_bus import AsyncEventBus, Event, EventType, get_async_event_bus
 from agents.parent import create_parent
-from stores.constitution import create_constitution_store
 from stores.asset import create_asset_store
 from core.store import Store
 
@@ -39,6 +36,7 @@ def _setup():
 # 测试 1: event_driven=False 保持 V2.0 行为
 # ---------------------------------------------------------------------------
 
+
 def test_01_parent_v2_mode_no_subscription():
     """event_driven=False 时不订阅事件"""
     bus = _setup()
@@ -50,12 +48,14 @@ def test_01_parent_v2_mode_no_subscription():
 # 测试 2: event_driven=True 订阅 TASK_DECOMPOSED
 # ---------------------------------------------------------------------------
 
+
 def test_02_parent_v3_mode_subscribes_task_decomposed():
     """event_driven=True 时订阅 TASK_DECOMPOSED"""
     bus = _setup()
     asset = create_asset_store()
-    parent = create_parent("parent_v3", Store(), event_driven=True,
-                           asset_store=asset, sop_id="DEV-001")
+    parent = create_parent(
+        "parent_v3", Store(), event_driven=True, asset_store=asset, sop_id="DEV-001"
+    )
 
     assert bus.get_subscriber_count(EventType.TASK_DECOMPOSED) == 1
 
@@ -64,14 +64,16 @@ def test_02_parent_v3_mode_subscribes_task_decomposed():
 # 测试 3: 收到 TASK_DECOMPOSED 后发布 STAGE_STARTED + STAGE_COMPLETED
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_03_parent_publishes_stage_events():
     """parent 收到 TASK_DECOMPOSED 后发布 STAGE_STARTED 和 STAGE_COMPLETED"""
     bus = _setup()
     asset = create_asset_store()
 
-    parent = create_parent("parent_v3", Store(), event_driven=True,
-                           asset_store=asset, sop_id="DEV-001")
+    parent = create_parent(
+        "parent_v3", Store(), event_driven=True, asset_store=asset, sop_id="DEV-001"
+    )
 
     # 捕获事件
     stage_started = []
@@ -79,10 +81,17 @@ async def test_03_parent_publishes_stage_events():
     task_completed = []
     task_failed = []
 
-    async def capture_started(e): stage_started.append(e)
-    async def capture_completed(e): stage_completed.append(e)
-    async def capture_task_completed(e): task_completed.append(e)
-    async def capture_task_failed(e): task_failed.append(e)
+    async def capture_started(e):
+        stage_started.append(e)
+
+    async def capture_completed(e):
+        stage_completed.append(e)
+
+    async def capture_task_completed(e):
+        task_completed.append(e)
+
+    async def capture_task_failed(e):
+        task_failed.append(e)
 
     bus.subscribe_async(EventType.STAGE_STARTED, capture_started)
     bus.subscribe_async(EventType.STAGE_COMPLETED, capture_completed)
@@ -90,22 +99,28 @@ async def test_03_parent_publishes_stage_events():
     bus.subscribe_async(EventType.TASK_FAILED, capture_task_failed)
 
     # 发布 TASK_DECOMPOSED
-    await bus.publish(Event(
-        event_type=EventType.TASK_DECOMPOSED,
-        source="ancestor:task_decomposer",
-        data={
-            "task_id": "test_v3_003",
-            "task_description": "用户权限管理",
-            "decomposition": "mock decomposition",
-        },
-    ))
+    await bus.publish(
+        Event(
+            event_type=EventType.TASK_DECOMPOSED,
+            source="ancestor:task_decomposer",
+            data={
+                "task_id": "test_v3_003",
+                "task_description": "用户权限管理",
+                "decomposition": "mock decomposition",
+            },
+        )
+    )
 
     # 等待异步处理完成
     await asyncio.sleep(0.5)
 
     # 验证：DEV-001 有 5 个阶段
-    assert len(stage_started) >= 1, f"Expected STAGE_STARTED events, got {len(stage_started)}"
-    assert len(stage_completed) >= 1, f"Expected STAGE_COMPLETED events, got {len(stage_completed)}"
+    assert len(stage_started) >= 1, (
+        f"Expected STAGE_STARTED events, got {len(stage_started)}"
+    )
+    assert len(stage_completed) >= 1, (
+        f"Expected STAGE_COMPLETED events, got {len(stage_completed)}"
+    )
 
     # 验证 STAGE_STARTED 和 STAGE_COMPLETED 数量一致
     assert len(stage_started) == len(stage_completed)
@@ -115,29 +130,35 @@ async def test_03_parent_publishes_stage_events():
 # 测试 4: 全部完成后发布 TASK_COMPLETED
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_04_parent_publishes_task_completed():
     """parent 完成所有阶段后发布 TASK_COMPLETED"""
     bus = _setup()
     asset = create_asset_store()
 
-    parent = create_parent("parent_v3", Store(), event_driven=True,
-                           asset_store=asset, sop_id="DEV-001")
+    parent = create_parent(
+        "parent_v3", Store(), event_driven=True, asset_store=asset, sop_id="DEV-001"
+    )
 
     task_completed = []
 
-    async def capture(e): task_completed.append(e)
+    async def capture(e):
+        task_completed.append(e)
+
     bus.subscribe_async(EventType.TASK_COMPLETED, capture)
 
-    await bus.publish(Event(
-        event_type=EventType.TASK_DECOMPOSED,
-        source="ancestor:task_decomposer",
-        data={
-            "task_id": "test_v3_004",
-            "task_description": "实现登录功能",
-            "decomposition": "mock",
-        },
-    ))
+    await bus.publish(
+        Event(
+            event_type=EventType.TASK_DECOMPOSED,
+            source="ancestor:task_decomposer",
+            data={
+                "task_id": "test_v3_004",
+                "task_description": "实现登录功能",
+                "decomposition": "mock",
+            },
+        )
+    )
 
     await asyncio.sleep(0.5)
 
@@ -154,29 +175,35 @@ async def test_04_parent_publishes_task_completed():
 # 测试 5: STAGE_STARTED 包含正确的阶段信息
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_05_stage_started_contains_stage_info():
     """STAGE_STARTED 事件包含阶段名称和顺序"""
     bus = _setup()
     asset = create_asset_store()
 
-    parent = create_parent("parent_v3", Store(), event_driven=True,
-                           asset_store=asset, sop_id="DEV-001")
+    parent = create_parent(
+        "parent_v3", Store(), event_driven=True, asset_store=asset, sop_id="DEV-001"
+    )
 
     started_events = []
 
-    async def capture(e): started_events.append(e)
+    async def capture(e):
+        started_events.append(e)
+
     bus.subscribe_async(EventType.STAGE_STARTED, capture)
 
-    await bus.publish(Event(
-        event_type=EventType.TASK_DECOMPOSED,
-        source="ancestor:task_decomposer",
-        data={
-            "task_id": "test_v3_005",
-            "task_description": "测试阶段信息",
-            "decomposition": "mock",
-        },
-    ))
+    await bus.publish(
+        Event(
+            event_type=EventType.TASK_DECOMPOSED,
+            source="ancestor:task_decomposer",
+            data={
+                "task_id": "test_v3_005",
+                "task_description": "测试阶段信息",
+                "decomposition": "mock",
+            },
+        )
+    )
 
     await asyncio.sleep(0.5)
 
@@ -191,6 +218,7 @@ async def test_05_stage_started_contains_stage_info():
 # 测试 6: SOP 加载失败时发布 TASK_FAILED
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_06_sop_load_failure_publishes_task_failed():
     """SOP 加载失败时发布 TASK_FAILED"""
@@ -198,23 +226,32 @@ async def test_06_sop_load_failure_publishes_task_failed():
     asset = create_asset_store()
 
     # 使用不存在的 SOP ID
-    parent = create_parent("parent_v3", Store(), event_driven=True,
-                           asset_store=asset, sop_id="NONEXISTENT-999")
+    parent = create_parent(
+        "parent_v3",
+        Store(),
+        event_driven=True,
+        asset_store=asset,
+        sop_id="NONEXISTENT-999",
+    )
 
     task_failed = []
 
-    async def capture(e): task_failed.append(e)
+    async def capture(e):
+        task_failed.append(e)
+
     bus.subscribe_async(EventType.TASK_FAILED, capture)
 
-    await bus.publish(Event(
-        event_type=EventType.TASK_DECOMPOSED,
-        source="ancestor:task_decomposer",
-        data={
-            "task_id": "test_v3_006",
-            "task_description": "测试失败路径",
-            "decomposition": "mock",
-        },
-    ))
+    await bus.publish(
+        Event(
+            event_type=EventType.TASK_DECOMPOSED,
+            source="ancestor:task_decomposer",
+            data={
+                "task_id": "test_v3_006",
+                "task_description": "测试失败路径",
+                "decomposition": "mock",
+            },
+        )
+    )
 
     await asyncio.sleep(0.3)
 
@@ -226,6 +263,7 @@ async def test_06_sop_load_failure_publishes_task_failed():
 # ---------------------------------------------------------------------------
 # 测试 7: event_driven=False 不订阅
 # ---------------------------------------------------------------------------
+
 
 def test_07_v2_mode_no_side_effects():
     """V2.0 模式创建 parent 不会产生任何事件订阅"""
@@ -240,6 +278,7 @@ def test_07_v2_mode_no_side_effects():
 # 测试 8: V2.0 模式 parent 仍可正常 run()
 # ---------------------------------------------------------------------------
 
+
 def test_08_v2_mode_parent_run_works():
     """V2.0 模式 parent 仍可正常调用 run()"""
     bus = _setup()
@@ -250,14 +289,16 @@ def test_08_v2_mode_parent_run_works():
         sop_steps=["internalize_sop"],
         initial_context={
             "_sop_to_internalize": {
-                "stages": [{"name": "测试阶段", "agent": "测试者", "skills": ["call_llm"]}],
+                "stages": [
+                    {"name": "测试阶段", "agent": "测试者", "skills": ["call_llm"]}
+                ],
                 "sop_id": "test",
                 "name": "测试SOP",
                 "version": "1.0",
                 "required_stages": [],
                 "forbidden_skills": [],
             }
-        }
+        },
     )
 
     assert "_internalized_steps" in context

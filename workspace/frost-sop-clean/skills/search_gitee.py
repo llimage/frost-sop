@@ -12,10 +12,10 @@ from core.skill import Skill
 def search_gitee(context: dict) -> dict:
     """
     在 Gitee 上搜索仓库，返回真实结果。
-    
+
     输入 context 键：
         _search_query: str —— 搜索关键词（默认 "FROST-SOP Skill"）
-    
+
     输出 context 键：
         _search_results: list —— 搜索结果列表
             [{"source": "gitee", "name": "...", "description": "...", "url": "..."}, ...]
@@ -43,12 +43,14 @@ def search_gitee(context: dict) -> dict:
             data = resp.json()
             results = []
             for repo in data.get("content", data).get("repos", [])[:5]:
-                results.append({
-                    "source": "gitee",
-                    "name": repo.get("full_name", ""),
-                    "description": repo.get("description", ""),
-                    "url": repo.get("html_url", ""),
-                })
+                results.append(
+                    {
+                        "source": "gitee",
+                        "name": repo.get("full_name", ""),
+                        "description": repo.get("description", ""),
+                        "url": repo.get("html_url", ""),
+                    }
+                )
             context["_search_results"] = results
             context["_reason"] = f"Gitee搜索成功：找到 {len(results)} 个仓库"
         else:

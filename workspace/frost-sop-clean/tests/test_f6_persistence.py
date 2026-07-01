@@ -6,6 +6,7 @@ F6 持久化恢复测试
 - 宪法Store只读规则在持久化后依然有效
 - 能力基因库持久化后完整恢复
 """
+
 import sys
 import os
 import json
@@ -15,7 +16,6 @@ import shutil
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from stores.asset import create_asset_store, FileStore
-from stores.constitution import create_constitution_store
 from core.store import HierarchicalStore, Store
 
 
@@ -34,23 +34,33 @@ def test_per01_store_persistence():
         # 1. 创建资产Store（文件后端）并写入数据
         store1 = create_asset_store(backend="file", path=asset_path)
         # 写入任务记录
-        store1.save("task:per01-001", {
-            "task_id": "per01-001",
-            "sop": "DEV-001",
-            "status": "completed",
-            "stages_completed": 5,
-        })
-        store1.save("task:per01-002", {
-            "task_id": "per01-002",
-            "sop": "MT-001",
-            "status": "completed",
-            "stages_completed": 4,
-        })
+        store1.save(
+            "task:per01-001",
+            {
+                "task_id": "per01-001",
+                "sop": "DEV-001",
+                "status": "completed",
+                "stages_completed": 5,
+            },
+        )
+        store1.save(
+            "task:per01-002",
+            {
+                "task_id": "per01-002",
+                "sop": "MT-001",
+                "status": "completed",
+                "stages_completed": 4,
+            },
+        )
         # 写入能力基因
-        store1.save("skill_gene:需求分析", {
-            "name": "需求分析", "type": "functional",
-            "description": "分析用户需求",
-        })
+        store1.save(
+            "skill_gene:需求分析",
+            {
+                "name": "需求分析",
+                "type": "functional",
+                "description": "分析用户需求",
+            },
+        )
         # FileStore 会在每次 save 时自动持久化
 
         # 2. 重新加载 Store
@@ -62,7 +72,9 @@ def test_per01_store_persistence():
         g1 = store2.load("skill_gene:需求分析")
 
         ok = (
-            t1 is not None and t2 is not None and g1 is not None
+            t1 is not None
+            and t2 is not None
+            and g1 is not None
             and t1.get("task_id") == "per01-001"
             and t2.get("sop") == "MT-001"
             and g1.get("name") == "需求分析"
@@ -149,7 +161,6 @@ def test_per03_constitution_readonly():
 
         # 为了简化，直接测试 ConstitutionStore 的持久化和规则恢复
         # 实际 ConstitutionStore 使用 HierarchicalStore，持久化时需要保存 readonly 配置
-        from stores.constitution import create_constitution_store
 
         # 用文件后端创建 constitution store
         const_file = os.path.join(tmpdir, "const.json")
@@ -173,7 +184,11 @@ def test_per03_constitution_readonly():
         readonly_contains = "constitution:text" in loaded_data.get("_readonly_keys", [])
 
         ok = has_constitution and has_readonly and readonly_contains
-        print("✅ 通过" if ok else f"❌ 失败 (readonly={loaded_data.get('_readonly_keys')})")
+        print(
+            "✅ 通过"
+            if ok
+            else f"❌ 失败 (readonly={loaded_data.get('_readonly_keys')})"
+        )
         result = {"loaded": loaded_data, "ok": ok}
     except Exception as e:
         print(f"❌ 失败 ({e})")
@@ -224,8 +239,16 @@ def test_per04_gene_persistence():
             if k in loaded_genes
         )
         ok = count_match and content_match
-        print(f"✅ 通过 (基因数={len(loaded_genes)}/{len(test_genes)})" if ok else "❌ 失败")
-        result = {"loaded_count": len(loaded_genes), "expected_count": len(test_genes), "ok": ok}
+        print(
+            f"✅ 通过 (基因数={len(loaded_genes)}/{len(test_genes)})"
+            if ok
+            else "❌ 失败"
+        )
+        result = {
+            "loaded_count": len(loaded_genes),
+            "expected_count": len(test_genes),
+            "ok": ok,
+        }
     except Exception as e:
         print(f"❌ 失败 ({e})")
         result = {"error": str(e), "ok": False}

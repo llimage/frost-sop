@@ -100,3 +100,16 @@ experiments/
 # Benchmark cache
 .benchmarks/
 .hypothesis/
+
+# Model files (1GB+, use external storage)
+*.gguf
+*.bin
+workspace/frost-sop/models/
+
+# Test artifacts
+cosmic_ray_session.sqlite
+locust_report.html
+
+# Source archives
+*-source.zip
+frost-sop-v3.0-audit-package.zip

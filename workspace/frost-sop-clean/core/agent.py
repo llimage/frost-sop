@@ -13,7 +13,6 @@ V2.0 变更：
 """
 
 from core.store import Store
-from core.skill import Skill
 import copy
 import asyncio
 import logging
@@ -33,12 +32,18 @@ class Agent:
     V2.0 子阶段 4.3: 集成 EventBus，步骤完成时发布 STEP_COMPLETED 事件
     """
 
-    def __init__(self, name: str = None, store: Store = None, skills: dict = None,
-                 sop_steps: list = None, generation: int = 0,
-                 max_spawn_generation: int = None,
-                 retry_config: Dict = None,
-                 on_max_retries: Optional[Callable] = None,
-                 event_driven: bool = False):
+    def __init__(
+        self,
+        name: str = None,
+        store: Store = None,
+        skills: dict = None,
+        sop_steps: list = None,
+        generation: int = 0,
+        max_spawn_generation: int = None,
+        retry_config: Dict = None,
+        on_max_retries: Optional[Callable] = None,
+        event_driven: bool = False,
+    ):
         """
         Initialize an Agent.
 
@@ -74,7 +79,7 @@ class Agent:
         self._on_max_retries = on_max_retries
 
         # V2.0: 生命周期状态追踪
-        self._status: str = "idle"          # idle / running / destroyed
+        self._status: str = "idle"  # idle / running / destroyed
         self._created_at: datetime = datetime.now()
         self._destroyed_at: Optional[datetime] = None
 
@@ -85,10 +90,13 @@ class Agent:
 
         # V2.0 子阶段 4.3: 发布 AGENT_CREATED 事件
         if self._event_driven:
-            self._publish_event("agent_created", {
-                "agent_name": self.name,
-                "generation": self.generation,
-            })
+            self._publish_event(
+                "agent_created",
+                {
+                    "agent_name": self.name,
+                    "generation": self.generation,
+                },
+            )
 
     def run(self, sop_steps: list, initial_context: dict = None) -> dict:
         """
@@ -110,7 +118,7 @@ class Agent:
             Exception: If max retries exceeded for any step
         """
         context = dict(initial_context) if initial_context else {}
-        context['_store'] = self.store
+        context["_store"] = self.store
         step_records = []
         overall_success = True
         execution_error = None
@@ -121,7 +129,11 @@ class Agent:
 
         try:
             for step in sop_steps:
-                step_name = step if isinstance(step, str) else (step.name if step else "unknown")
+                step_name = (
+                    step
+                    if isinstance(step, str)
+                    else (step.name if step else "unknown")
+                )
                 step_result = self._execute_step_with_retry(step, context, step_records)
                 if not step_result["success"]:
                     overall_success = False
@@ -132,22 +144,27 @@ class Agent:
 
                 # V2.0 子阶段 4.3: 步骤成功后发布 STEP_COMPLETED 事件
                 if self._event_driven:
-                    self._publish_event("step_completed", {
-                        "agent_name": self.name,
-                        "step_name": step_name,
-                        "task_id": context.get("_task_id", ""),
-                    })
+                    self._publish_event(
+                        "step_completed",
+                        {
+                            "agent_name": self.name,
+                            "step_name": step_name,
+                            "task_id": context.get("_task_id", ""),
+                        },
+                    )
 
             # Record execution history
-            self._execution_history.append({
-                "timestamp": datetime.now(),
-                "sop_steps": sop_steps,
-                "step_records": step_records,
-                "overall_success": overall_success,
-            })
+            self._execution_history.append(
+                {
+                    "timestamp": datetime.now(),
+                    "sop_steps": sop_steps,
+                    "step_records": step_records,
+                    "overall_success": overall_success,
+                }
+            )
             # Trim history if exceeds max
             if len(self._execution_history) > self._max_history:
-                self._execution_history = self._execution_history[-self._max_history:]
+                self._execution_history = self._execution_history[-self._max_history :]
 
         finally:
             # V2.0: 任务完成时（正常或异常）调用 destroy()
@@ -185,11 +202,14 @@ class Agent:
 
         # V2.0 子阶段 4.3: 发布 AGENT_DESTROYED 事件
         if self._event_driven:
-            self._publish_event("agent_destroyed", {
-                "agent_name": self.name,
-                "generation": self.generation,
-                "destroyed_at": self._destroyed_at.isoformat(),
-            })
+            self._publish_event(
+                "agent_destroyed",
+                {
+                    "agent_name": self.name,
+                    "generation": self.generation,
+                    "destroyed_at": self._destroyed_at.isoformat(),
+                },
+            )
 
         # 释放资源
         self._cleanup()
@@ -205,6 +225,7 @@ class Agent:
         """
         try:
             from core.event_bus import get_event_bus, Event
+
             bus = get_event_bus()
             event = Event(
                 event_type=event_type,
@@ -241,26 +262,35 @@ class Agent:
         """
         try:
             from core.db import get_db
+
             db = get_db()
 
             # P1-9: 确保 agents 表有此 Agent 的记录（UPSERT）
             existing_agent = db.select_one("agents", "id", self.name)
             if not existing_agent:
-                db.insert("agents", {
-                    "id": self.name,
-                    "name": self.name,
-                    "agent_type": "transient",          # 瞬态 Agent（run() 驱动）
-                    "generation": self.generation,
-                    "created_at": self._created_at.isoformat(),
-                })
+                db.insert(
+                    "agents",
+                    {
+                        "id": self.name,
+                        "name": self.name,
+                        "agent_type": "transient",  # 瞬态 Agent（run() 驱动）
+                        "generation": self.generation,
+                        "created_at": self._created_at.isoformat(),
+                    },
+                )
             else:
                 # 重复运行时不报 UNIQUE 约束错误，直接更新
                 conn = db.get_connection()
                 conn.execute(
                     "INSERT OR REPLACE INTO agents (id, name, agent_type, generation, created_at) "
                     "VALUES (?, ?, ?, ?, ?)",
-                    (self.name, self.name, "transient", self.generation,
-                     self._created_at.isoformat())
+                    (
+                        self.name,
+                        self.name,
+                        "transient",
+                        self.generation,
+                        self._created_at.isoformat(),
+                    ),
                 )
                 conn.commit()
 
@@ -274,39 +304,47 @@ class Agent:
             if existing_status:
                 db.update("agent_status", "agent_id", self.name, status_data)
             else:
-                db.insert("agent_status", {
-                    "agent_id": self.name,
-                    **status_data,
-                })
+                db.insert(
+                    "agent_status",
+                    {
+                        "agent_id": self.name,
+                        **status_data,
+                    },
+                )
 
         except Exception as e:
             # 生命周期记录失败不影响主流程
             logger.warning("Agent生命周期记录失败 (%s, %s): %s", self.name, status, e)
 
     def _execute_step_with_retry(
-        self, step: Union[str, 'Agent'], context: dict, step_records: list
+        self, step: Union[str, "Agent"], context: dict, step_records: list
     ) -> dict:
         """
         Execute a single step with retry logic (P0-2).
-        
+
         Retry behavior:
         1. Try the primary step/skill up to max_retries times
         2. Between retries, apply backoff delay
         3. On max retries exceeded, invoke on_max_retries callback for elder reporting
-        
+
         Returns:
             {"success": bool, "context": dict, "error": Exception|None}
         """
         step_name = step if isinstance(step, str) else step.name
         last_error = None
-        
+
         for attempt in range(1, self._max_retries + 1):
             try:
                 is_retry = attempt > 1
                 if is_retry:
-                    logger.info("[%s] 重试 %s/%s — 步骤: %s",
-                                self.name, attempt, self._max_retries, step_name)
-                
+                    logger.info(
+                        "[%s] 重试 %s/%s — 步骤: %s",
+                        self.name,
+                        attempt,
+                        self._max_retries,
+                        step_name,
+                    )
+
                 # Execute the step
                 if isinstance(step, str):
                     if step not in self.skills:
@@ -316,40 +354,58 @@ class Agent:
                     new_context = step.run(step._sop_steps, dict(context))
                 else:
                     raise TypeError(f"Invalid step type: {type(step)}")
-                
+
                 # Success!
-                step_records.append({
-                    "step": step_name,
-                    "success": True,
-                    "error": None,
-                    "retries": attempt - 1,
-                    "reason": new_context.get("_reason", None)
-                })
+                step_records.append(
+                    {
+                        "step": step_name,
+                        "success": True,
+                        "error": None,
+                        "retries": attempt - 1,
+                        "reason": new_context.get("_reason", None),
+                    }
+                )
                 return {"success": True, "context": new_context, "error": None}
-                
+
             except Exception as e:
                 last_error = e
                 error_str = str(e)[:200]
-                logger.error("[%s] 步骤 '%s' 失败 (尝试 %s/%s): %s",
-                             self.name, step_name, attempt, self._max_retries, error_str)
-                
+                logger.error(
+                    "[%s] 步骤 '%s' 失败 (尝试 %s/%s): %s",
+                    self.name,
+                    step_name,
+                    attempt,
+                    self._max_retries,
+                    error_str,
+                )
+
                 if attempt < self._max_retries:
                     # 备用 Skill 切换（P0-2: 第2次重试时尝试）
                     if attempt == 2 and isinstance(step, str):
                         alt_step = self._find_alternate_skill(step)
                         if alt_step and alt_step != step:
-                            logger.info("[%s] 切换备用 Skill: %s → %s",
-                                        self.name, step, alt_step)
+                            logger.info(
+                                "[%s] 切换备用 Skill: %s → %s",
+                                self.name,
+                                step,
+                                alt_step,
+                            )
                             step = alt_step
-                    
+
                     # Wait before retry
-                    logger.info("[%s] 等待 %s秒后重试...", self.name, self._retry_delay_seconds)
+                    logger.info(
+                        "[%s] 等待 %s秒后重试...", self.name, self._retry_delay_seconds
+                    )
                     time.sleep(self._retry_delay_seconds)
                 else:
                     # Max retries exceeded — report to elder
-                    logger.error("[%s] 步骤 '%s' 已达最大重试 (%s次)，上报祖辈...",
-                                 self.name, step_name, self._max_retries)
-                    
+                    logger.error(
+                        "[%s] 步骤 '%s' 已达最大重试 (%s次)，上报祖辈...",
+                        self.name,
+                        step_name,
+                        self._max_retries,
+                    )
+
                     if self._on_max_retries:
                         try:
                             self._on_max_retries(
@@ -360,27 +416,31 @@ class Agent:
                             )
                             logger.info("[%s] 已上报祖辈 Agent", self.name)
                         except Exception as report_err:
-                            logger.warning("[%s] 上报祖辈失败: %s", self.name, report_err)
-                    
+                            logger.warning(
+                                "[%s] 上报祖辈失败: %s", self.name, report_err
+                            )
+
                     # Record failure
-                    step_records.append({
-                        "step": step_name,
-                        "success": False,
-                        "error": str(last_error),
-                        "retries": self._max_retries,
-                        "escalated_to_elder": True,
-                    })
-        
+                    step_records.append(
+                        {
+                            "step": step_name,
+                            "success": False,
+                            "error": str(last_error),
+                            "retries": self._max_retries,
+                            "escalated_to_elder": True,
+                        }
+                    )
+
         return {"success": False, "context": context, "error": last_error}
 
     def _find_alternate_skill(self, skill_name: str) -> Optional[str]:
         """
         Find an alternate skill for the given skill name (P0-2).
         Uses simple heuristic: append '_backup' or search for similar named skills.
-        
+
         Args:
             skill_name: Original skill name
-            
+
         Returns:
             Alternate skill name or None
         """
@@ -388,11 +448,11 @@ class Agent:
         backup_name = f"{skill_name}_backup"
         if backup_name in self.skills:
             return backup_name
-        
+
         # Check for generic fallback
         if "call_llm_base" in self.skills and skill_name.startswith("call_llm"):
             return "call_llm_base"
-        
+
         # Check for similar named skills (same prefix)
         prefixes = skill_name.split("_")[:2]
         if len(prefixes) >= 1:
@@ -400,7 +460,7 @@ class Agent:
             for key in self.skills:
                 if key != skill_name and key.startswith(prefix):
                     return key
-        
+
         return None
 
     async def run_async(self, sop_steps: list, initial_context: dict = None) -> dict:
@@ -415,7 +475,7 @@ class Agent:
             Updated context dictionary
         """
         context = dict(initial_context) if initial_context else {}
-        context['_store'] = self.store
+        context["_store"] = self.store
 
         for step in sop_steps:
             if isinstance(step, str):
@@ -427,8 +487,14 @@ class Agent:
 
         return context
 
-    def spawn(self, name: str = None, store: Store = None, skills: dict = None,
-              sop_steps: list = None, **kwargs) -> 'Agent':
+    def spawn(
+        self,
+        name: str = None,
+        store: Store = None,
+        skills: dict = None,
+        sop_steps: list = None,
+        **kwargs,
+    ) -> "Agent":
         """
         Create a child Agent.
 
@@ -448,19 +514,24 @@ class Agent:
         child_generation = self.generation + 1
 
         # Check if this agent can spawn based on max_spawn_generation
-        if self.max_spawn_generation is not None and child_generation > self.max_spawn_generation:
+        if (
+            self.max_spawn_generation is not None
+            and child_generation > self.max_spawn_generation
+        ):
             raise PermissionError(
                 f"Agent '{self.name}' (gen {self.generation}) cannot spawn gen {child_generation}"
             )
 
         # Set child's max_spawn_generation to limit further spawning
         if self.max_spawn_generation is not None:
-            kwargs['max_spawn_generation'] = self.max_spawn_generation - 1
+            kwargs["max_spawn_generation"] = self.max_spawn_generation - 1
 
-        kwargs['generation'] = child_generation
-        return Agent(name=name, store=store, skills=skills, sop_steps=sop_steps, **kwargs)
+        kwargs["generation"] = child_generation
+        return Agent(
+            name=name, store=store, skills=skills, sop_steps=sop_steps, **kwargs
+        )
 
-    def teach(self, child: 'Agent', sop_steps: list):
+    def teach(self, child: "Agent", sop_steps: list):
         """
         Teach a child agent by sending SOP steps.
 

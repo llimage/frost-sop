@@ -134,7 +134,7 @@ def analyze_finance(context: dict) -> dict:
         - 本月总成本：${total_cost:.4f}
         - 总Token消耗：{total_tokens:.0f}
         - 预算使用率：{latest_budget_rate:.1%}
-        
+
         请分析成本趋势，识别异常点，给出优化建议。
         """
         result["briefing"] = _call_llm_for_briefing(prompt, max_tokens=300)
@@ -147,7 +147,7 @@ def analyze_finance(context: dict) -> dict:
         - 总Token消耗：{total_tokens:.0f}
         - 预算使用率：{latest_budget_rate:.1%}
         - 详细成本数据：{cost_data[-10:]}  # 最近10条
-        
+
         请分析：
         1. 成本趋势与预测
         2. 异常支出识别
@@ -210,7 +210,7 @@ def analyze_skill(context: dict) -> dict:
         - 成功次数：{success_count}
         - 失败次数：{failed_count}
         - 成功率：{success_rate:.1%}
-        
+
         请识别失败频繁的Skill，给出优化建议。
         """
         result["briefing"] = _call_llm_for_briefing(prompt, max_tokens=300)
@@ -275,7 +275,7 @@ def analyze_task(context: dict) -> dict:
         - 失败数：{failed_count}
         - 完成率：{completion_rate:.1%}
         - 平均耗时：{avg_duration:.1f}s
-        
+
         请识别耗时过长的任务，给出优化建议。
         """
         result["briefing"] = _call_llm_for_briefing(prompt, max_tokens=300)
@@ -332,7 +332,7 @@ def analyze_audit(context: dict) -> dict:
         - 通过次数：{pass_count}
         - 失败次数：{fail_count}
         - 通过率：{pass_rate:.1%}
-        
+
         请识别频繁失败的合规规则，给出修订建议。
         """
         result["briefing"] = _call_llm_for_briefing(prompt, max_tokens=300)
@@ -388,7 +388,7 @@ def analyze_heartbeat(context: dict) -> dict:
         - 总心跳次数：{total_heartbeats}
         - 超时次数：{timeout_count}
         - 超时率：{timeout_rate:.1%}
-        
+
         请识别超时频繁的Agent，给出优化建议。
         """
         result["briefing"] = _call_llm_for_briefing(prompt, max_tokens=300)
@@ -450,7 +450,7 @@ def analyze_hunt(context: dict) -> dict:
         - 吸收次数：{absorbed_count}
         - 拒绝次数：{rejected_count}
         - 吸收率：{absorption_rate:.1%}
-        
+
         请评估狩猎效率，给出优化建议。
         """
         result["briefing"] = _call_llm_for_briefing(prompt, max_tokens=300)
@@ -520,13 +520,13 @@ def integrate_briefings(context: dict) -> dict:
         # 调用LLM生成整合简报
         prompt = f"""
         请生成家族健康整合简报（不超过500字）。
-        
+
         各维度简报：
         {briefings}
-        
+
         跨维度关联：
         {correlations}
-        
+
         请：
         1. 总结家族整体健康度
         2. 识别需要立即关注的问题

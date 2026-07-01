@@ -4,15 +4,14 @@ core/log_config.py 单元测试
 测试 setup_logging、SensitiveFilter 和 get_logger。
 """
 
-import sys
-import os
 import logging
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("FROST_TESTING", "1")
 
-import pytest
-from core.log_config import setup_logging, SensitiveFilter, get_logger
+from core.log_config import SensitiveFilter, get_logger, setup_logging
 
 
 class TestSensitiveFilter:
@@ -24,9 +23,13 @@ class TestSensitiveFilter:
     def test_filter_api_key_long(self):
         """sk- 后 20+ 字符才会被过滤"""
         record = logging.LogRecord(
-            "test", logging.INFO, "", 0,
+            "test",
+            logging.INFO,
+            "",
+            0,
             "Using api_key=sk-abcdefghijklmnopqrstuvwx",
-            (), None,
+            (),
+            None,
         )
         self.filter.filter(record)
         assert "sk-" not in record.msg
@@ -34,9 +37,13 @@ class TestSensitiveFilter:
     def test_filter_authorization_bearer(self):
         """Bearer token 被过滤但 authorization 被关键词替换"""
         record = logging.LogRecord(
-            "test", logging.WARNING, "", 0,
+            "test",
+            logging.WARNING,
+            "",
+            0,
             "Authorization: Bearer mytoken123",
-            (), None,
+            (),
+            None,
         )
         self.filter.filter(record)
         # Authorization: Bearer → Authorization=***, 然后 Bearer *** 匹配第三个模式
@@ -49,9 +56,13 @@ class TestSensitiveFilter:
 
     def test_filter_password(self):
         record = logging.LogRecord(
-            "test", logging.ERROR, "", 0,
+            "test",
+            logging.ERROR,
+            "",
+            0,
             "password=secret123 not safe",
-            (), None,
+            (),
+            None,
         )
         self.filter.filter(record)
         assert "secret123" not in record.msg
@@ -59,9 +70,13 @@ class TestSensitiveFilter:
     def test_filter_token_param(self):
         """token=xxx 格式被过滤"""
         record = logging.LogRecord(
-            "test", logging.INFO, "", 0,
+            "test",
+            logging.INFO,
+            "",
+            0,
             "Request: token=abc123def456",
-            (), None,
+            (),
+            None,
         )
         self.filter.filter(record)
         # token=abc123def456 → token=***
@@ -86,6 +101,7 @@ class TestSetupLogging:
 
     def test_console_only(self, tmp_path):
         import core.log_config as lc
+
         lc.LOG_DIR = tmp_path
         logger = setup_logging(level="DEBUG", file_rotation=False)
         assert logger.name == "frost"
@@ -93,12 +109,14 @@ class TestSetupLogging:
 
     def test_with_file_rotation(self, tmp_path):
         import core.log_config as lc
+
         lc.LOG_DIR = tmp_path
         logger = setup_logging(level="WARNING")
         assert logger.level == logging.WARNING
 
     def test_idempotent(self, tmp_path):
         import core.log_config as lc
+
         lc.LOG_DIR = tmp_path
         logger1 = setup_logging(file_rotation=False)
         h1 = len(logger1.handlers)
@@ -108,12 +126,14 @@ class TestSetupLogging:
     def test_env_var_level(self, tmp_path):
         os.environ["FROST_LOG_LEVEL"] = "ERROR"
         import core.log_config as lc
+
         lc.LOG_DIR = tmp_path
         logger = setup_logging(file_rotation=False)
         assert logger.level == logging.ERROR
 
     def test_default_level(self, tmp_path):
         import core.log_config as lc
+
         lc.LOG_DIR = tmp_path
         logger = setup_logging(file_rotation=False)
         assert logger.level == logging.INFO

@@ -18,9 +18,10 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from functools import wraps
 from threading import Lock
-from typing import Any, Callable
+from typing import Any
 
 
 class PerfStats:

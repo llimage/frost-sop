@@ -8,7 +8,6 @@ V2.0: 长老可订阅 TASK_COMPLETED 事件，自动执行 audit_family（fail-s
 """
 
 import logging
-import threading
 from core.agent import Agent
 from core.skill import Skill
 
@@ -42,7 +41,7 @@ def audit_family(context: dict) -> dict:
     }
 
     # 获取所有键
-    all_keys = asset_store.list_keys() if hasattr(asset_store, 'list_keys') else []
+    all_keys = asset_store.list_keys() if hasattr(asset_store, "list_keys") else []
 
     # 统计任务记录
     tasks = []
@@ -105,7 +104,9 @@ def audit_family(context: dict) -> dict:
 
     # 生成发现和建议
     if len(tasks) > 0:
-        report["findings"].append(f"家族共执行{len(tasks)}个任务，成功{successful}个，失败{failed}个")
+        report["findings"].append(
+            f"家族共执行{len(tasks)}个任务，成功{successful}个，失败{failed}个"
+        )
     else:
         report["findings"].append("家族尚未执行任何任务")
 
@@ -116,14 +117,20 @@ def audit_family(context: dict) -> dict:
         report["recommendations"].append("任务数量较多，建议考虑增加父辈Agent")
 
     if failed > successful * 0.3 and len(tasks) >= 5:
-        report["recommendations"].append(f"失败率较高（{failed}/{len(tasks)}），建议进行SOP优化回顾")
+        report["recommendations"].append(
+            f"失败率较高（{failed}/{len(tasks)}），建议进行SOP优化回顾"
+        )
 
     context["_audit_report"] = report
-    context["_reason"] = f"审计完成：共{len(tasks)}个任务，成功{successful}，失败{failed}，错题本{len(lessons)}条"
+    context["_reason"] = (
+        f"审计完成：共{len(tasks)}个任务，成功{successful}，失败{failed}，错题本{len(lessons)}条"
+    )
     return context
 
 
-def create_elder(name: str = "elder", asset_store=None, constitution_store=None) -> Agent:
+def create_elder(
+    name: str = "elder", asset_store=None, constitution_store=None
+) -> Agent:
     """创建长老Agent"""
     skills = {
         "audit_family": Skill("audit_family", audit_family),
@@ -144,13 +151,15 @@ audit_family_skill = Skill("audit_family", audit_family)
 # V2.0: 长老事件驱动——订阅 TASK_COMPLETED，自动执行审计
 # ---------------------------------------------------------------------------
 
+
 def _make_elder_event_handler(elder_agent: "Agent"):
     """
     创建长老的 TASK_COMPLETED 事件处理函数。
-    
+
     当任务完成时，在后台守护线程中自动运行 audit_family。
     fail-safe：任何异常只打印警告，不影响主流程。
     """
+
     def _on_task_completed(event):
         try:
             ctx = {
@@ -161,9 +170,10 @@ def _make_elder_event_handler(elder_agent: "Agent"):
             }
             audit_family(ctx)
             report = ctx.get("_audit_report", {})
-            logger.info("自动审计完成（事件触发）: %s", ctx.get('_reason', '已完成'))
+            logger.info("自动审计完成（事件触发）: %s", ctx.get("_reason", "已完成"))
         except Exception as e:
             import warnings
+
             warnings.warn(f"[Elder] TASK_COMPLETED 自动审计失败（已忽略）: {e}")
 
     return _on_task_completed
@@ -172,17 +182,19 @@ def _make_elder_event_handler(elder_agent: "Agent"):
 def subscribe_elder_to_events(elder_agent: "Agent") -> bool:
     """
     让长老订阅 TASK_COMPLETED 事件。
-    
+
     返回 True 表示订阅成功，False 表示不支持事件总线（fail-safe）。
     """
     try:
         from core.event_bus import get_event_bus, EventType
+
         bus = get_event_bus()
         handler = _make_elder_event_handler(elder_agent)
         bus.subscribe(EventType.TASK_COMPLETED, handler)
-        elder_agent._event_handler = handler   # 保存引用，方便后续 unsubscribe
+        elder_agent._event_handler = handler  # 保存引用，方便后续 unsubscribe
         return True
     except Exception as e:
         import warnings
+
         warnings.warn(f"[Elder] 事件订阅失败（已忽略）: {e}")
         return False

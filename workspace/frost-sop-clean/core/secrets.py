@@ -34,34 +34,34 @@ _KDF_ITERATIONS = 600_000
 def _get_machine_key() -> bytes:
     """
     从机器标识派生加密密钥。
-    
+
     使用 machine-id 或 hostname + MAC 的组合，
     确保每台机器的密钥不同。
     """
     identifiers = []
-    
+
     # 1. 主机名
     try:
         identifiers.append(socket.gethostname())
     except Exception:
         pass
-    
+
     # 2. 用户目录（Windows/macOS/Linux 通用）
     try:
         identifiers.append(os.path.expanduser("~"))
     except Exception:
         pass
-    
+
     # 3. 计算机名（Windows）
     try:
         identifiers.append(os.environ.get("COMPUTERNAME", ""))
     except Exception:
         pass
-    
+
     # 如果以上都不行，使用固定值（降级）
     if not identifiers:
         identifiers.append("frost-sop-default-machine")
-    
+
     # 组合并哈希
     combined = "|".join(identifiers).encode("utf-8")
     return hashlib.sha256(combined).digest()
@@ -70,10 +70,10 @@ def _get_machine_key() -> bytes:
 def _derive_key(machine_key: bytes) -> bytes:
     """
     从机器密钥派生 AES-256 密钥。
-    
+
     Args:
         machine_key: 机器标识原始字节
-        
+
     Returns:
         32 字节 AES-256 密钥
     """
@@ -88,25 +88,26 @@ def _derive_key(machine_key: bytes) -> bytes:
 
 # ── 核心 API ───────────────────────────────────────────────
 
+
 def encrypt_api_key(plaintext: str) -> str:
     """
     加密 API 密钥。
-    
+
     Args:
         plaintext: 明文 API 密钥
-        
+
     Returns:
         Base64 编码的密文（含 nonce）
     """
     key = _derive_key(_get_machine_key())
     aesgcm = AESGCM(key)
-    
+
     # 生成随机 nonce（12 字节，GCM 推荐）
     nonce = os.urandom(12)
-    
+
     # 加密并认证
     ciphertext = aesgcm.encrypt(nonce, plaintext.encode("utf-8"), None)
-    
+
     # 组合 nonce + ciphertext，Base64 编码
     combined = nonce + ciphertext
     return base64.b64encode(combined).decode("ascii")
@@ -115,24 +116,24 @@ def encrypt_api_key(plaintext: str) -> str:
 def decrypt_api_key(encrypted: str) -> Optional[str]:
     """
     解密 API 密钥。
-    
+
     Args:
         encrypted: Base64 编码的密文（含 nonce）
-        
+
     Returns:
         明文 API 密钥，失败返回 None
     """
     try:
         key = _derive_key(_get_machine_key())
         aesgcm = AESGCM(key)
-        
+
         # 解码 Base64
         combined = base64.b64decode(encrypted)
-        
+
         # 分离 nonce (12 字节) 和 ciphertext
         nonce = combined[:12]
         ciphertext = combined[12:]
-        
+
         # 解密并验证
         plaintext = aesgcm.decrypt(nonce, ciphertext, None)
         return plaintext.decode("utf-8")
@@ -143,11 +144,11 @@ def decrypt_api_key(encrypted: str) -> Optional[str]:
 def save_secret(key: str, value: str) -> bool:
     """
     加密并保存一个密钥到 .secrets.enc 文件。
-    
+
     Args:
         key: 密钥名称（如 "DEEPSEEK_API_KEY"）
         value: 明文值
-        
+
     Returns:
         是否成功
     """
@@ -155,18 +156,18 @@ def save_secret(key: str, value: str) -> bool:
         # 确保目录存在
         secrets_path = Path(_SECRETS_FILE)
         secrets_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # 读取现有密钥
         secrets = _load_secrets()
-        
+
         # 加密新值
         encrypted = encrypt_api_key(value)
         secrets[key] = encrypted
-        
+
         # 写回文件
         with open(secrets_path, "w", encoding="utf-8") as f:
             json.dump(secrets, f, indent=2)
-        
+
         print(f"  🔒 已加密保存: {key}")
         return True
     except Exception as e:
@@ -177,10 +178,10 @@ def save_secret(key: str, value: str) -> bool:
 def get_secret(key: str) -> Optional[str]:
     """
     获取解密后的密钥值。
-    
+
     Args:
         key: 密钥名称
-        
+
     Returns:
         明文值，失败返回 None
     """
@@ -221,7 +222,7 @@ def is_first_run() -> bool:
 def setup_wizard() -> Dict[str, str]:
     """
     首次运行设置向导：提示用户输入 API 密钥并加密存储。
-    
+
     Returns:
         解密后的密钥字典（供当前会话使用）
     """
@@ -235,9 +236,9 @@ def setup_wizard() -> Dict[str, str]:
     print()
     print("API 密钥将被 AES-256-GCM 加密存储，仅本机可解密。")
     print()
-    
+
     decrypted = {}
-    
+
     # DeepSeek API Key（必填）
     while True:
         key = getpass.getpass("  DEEPSEEK_API_KEY (必填): ").strip()
@@ -246,22 +247,23 @@ def setup_wizard() -> Dict[str, str]:
                 decrypted["DEEPSEEK_API_KEY"] = key
             break
         print("  ⚠️ DeepSeek API Key 是必填项。")
-    
+
     # Perplexity API Key（可选）
     key = getpass.getpass("  PERPLEXITY_API_KEY (可选，直接回车跳过): ").strip()
     if key:
         if save_secret("PERPLEXITY_API_KEY", key):
             decrypted["PERPLEXITY_API_KEY"] = key
-    
+
     print()
     print("✅ API 密钥设置完成！")
     print(f"   密钥文件: {Path(_SECRETS_FILE).resolve()}")
     print()
-    
+
     return decrypted
 
 
 # ── 内部辅助 ───────────────────────────────────────────────
+
 
 def _load_secrets() -> Dict[str, str]:
     """从文件加载加密的密钥字典。"""
@@ -290,31 +292,31 @@ _decrypted_cache: Dict[str, str] = {}
 def get_decrypted_key(key_name: str, prompt_if_missing: bool = True) -> Optional[str]:
     """
     获取解密后的 API 密钥（带缓存）。
-    
+
     Args:
         key_name: 密钥名称（如 "DEEPSEEK_API_KEY"）
         prompt_if_missing: 如果未找到，是否提示用户输入
-        
+
     Returns:
         明文密钥，或 None
     """
     # 1. 先查内存缓存
     if key_name in _decrypted_cache:
         return _decrypted_cache[key_name]
-    
+
     # 2. 查加密文件
     decrypted = get_secret(key_name)
     if decrypted:
         _decrypted_cache[key_name] = decrypted
         return decrypted
-    
+
     # 3. 回退到环境变量（兼容旧配置）
     env_val = os.getenv(key_name)
     if env_val:
         print(f"  ⚠️  使用环境变量中的 {key_name}（建议迁移到加密存储）")
         _decrypted_cache[key_name] = env_val
         return env_val
-    
+
     # 4. 提示输入
     if prompt_if_missing:
         print(f"  ⚠️  未找到 {key_name}")
@@ -323,7 +325,7 @@ def get_decrypted_key(key_name: str, prompt_if_missing: bool = True) -> Optional
             save_secret(key_name, key)
             _decrypted_cache[key_name] = key
             return key
-    
+
     return None
 
 
@@ -334,15 +336,15 @@ def migrate_from_env():
     """
     keys_to_migrate = ["DEEPSEEK_API_KEY", "PERPLEXITY_API_KEY"]
     migrated = []
-    
+
     for key_name in keys_to_migrate:
         env_val = os.getenv(key_name)
         if env_val and not get_secret(key_name):
             if save_secret(key_name, env_val):
                 migrated.append(key_name)
-    
+
     if migrated:
         print(f"\n  ✅ 已迁移 {len(migrated)} 个密钥到加密存储: {', '.join(migrated)}")
-        print(f"  💡 建议从 .env 文件中删除明文密钥以提高安全性。")
-    
+        print("  💡 建议从 .env 文件中删除明文密钥以提高安全性。")
+
     return migrated

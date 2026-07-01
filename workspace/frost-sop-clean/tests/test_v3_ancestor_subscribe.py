@@ -13,11 +13,9 @@ import os
 import asyncio
 import pytest
 
-os.environ['FROST_TESTING'] = '1'
+os.environ["FROST_TESTING"] = "1"
 
-from core.event_bus import (
-    AsyncEventBus, Event, EventType, get_async_event_bus
-)
+from core.event_bus import AsyncEventBus, Event, EventType, get_async_event_bus
 from agents.ancestor import create_ancestor
 from stores.constitution import create_constitution_store
 from stores.asset import create_asset_store
@@ -26,6 +24,7 @@ from stores.asset import create_asset_store
 # ---------------------------------------------------------------------------
 # 辅助函数
 # ---------------------------------------------------------------------------
+
 
 def _setup():
     """重置 AsyncEventBus"""
@@ -38,6 +37,7 @@ def _setup():
 # ---------------------------------------------------------------------------
 # 测试 1: event_driven=False 保持 V2.0 行为
 # ---------------------------------------------------------------------------
+
 
 def test_01_ancestor_v2_mode_no_subscription():
     """event_driven=False 时不订阅事件"""
@@ -55,6 +55,7 @@ def test_01_ancestor_v2_mode_no_subscription():
 # 测试 2: event_driven=True 订阅 TASK_CREATED
 # ---------------------------------------------------------------------------
 
+
 def test_02_ancestor_v3_mode_subscribes_task_created():
     """event_driven=True 时订阅 TASK_CREATED"""
     bus = _setup()
@@ -70,6 +71,7 @@ def test_02_ancestor_v3_mode_subscribes_task_created():
 # ---------------------------------------------------------------------------
 # 测试 3: 收到 TASK_CREATED 后发布 TASK_DECOMPOSED
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_03_ancestor_publishes_task_decomposed():
@@ -89,14 +91,16 @@ async def test_03_ancestor_publishes_task_decomposed():
     bus.subscribe_async(EventType.TASK_DECOMPOSED, capture_decomposed)
 
     # 发布 TASK_CREATED
-    await bus.publish(Event(
-        event_type=EventType.TASK_CREATED,
-        source="main:async_entry",
-        data={
-            "task_id": "test_task_001",
-            "task_description": "用户权限管理",
-        },
-    ))
+    await bus.publish(
+        Event(
+            event_type=EventType.TASK_CREATED,
+            source="main:async_entry",
+            data={
+                "task_id": "test_task_001",
+                "task_description": "用户权限管理",
+            },
+        )
+    )
 
     # 等待异步处理完成
     await asyncio.sleep(0.1)
@@ -114,6 +118,7 @@ async def test_03_ancestor_publishes_task_decomposed():
 # 测试 4: TASK_DECOMPOSED 包含 LLM 分解结果
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_04_decomposition_contains_llm_response():
     """TASK_DECOMPOSED 事件包含 LLM 分解结果"""
@@ -130,14 +135,16 @@ async def test_04_decomposition_contains_llm_response():
 
     bus.subscribe_async(EventType.TASK_DECOMPOSED, capture)
 
-    await bus.publish(Event(
-        event_type=EventType.TASK_CREATED,
-        source="main:async_entry",
-        data={
-            "task_id": "test_002",
-            "task_description": "实现登录功能",
-        },
-    ))
+    await bus.publish(
+        Event(
+            event_type=EventType.TASK_CREATED,
+            source="main:async_entry",
+            data={
+                "task_id": "test_002",
+                "task_description": "实现登录功能",
+            },
+        )
+    )
 
     await asyncio.sleep(0.1)
 
@@ -151,6 +158,7 @@ async def test_04_decomposition_contains_llm_response():
 # 测试 5: event_driven=False 不影响 Agent 正常功能
 # ---------------------------------------------------------------------------
 
+
 def test_05_ancestor_v2_mode_still_works():
     """V2.0 模式下 ancestor 仍可正常 run()"""
     bus = _setup()
@@ -161,10 +169,7 @@ def test_05_ancestor_v2_mode_still_works():
 
     # 正常调用 ancestor.run()
     context = ancestor.run(
-        sop_steps=["call_llm"],
-        initial_context={
-            "_prompt": "Analyze task: test"
-        }
+        sop_steps=["call_llm"], initial_context={"_prompt": "Analyze task: test"}
     )
 
     # mock 模式下应该有 LLM 响应

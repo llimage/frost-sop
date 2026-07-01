@@ -1,9 +1,13 @@
 """F16 FastAPI 端点验证脚本"""
-import json, urllib.request, urllib.error
+
+import json
+import urllib.request
+import urllib.error
 
 BASE = "http://localhost:8000/api"
 passed = 0
 failed = 0
+
 
 def test(name, method="GET", path="", body=None):
     global passed, failed
@@ -28,6 +32,7 @@ def test(name, method="GET", path="", body=None):
         failed += 1
         return None
 
+
 print("=" * 50)
 print("F16 FastAPI Endpoint Verification")
 print("=" * 50)
@@ -48,11 +53,18 @@ r = test(
     "4. POST /api/tasks",
     method="POST",
     path="/tasks",
-    body={"description": "F16 API测试任务", "sop_id": "DEV-001", "project_id": "default", "use_real_llm": False}
+    body={
+        "description": "F16 API测试任务",
+        "sop_id": "DEV-001",
+        "project_id": "default",
+        "use_real_llm": False,
+    },
 )
 task_id = r.get("task_id") if r else None
 if r:
-    print(f"     → task_id={task_id} status={r.get('status')} stages={len(r.get('stages', []))}")
+    print(
+        f"     → task_id={task_id} status={r.get('status')} stages={len(r.get('stages', []))}"
+    )
 
 # 5. List tasks
 r = test("5. GET /api/tasks", path="/tasks?limit=5")
@@ -76,7 +88,7 @@ test(
     "9. POST /api/chat",
     method="POST",
     path="/chat",
-    body={"message": "项目进展如何？请用中文回复", "use_real_llm": False}
+    body={"message": "项目进展如何？请用中文回复", "use_real_llm": False},
 )
 
 # 10. Skills
@@ -94,13 +106,13 @@ r = test(
         "title": "F16测试日程",
         "start_time": "2026-06-25T09:00:00",
         "end_time": "2026-06-25T10:00:00",
-        "description": "API验证测试"
-    }
+        "description": "API验证测试",
+    },
 )
 if r:
     print(f"     → id={r.get('id')} title={r.get('title')}")
 
 print()
-print(f"{'='*50}")
+print(f"{'=' * 50}")
 print(f"RESULTS: {passed} passed / {failed} failed / {12} total")
-print(f"{'='*50}")
+print(f"{'=' * 50}")

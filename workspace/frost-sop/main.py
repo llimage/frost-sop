@@ -554,13 +554,15 @@ def main_cli():
     )
     parser.add_argument("--task", type=str, default=None, help="任务描述")
     parser.add_argument("--sop", type=str, default=None, help="SOP模板ID (e.g. DEV-001, DEV-002)")
-    parser.add_argument(
-        "--async-mode", action="store_true", help="使用 V3.0 异步事件驱动模式"
-    )
+    parser.add_argument("--async-mode", action="store_true", help="使用 V3.0 异步事件驱动模式")
     parser.add_argument("--timeout", type=int, default=600, help="超时时间（秒，异步模式）")
     parser.add_argument("--serve", action="store_true", help="启动 FastAPI 服务（代替执行任务）")
-    parser.add_argument("--port", type=int, default=8000, help="FastAPI 端口（与 --serve 配合使用）")
-    parser.add_argument("--host", type=str, default="0.0.0.0", help="FastAPI host（与 --serve 配合使用）")
+    parser.add_argument(
+        "--port", type=int, default=8000, help="FastAPI 端口（与 --serve 配合使用）"
+    )
+    parser.add_argument(
+        "--host", type=str, default="0.0.0.0", help="FastAPI host（与 --serve 配合使用）"
+    )
     parser.add_argument("--init-db", action="store_true", help="仅初始化数据库（不执行任务）")
     args = parser.parse_args()
 

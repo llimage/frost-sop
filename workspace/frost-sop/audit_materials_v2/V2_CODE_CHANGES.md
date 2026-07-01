@@ -31,7 +31,7 @@ class EventBus:
     reset()
 ```
 
-**变更前**：不存在  
+**变更前**：不存在
 **变更后**：完整的事件总线基础设施
 
 ---
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS event_log (
 );
 ```
 
-**变更前**：18 张表（不含 event_log）  
+**变更前**：18 张表（不含 event_log）
 **变更后**：19 张表（含 event_log，实际运行中 23 张含测试用表）
 
 ---
@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS event_log (
           return False
   ```
 
-**变更前**：仅有 `create_elder()` 和 `audit_family` Skill  
+**变更前**：仅有 `create_elder()` 和 `audit_family` Skill
 **变更后**：增加了事件订阅能力，支持自动审计
 
 ---
@@ -164,7 +164,7 @@ except Exception as e:
     print(f"[V2.0 assemble] 事件发布失败（已忽略）: {e}")
 ```
 
-**变更前**：组装完成后仅设置 context  
+**变更前**：组装完成后仅设置 context
 **变更后**：组装完成后发布 `AGENT_CREATED` 事件（fail-safe）
 
 ---
@@ -187,7 +187,7 @@ else:
     print("   [V2.0] 长老事件订阅跳过（EventBus 不可用）")
 ```
 
-**变更前**：祖辈 → 父辈 → 执行 SOP  
+**变更前**：祖辈 → 父辈 → 执行 SOP
 **变更后**：祖辈 → 长老订阅 → 父辈 → 执行 SOP → 长老自动审计
 
 ---

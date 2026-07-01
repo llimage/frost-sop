@@ -5,13 +5,13 @@ F6.5 撒豆成兵 - 功能测试脚本
 
 import os
 import sys
-import json
 
 # 添加项目根目录到路径
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 from core.store import AssetStore
+
 
 def test_asset_store():
     """测试 AssetStore 类的功能"""
@@ -47,7 +47,7 @@ def test_asset_store():
     print("\n[4] 测试加载最新配置...")
     latest_config = asset_store.load_latest()
     if latest_config:
-        print(f"   ✓ 最新配置加载成功:")
+        print("   ✓ 最新配置加载成功:")
         print(f"      - 任务描述: {latest_config.get('task_description')}")
         print(f"      - 项目名: {latest_config.get('project_name')}")
         print(f"      - 版本: {latest_config.get('version')}")
@@ -64,7 +64,7 @@ def test_asset_store():
     auto_config = asset_store.load_latest()
     if auto_config:
         print(f"   ✓ 自动唤醒成功，任务描述: {auto_config.get('task_description')}")
-        print(f"   ✓ 可以直接填充到界面，用户无需重新输入")
+        print("   ✓ 可以直接填充到界面，用户无需重新输入")
 
     print("\n" + "=" * 60)
     print("F6.5 测试完成！所有功能正常")
@@ -79,5 +79,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n❌ 测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

@@ -5,6 +5,7 @@ Tests the complete family model workflow.
 
 import sys
 import os
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from stores.constitution import create_constitution_store
@@ -36,7 +37,7 @@ def test_full_workflow():
     # 3. Ancestor LLM decomposes task
     context = ancestor.run(
         sop_steps=["call_llm"],
-        initial_context={"_prompt": "Add user authentication feature to the project"}
+        initial_context={"_prompt": "Add user authentication feature to the project"},
     )
     assert "_llm_response" in context
     print("[PASS] Ancestor LLM decomposition complete")
@@ -53,10 +54,15 @@ def test_full_workflow():
     }
     context = ancestor.run(
         sop_steps=["validate_sop"],
-        initial_context={"_sop_to_validate": sop, "_compliance_rules": compliance_rules}
+        initial_context={
+            "_sop_to_validate": sop,
+            "_compliance_rules": compliance_rules,
+        },
     )
     validation = context.get("_validation_result", {})
-    assert validation.get("valid") is True, f"Compliance check failed: {validation.get('errors')}"
+    assert validation.get("valid") is True, (
+        f"Compliance check failed: {validation.get('errors')}"
+    )
     print("[PASS] Compliance validation passed")
 
     # 6. Create Parent and execute
@@ -70,11 +76,14 @@ def test_full_workflow():
         print(f"   Executing stage: {stage['name']}")
 
     # 8. Harvest outputs
-    asset_store.save("task:latest", {
-        "task": "User authentication feature",
-        "sop": sop.name,
-        "stages_completed": len(sop.stages),
-    })
+    asset_store.save(
+        "task:latest",
+        {
+            "task": "User authentication feature",
+            "sop": sop.name,
+            "stages_completed": len(sop.stages),
+        },
+    )
     assert asset_store.load("task:latest") is not None
     print("[PASS] Output harvesting complete")
 

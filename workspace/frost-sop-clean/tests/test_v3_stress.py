@@ -3,6 +3,7 @@ V3.0 缺失测试 3.4：压力测试
 
 验证高并发/高负载场景下事件总线的稳定性。
 """
+
 import asyncio
 import time
 import pytest
@@ -29,11 +30,9 @@ async def test_high_volume_event_publish():
 
     # 发布 1000 个事件
     for i in range(1000):
-        await bus.publish(Event(
-            event_type=EventType.TASK_CREATED,
-            source="stress",
-            data={"seq": i}
-        ))
+        await bus.publish(
+            Event(event_type=EventType.TASK_CREATED, source="stress", data={"seq": i})
+        )
 
     # 等待所有回调完成
     await asyncio.sleep(0.5)
@@ -52,11 +51,13 @@ async def test_concurrent_event_publish():
 
     async def publisher(task_id: int):
         for i in range(50):
-            await bus.publish(Event(
-                event_type=EventType.TASK_CREATED,
-                source=f"task-{task_id}",
-                data={"task": task_id, "seq": i}
-            ))
+            await bus.publish(
+                Event(
+                    event_type=EventType.TASK_CREATED,
+                    source=f"task-{task_id}",
+                    data={"task": task_id, "seq": i},
+                )
+            )
             logs.append(("pub", task_id, i))
 
     async def collector(event: Event):
@@ -92,11 +93,9 @@ async def test_many_subscribers_performance():
 
     # 发布 1 个事件，计时
     start = time.monotonic()
-    await bus.publish(Event(
-        event_type=EventType.TASK_CREATED,
-        source="stress",
-        data={}
-    ))
+    await bus.publish(
+        Event(event_type=EventType.TASK_CREATED, source="stress", data={})
+    )
     # 等待所有回调完成
     await asyncio.sleep(0.3)
     elapsed = time.monotonic() - start
@@ -113,11 +112,9 @@ async def test_event_log_no_missing():
     count = 100
 
     for i in range(count):
-        await bus.publish(Event(
-            event_type=EventType.TASK_CREATED,
-            source="stress",
-            data={"seq": i}
-        ))
+        await bus.publish(
+            Event(event_type=EventType.TASK_CREATED, source="stress", data={"seq": i})
+        )
 
     await asyncio.sleep(1.0)
 
@@ -140,19 +137,19 @@ async def test_bus_still_responsive_after_stress():
 
     # 先压力测试：发布 500 个事件
     for i in range(500):
-        await bus.publish(Event(
-            event_type=EventType.TASK_CREATED,
-            source="stress",
-            data={"seq": i}
-        ))
+        await bus.publish(
+            Event(event_type=EventType.TASK_CREATED, source="stress", data={"seq": i})
+        )
     await asyncio.sleep(0.3)
 
     # 再发一个"健康检查"事件
-    await bus.publish(Event(
-        event_type=EventType.TASK_CREATED,
-        source="health_check",
-        data={"check": "alive"}
-    ))
+    await bus.publish(
+        Event(
+            event_type=EventType.TASK_CREATED,
+            source="health_check",
+            data={"check": "alive"},
+        )
+    )
     await asyncio.sleep(0.1)
 
     assert "alive" in received, "压力测试后事件总线无响应"

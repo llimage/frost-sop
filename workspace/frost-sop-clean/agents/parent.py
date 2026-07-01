@@ -10,27 +10,41 @@ V2.0: 保持原有同步调用方式（被 main() 直接调用）
 import logging
 from core.agent import Agent
 from skills.orchestration import (
-    spawn_skill, emit_skill, validate_sop_skill, merge_from_skill,
-    internalize_sop_skill, execute_stage_skill, finalize_task_skill,
+    spawn_skill,
+    emit_skill,
+    validate_sop_skill,
+    merge_from_skill,
+    internalize_sop_skill,
+    execute_stage_skill,
+    finalize_task_skill,
 )
 from skills.search import search_sop_skill, search_skill_skill
 from skills.llm import call_llm_skill
-from skills.knowledge import archive_sop_skill, archive_lesson_skill, query_lessons_skill
+from skills.knowledge import (
+    archive_sop_skill,
+    archive_lesson_skill,
+    query_lessons_skill,
+)
 from skills.assemble import assemble_agent_skill
 from skills.importer import import_agency_agents_skill
 from skills.evolution import (
-    load_task_history_skill, analyze_trends_skill,
-    generate_suggestions_skill, present_for_approval_skill,
+    load_task_history_skill,
+    analyze_trends_skill,
+    generate_suggestions_skill,
+    present_for_approval_skill,
 )
 
 logger = logging.getLogger(__name__)
 import asyncio
 
 
-def create_parent(name: str, coordination_store,
-                  event_driven: bool = False,
-                  asset_store=None,
-                  sop_id: str = None) -> Agent:
+def create_parent(
+    name: str,
+    coordination_store,
+    event_driven: bool = False,
+    asset_store=None,
+    sop_id: str = None,
+) -> Agent:
     """
     创建父辈Agent。出厂预装15个本能Skill。
 
@@ -104,15 +118,18 @@ def _subscribe_parent_to_events(parent: Agent, asset_store, sop_id: str) -> bool
             # 1. 加载 SOP 模板
             sop_file = f"sops/templates/{sop_id or 'DEV-001'}.yaml"
             from core.sop import SOP
+
             try:
                 sop = SOP.load_from_yaml(sop_file)
             except Exception as e:
                 logger.error("[V3.0] SOP 加载失败: %s", e)
-                await bus.publish(Event(
-                    event_type=EventType.TASK_FAILED,
-                    source="parent:stage_executor",
-                    data={"task_id": task_id, "error": f"SOP load failed: {e}"},
-                ))
+                await bus.publish(
+                    Event(
+                        event_type=EventType.TASK_FAILED,
+                        source="parent:stage_executor",
+                        data={"task_id": task_id, "error": f"SOP load failed: {e}"},
+                    )
+                )
                 return
 
             # 2. 内化 SOP
@@ -129,33 +146,41 @@ def _subscribe_parent_to_events(parent: Agent, asset_store, sop_id: str) -> bool
             int_context = await asyncio.to_thread(
                 parent.run,
                 sop_steps=["internalize_sop"],
-                initial_context={"_sop_to_internalize": sop_to_internalize}
+                initial_context={"_sop_to_internalize": sop_to_internalize},
             )
             sop_stages = int_context.get("_sop_stages", [])
             logger.info("[V3.0] SOP 内化完成: %s 个阶段", len(sop_stages))
 
             # 3. 逐阶段发布 STAGE_STARTED（由 orchestration.py 的 stage executor 异步执行）
             for i, stage in enumerate(sop_stages):
-                stage_name = stage.get("name", f"阶段{i+1}")
+                stage_name = stage.get("name", f"阶段{i + 1}")
 
                 # 发布 STAGE_STARTED（orchestration.py 的 stage executor 会处理）
-                await bus.publish(Event(
-                    event_type=EventType.STAGE_STARTED,
-                    source="parent:stage_executor",
-                    data={
-                        "task_id": task_id,
-                        "stage_name": stage_name,
-                        "stage_order": i + 1,
-                        "total_stages": len(sop_stages),
-                    },
-                ))
-                logger.info("[V3.0] 发布 STAGE_STARTED: %s (阶段 %s/%s)",
-                           stage_name, i + 1, len(sop_stages))
+                await bus.publish(
+                    Event(
+                        event_type=EventType.STAGE_STARTED,
+                        source="parent:stage_executor",
+                        data={
+                            "task_id": task_id,
+                            "stage_name": stage_name,
+                            "stage_order": i + 1,
+                            "total_stages": len(sop_stages),
+                        },
+                    )
+                )
+                logger.info(
+                    "[V3.0] 发布 STAGE_STARTED: %s (阶段 %s/%s)",
+                    stage_name,
+                    i + 1,
+                    len(sop_stages),
+                )
 
             # 4. 等待所有阶段完成（由 stage executor 发布 TASK_COMPLETED）
             # 注意：不直接执行阶段，而是由事件驱动的 stage executor 处理
             logger.info("[V3.0] 所有 STAGE_STARTED 已发布，等待阶段执行完成...")
-            logger.info("[V3.0] TASK_COMPLETED 将由 orchestration.py 的 stage executor 发布")
+            logger.info(
+                "[V3.0] TASK_COMPLETED 将由 orchestration.py 的 stage executor 发布"
+            )
 
         bus.subscribe_async(EventType.TASK_DECOMPOSED, on_task_decomposed)
         logger.info("[V3.0] parent 已订阅 TASK_DECOMPOSED 事件")

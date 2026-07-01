@@ -1,8 +1,8 @@
 # V5.0 Panel 开发代码审计报告
 
-**审计日期**: 2026-06-28  
-**审计范围**: `core/panel_generator.py`、`skills/orchestration.py`、V5.0 相关测试  
-**审计原则**: 颗粒度最低、最严苛、诚实、中肯  
+**审计日期**: 2026-06-28
+**审计范围**: `core/panel_generator.py`、`skills/orchestration.py`、V5.0 相关测试
+**审计原则**: 颗粒度最低、最严苛、诚实、中肯
 
 ---
 
@@ -98,7 +98,7 @@ def generate(self, task: Any, sop: Optional[SOP] = None) -> PanelDefinition:
 ```python
 from typing import Union
 
-def generate(self, task: Union[Dict[str, Any], List[Dict[str, Any]]], 
+def generate(self, task: Union[Dict[str, Any], List[Dict[str, Any]]],
              sop: Optional[SOP] = None) -> PanelDefinition:
     """...当 task 是列表时，sop 参数被忽略..."""
 ```

@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 import yaml
-from hypothesis import given, strategies as st, settings, assume
-
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
 
 # ──────────────────────────────────────────────────────────────
 # Store 属性测试
@@ -30,6 +30,7 @@ class TestStoreProperties:
     def _new_store():
         """创建全新的 Store 实例。"""
         from core.store import Store
+
         return Store()
 
     @given(
@@ -68,8 +69,12 @@ class TestStoreProperties:
 
     @given(
         key=st.text(alphabet="abcdefghijklmnopqrstuvwxyz0123456789_-", min_size=1, max_size=50),
-        value1=st.dictionaries(keys=st.text(min_size=1, max_size=10), values=st.integers(), min_size=1, max_size=5),
-        value2=st.dictionaries(keys=st.text(min_size=1, max_size=10), values=st.integers(), min_size=1, max_size=5),
+        value1=st.dictionaries(
+            keys=st.text(min_size=1, max_size=10), values=st.integers(), min_size=1, max_size=5
+        ),
+        value2=st.dictionaries(
+            keys=st.text(min_size=1, max_size=10), values=st.integers(), min_size=1, max_size=5
+        ),
     )
     @settings(max_examples=50, deadline=None)
     def test_last_write_wins(self, key, value1, value2):
@@ -100,7 +105,7 @@ class TestEncryptionProperties:
     @settings(max_examples=200, deadline=None)
     def test_encrypt_decrypt_roundtrip(self, plaintext):
         """属性：任意明文加密再解密，结果与原文一致。"""
-        from core.secrets import encrypt_api_key, decrypt_api_key
+        from core.secrets import decrypt_api_key, encrypt_api_key
 
         assume(plaintext.strip())
 
@@ -218,13 +223,15 @@ class TestSOPParserProperties:
 
         stages = []
         for i in range(num_stages):
-            stages.append({
-                "name": f"Stage {i + 1}",
-                "description": f"Description {i + 1}",
-                "inputs": ["input"],
-                "outputs": ["output"],
-                "skill": "test_skill",
-            })
+            stages.append(
+                {
+                    "name": f"Stage {i + 1}",
+                    "description": f"Description {i + 1}",
+                    "inputs": ["input"],
+                    "outputs": ["output"],
+                    "skill": "test_skill",
+                }
+            )
 
         sop_data = {
             "sop_id": sop_id,
@@ -286,13 +293,16 @@ class TestDBQueryProperties:
     """数据库查询安全性属性测试。"""
 
     @given(
-        table_name=st.text(alphabet="abcdefghijklmnopqrstuvwxyz_0123456789", min_size=1, max_size=30),
+        table_name=st.text(
+            alphabet="abcdefghijklmnopqrstuvwxyz_0123456789", min_size=1, max_size=30
+        ),
     )
     @settings(max_examples=200, deadline=None)
     def test_table_name_validation(self, table_name):
         """属性：合法表名通过格式验证，含 SQL 注入的表名不在白名单。"""
-        from core.db import ALLOWED_TABLES
         import re
+
+        from core.db import ALLOWED_TABLES
 
         pattern = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 

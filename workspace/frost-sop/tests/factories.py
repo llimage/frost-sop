@@ -13,9 +13,8 @@ FROST-SOP 测试数据工厂 (Data Factories)
 """
 
 import random
-import string
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 import factory
@@ -27,6 +26,7 @@ faker = Faker(["zh_CN", "en_US"])
 # ──────────────────────────────────────────────────────────────
 # 基础值生成器
 # ──────────────────────────────────────────────────────────────
+
 
 def random_task_id() -> str:
     """生成随机任务 ID (task: 前缀 + UUID)。"""
@@ -72,6 +72,7 @@ def empty_or_whitespace() -> str:
 # Task 任务工厂
 # ──────────────────────────────────────────────────────────────
 
+
 class TaskConfigFactory(factory.Factory):
     """任务配置工厂 — 覆盖正常、边界、异常值。"""
 
@@ -91,9 +92,7 @@ class TaskConfigFactory(factory.Factory):
             sop_id="DEV-001",
         )
         as_verbose = factory.Trait(
-            task_input=factory.LazyFunction(
-                lambda: faker.text(max_nb_chars=2000)
-            ),
+            task_input=factory.LazyFunction(lambda: faker.text(max_nb_chars=2000)),
             sop_id=factory.LazyFunction(random_sop_id),
         )
         as_unicode = factory.Trait(
@@ -113,6 +112,7 @@ class TaskConfigFactory(factory.Factory):
 # ──────────────────────────────────────────────────────────────
 # Agent 装配配置工厂
 # ──────────────────────────────────────────────────────────────
+
 
 class AgentConfigFactory(factory.Factory):
     """孙辈 Agent 装配配置工厂。"""
@@ -138,9 +138,7 @@ class AgentConfigFactory(factory.Factory):
             temperature=0.0,
         )
         as_maximal = factory.Trait(
-            assigned_skills=factory.LazyFunction(
-                lambda: [random_skill_id() for _ in range(20)]
-            ),
+            assigned_skills=factory.LazyFunction(lambda: [random_skill_id() for _ in range(20)]),
             temperature=1.0,
         )
 
@@ -149,15 +147,14 @@ class AgentConfigFactory(factory.Factory):
 # SOP 模板工厂
 # ──────────────────────────────────────────────────────────────
 
+
 class SOPPhaseFactory(factory.Factory):
     """SOP 阶段工厂。"""
 
     class Meta:
         model = dict
 
-    phase_id = factory.LazyFunction(
-        lambda: f"phase_{faker.random_int(1, 20):02d}"
-    )
+    phase_id = factory.LazyFunction(lambda: f"phase_{faker.random_int(1, 20):02d}")
     name = factory.LazyFunction(lambda: faker.catch_phrase())
     description = factory.LazyFunction(lambda: faker.text(max_nb_chars=200))
     inputs = factory.LazyFunction(lambda: [faker.word() for _ in range(3)])
@@ -192,6 +189,7 @@ class SOPTemplateFactory(factory.Factory):
 # Skill 技能工厂
 # ──────────────────────────────────────────────────────────────
 
+
 class SkillConfigFactory(factory.Factory):
     """Skill 技能配置工厂。"""
 
@@ -200,13 +198,9 @@ class SkillConfigFactory(factory.Factory):
 
     id = factory.LazyFunction(random_skill_id)
     name = factory.LazyFunction(lambda: f"skill_gene:{faker.word()}")
-    status = factory.LazyFunction(
-        lambda: random.choice(["draft", "active", "rejected"])
-    )
+    status = factory.LazyFunction(lambda: random.choice(["draft", "active", "rejected"]))
     success_rate = factory.LazyFunction(lambda: round(random.uniform(0.0, 1.0), 2))
-    trigger_keywords = factory.LazyFunction(
-        lambda: faker.words(nb=faker.random_int(3, 8))
-    )
+    trigger_keywords = factory.LazyFunction(lambda: faker.words(nb=faker.random_int(3, 8)))
     task_type = factory.LazyFunction(
         lambda: random.choice(
             ["code_review", "data_analysis", "text_generation", "testing", "design"]
@@ -236,6 +230,7 @@ class SkillConfigFactory(factory.Factory):
 # ──────────────────────────────────────────────────────────────
 # Event 事件工厂
 # ──────────────────────────────────────────────────────────────
+
 
 class EventFactory(factory.Factory):
     """EventBus 事件工厂。"""
@@ -289,6 +284,7 @@ class EventFactory(factory.Factory):
 # Store 键值对工厂
 # ──────────────────────────────────────────────────────────────
 
+
 class StoreEntryFactory(factory.Factory):
     """Store 键值对工厂 — 覆盖正常值和边界异常值。"""
 
@@ -299,7 +295,9 @@ class StoreEntryFactory(factory.Factory):
         lambda: f"{random.choice(['task', 'lesson', 'config'])}:{uuid.uuid4().hex[:8]}"
     )
     value = factory.LazyFunction(
-        lambda: faker.pydict(nb_elements=faker.random_int(1, 5), value_types=[str, int, float, bool])
+        lambda: faker.pydict(
+            nb_elements=faker.random_int(1, 5), value_types=[str, int, float, bool]
+        )
     )
     namespace = "default"
     readonly = False
@@ -310,9 +308,7 @@ class StoreEntryFactory(factory.Factory):
             readonly=True,
         )
         as_large_value = factory.Trait(
-            value=factory.LazyFunction(
-                lambda: {"text": faker.text(max_nb_chars=10000)}
-            ),
+            value=factory.LazyFunction(lambda: {"text": faker.text(max_nb_chars=10000)}),
         )
         as_special_chars_key = factory.Trait(
             key="task:test-😀-unicode-key",
@@ -326,7 +322,10 @@ class StoreEntryFactory(factory.Factory):
 # 便利函数
 # ──────────────────────────────────────────────────────────────
 
-def create_batch(factory_class: type[factory.Factory], size: int = 10, **kwargs) -> list[dict[str, Any]]:
+
+def create_batch(
+    factory_class: type[factory.Factory], size: int = 10, **kwargs
+) -> list[dict[str, Any]]:
     """创建一批随机测试数据。
 
     Args:

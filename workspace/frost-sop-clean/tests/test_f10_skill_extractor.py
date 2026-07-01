@@ -36,12 +36,14 @@ class TestSkillExtractor:
 
         # 初始化数据库
         from core.db import DBManager
+
         # 重置单例
         DBManager._instance = None
         DBManager._connection = None
         DBManager._db_path = cls.db_path
         # 设置 db_path 并初始化
         import core.db as db_mod
+
         db_mod._DB_PATH = cls.db_path
         cls.db = DBManager()
         cls.db.db_path = cls.db_path
@@ -51,6 +53,7 @@ class TestSkillExtractor:
         """清理测试环境"""
         try:
             from core.db import DBManager
+
             if DBManager._instance:
                 DBManager._instance.close()
             DBManager._instance = None
@@ -121,6 +124,7 @@ class TestSkillExtractor:
     def test_scan_successful_calls(self):
         """T10.1: 扫描成功调用日志，过滤失败和无效记录"""
         from core.skill_extractor import SkillExtractor
+
         extractor = SkillExtractor(tool_calls_dir=self.tool_calls_dir)
         calls = extractor.scan_successful_calls()
 
@@ -132,6 +136,7 @@ class TestSkillExtractor:
     def test_scan_empty_directory(self):
         """T10.2: 扫描空目录"""
         from core.skill_extractor import SkillExtractor
+
         extractor = SkillExtractor(tool_calls_dir="/nonexistent_dir_xyz")
         calls = extractor.scan_successful_calls()
         assert calls == []
@@ -139,6 +144,7 @@ class TestSkillExtractor:
     def test_extract_skill_from_call(self):
         """T10.3: 从单条日志提取 Skill 草案"""
         from core.skill_extractor import SkillExtractor
+
         extractor = SkillExtractor()
         call = {
             "call_id": "test_001",
@@ -165,6 +171,7 @@ class TestSkillExtractor:
     def test_extract_skill_no_hints(self):
         """T10.4: 无用日志返回 None"""
         from core.skill_extractor import SkillExtractor
+
         extractor = SkillExtractor()
         call = {"call_id": "test", "tool_name": "test", "success": True}
         draft = extractor.extract_skill_from_call(call)
@@ -173,6 +180,7 @@ class TestSkillExtractor:
     def test_generate_skill_draft(self):
         """T10.5: 生成 Skill 草案并存入数据库"""
         from core.skill_extractor import SkillExtractor
+
         extractor = SkillExtractor(tool_calls_dir=self.tool_calls_dir)
 
         # 先生成一条
@@ -192,6 +200,7 @@ class TestSkillExtractor:
     def test_scan_and_extract_all(self):
         """T10.6: 批量提取并去重"""
         from core.skill_extractor import SkillExtractor
+
         extractor = SkillExtractor(tool_calls_dir=self.tool_calls_dir)
 
         # 第一次提取（可能部分已被之前测试提取，所以 >= 1）
@@ -206,6 +215,7 @@ class TestSkillExtractor:
         """T10.7: draft Skill 正确写入数据库"""
         from core.db import get_db
         from core.skill_extractor import SkillExtractor
+
         extractor = SkillExtractor(tool_calls_dir=self.tool_calls_dir)
         extractor.scan_and_extract_all()
 
@@ -230,11 +240,13 @@ class TestSkillExtractor:
     def test_validate_skill_becomes_active(self):
         """T10.8: 验证通过后 Skill 变为 active"""
         from core.skill_extractor import SkillExtractor
+
         extractor = SkillExtractor(tool_calls_dir=self.tool_calls_dir)
         extractor.scan_and_extract_all()
 
         # 获取一个 draft Skill
         from core.db import get_db
+
         db = get_db()
         conn = db.get_connection()
         cursor = conn.cursor()
@@ -250,20 +262,22 @@ class TestSkillExtractor:
     def test_validate_all_drafts(self):
         """T10.9: 批量验证所有 draft Skill"""
         from core.skill_extractor import SkillExtractor
+
         extractor = SkillExtractor(tool_calls_dir=self.tool_calls_dir)
         # 先检查是否还有 draft（前面的测试可能已经处理了）
-        
+
         from core.db import get_db
+
         db = get_db()
         conn = db.get_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) as cnt FROM skills WHERE status='draft'")
         row = cursor.fetchone()
-        
+
         if row["cnt"] == 0:
             # 没有 draft，重新提取
             extractor.scan_and_extract_all()
-        
+
         results = extractor.validate_all_drafts()
         # 现在应该没有 draft 了（或者至少运行不报错）
         assert isinstance(results, list)
@@ -284,7 +298,9 @@ class TestSkillExtractor:
         db = get_db()
         conn = db.get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name, version FROM skills WHERE status='active' LIMIT 1")
+        cursor.execute(
+            "SELECT id, name, version FROM skills WHERE status='active' LIMIT 1"
+        )
         row = cursor.fetchone()
         assert row is not None
 
@@ -299,10 +315,7 @@ class TestSkillExtractor:
         assert new_ver == current_version + 1
 
         # 验证数据库
-        cursor.execute(
-            "SELECT version, content FROM skills WHERE id=?",
-            (row["id"],)
-        )
+        cursor.execute("SELECT version, content FROM skills WHERE id=?", (row["id"],))
         updated = cursor.fetchone()
         expected_version = f"{current_version + 1}.0"
         assert updated["version"] == expected_version
@@ -370,6 +383,7 @@ class TestSkillExtractor:
     def test_get_versions_nonexistent(self):
         """T10.13: 查询不存在的 Skill 版本"""
         from core.skill_version import SkillVersionManager
+
         vm = SkillVersionManager()
         versions = vm.get_versions("nonexistent_skill_id")
         assert versions == []
@@ -385,6 +399,7 @@ class TestF10Integration:
         os.environ["FROST_DB_PATH"] = cls.db_path
 
         from core.db import DBManager
+
         DBManager._instance = None
         DBManager._connection = None
         cls.db = DBManager()
@@ -394,6 +409,7 @@ class TestF10Integration:
     def teardown_class(cls):
         try:
             from core.db import DBManager
+
             if DBManager._instance:
                 DBManager._instance.close()
             DBManager._instance = None
@@ -405,17 +421,24 @@ class TestF10Integration:
     def test_db_migration_adds_columns(self):
         """T10.14: 数据库迁移正确添加列"""
         from core.db import get_db
+
         db = get_db()
         conn = db.get_connection()
         cursor = conn.cursor()
 
         # 检查 skills 表新增的列
-        columns = {col["name"] for col in cursor.execute("PRAGMA table_info(skills)").fetchall()}
+        columns = {
+            col["name"]
+            for col in cursor.execute("PRAGMA table_info(skills)").fetchall()
+        }
         for col_name in ("trigger_keywords", "success_rate", "status", "task_type"):
             assert col_name in columns, f"skills 表缺少列: {col_name}"
 
         # 检查 skill_versions 表新增的列
-        columns = {col["name"] for col in cursor.execute("PRAGMA table_info(skill_versions)").fetchall()}
+        columns = {
+            col["name"]
+            for col in cursor.execute("PRAGMA table_info(skill_versions)").fetchall()
+        }
         assert "file_path" in columns, "skill_versions 表缺少列: file_path"
 
 

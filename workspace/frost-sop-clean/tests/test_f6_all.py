@@ -3,6 +3,7 @@ F6 全量集成测试主运行脚本
 
 依次运行4个测试模块，汇总结果并输出F6验收报告。
 """
+
 import sys
 import os
 import time
@@ -58,8 +59,11 @@ def run_regression_tests():
             env["FROST_TESTING"] = "1"
             result = subprocess.run(
                 [sys.executable, "-X", "utf8", tf],
-                capture_output=True, text=True, timeout=60,
-                env=env, cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                capture_output=True,
+                text=True,
+                timeout=60,
+                env=env,
+                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             )
             if result.returncode == 0:
                 print(f"  ✅ {tf}")
@@ -68,7 +72,13 @@ def run_regression_tests():
             else:
                 print(f"  ❌ {tf} (returncode={result.returncode})")
                 failed += 1
-                results.append({"file": tf, "status": "failed", "output": result.stdout[-200:] if result.stdout else ""})
+                results.append(
+                    {
+                        "file": tf,
+                        "status": "failed",
+                        "output": result.stdout[-200:] if result.stdout else "",
+                    }
+                )
         except subprocess.TimeoutExpired:
             print(f"  ⏰️ {tf} (超时)")
             failed += 1
@@ -104,7 +114,15 @@ def generate_f6_report(e2e_result, dq_result, par_result, per_result, reg_result
     # 一、SOP端到端测试
     lines.append("一、SOP端到端测试")
     e2e_map = {d["test"]: d for d in e2e_details}
-    for test_id in ["E2E-01", "E2E-02", "E2E-03", "E2E-04", "E2E-05", "E2E-06", "E2E-07"]:
+    for test_id in [
+        "E2E-01",
+        "E2E-02",
+        "E2E-03",
+        "E2E-04",
+        "E2E-05",
+        "E2E-06",
+        "E2E-07",
+    ]:
         d = e2e_map.get(test_id, {})
         status = d.get("passed", False)
         if status is True:
@@ -156,10 +174,16 @@ def generate_f6_report(e2e_result, dq_result, par_result, per_result, reg_result
     # 检查各维度覆盖情况
     dq_passed_set = {d["test"] for d in dq_details if d.get("passed") is True}
     matrix = {
-        "数据完整性": "已覆盖" if any(t in dq_passed_set for t in ["DQ-01", "DQ-05"]) else "未覆盖",
+        "数据完整性": "已覆盖"
+        if any(t in dq_passed_set for t in ["DQ-01", "DQ-05"])
+        else "未覆盖",
         "语义正确性": "已覆盖" if "DQ-02" in dq_passed_set else "未覆盖",
-        "逻辑一致性": "已覆盖" if any(t in dq_passed_set for t in ["DQ-03", "DQ-04"]) else "未覆盖",
-        "边界健壮性": "已覆盖" if any(t in dq_passed_set for t in ["DQ-06", "DQ-07", "DQ-08"]) else "未覆盖",
+        "逻辑一致性": "已覆盖"
+        if any(t in dq_passed_set for t in ["DQ-03", "DQ-04"])
+        else "未覆盖",
+        "边界健壮性": "已覆盖"
+        if any(t in dq_passed_set for t in ["DQ-06", "DQ-07", "DQ-08"])
+        else "未覆盖",
         "并行隔离性": "已覆盖" if par_passed >= 3 else "未覆盖",
         "持久化可靠性": "已覆盖" if per_passed >= 3 else "未覆盖",
     }
@@ -234,7 +258,9 @@ def main():
     print("")
 
     # 写入报告文件
-    report_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "F6_TEST_REPORT.md")
+    report_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "F6_TEST_REPORT.md"
+    )
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(report)
 

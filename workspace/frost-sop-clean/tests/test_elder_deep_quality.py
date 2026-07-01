@@ -2,7 +2,10 @@
 F5 深度质量测试 - 长老审计端到端
 ELDER-01 至 ELDER-06 共6个深度测试用例
 """
-import sys, os
+
+import sys
+import os
+
 # 把 frost-sop/ 目录加入 sys.path
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _PROJECT_ROOT)
@@ -44,24 +47,67 @@ def test_elder_01_data_integrity():
 
     # 预置5条任务（3成功2失败），包含完整 stages
     tasks = [
-        {"task_id": "t01", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t02", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t03", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t04", "sop": "DEV-002", "status": "failed",
-         "stages": [{"name": "定位", "status": "success"}, {"name": "修复", "status": "failed", "output": "合规校验未通过"}]},
-        {"task_id": "t05", "sop": "DEV-001", "status": "failed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "failed", "output": "合规校验失败"}]},
+        {
+            "task_id": "t01",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t02",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t03",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t04",
+            "sop": "DEV-002",
+            "status": "failed",
+            "stages": [
+                {"name": "定位", "status": "success"},
+                {"name": "修复", "status": "failed", "output": "合规校验未通过"},
+            ],
+        },
+        {
+            "task_id": "t05",
+            "sop": "DEV-001",
+            "status": "failed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "failed", "output": "合规校验失败"},
+            ],
+        },
     ]
     for t in tasks:
         asset_store.save(f"task:{t['task_id']}", t)
 
     # 预置3条错题本
     lessons = [
-        {"task_id": "t04", "error_type": "compliance", "description": "修复方案缺少审查阶段"},
-        {"task_id": "t05", "error_type": "compliance", "description": "代码实现包含禁止Skill"},
+        {
+            "task_id": "t04",
+            "error_type": "compliance",
+            "description": "修复方案缺少审查阶段",
+        },
+        {
+            "task_id": "t05",
+            "error_type": "compliance",
+            "description": "代码实现包含禁止Skill",
+        },
         {"task_id": "t03", "error_type": "performance", "description": "耗时过长"},
     ]
     for i, l in enumerate(lessons):
@@ -71,11 +117,21 @@ def test_elder_01_data_integrity():
     stats = report.get("statistics", {})
 
     # 验证
-    assert stats.get("total_tasks") == 5, f"total_tasks 应为5，实际为 {stats.get('total_tasks')}"
-    assert stats.get("successful_tasks") == 3, f"successful_tasks 应为3，实际为 {stats.get('successful_tasks')}"
-    assert stats.get("failed_tasks") == 2, f"failed_tasks 应为2，实际为 {stats.get('failed_tasks')}"
-    assert stats.get("successful_tasks") + stats.get("failed_tasks") == 5, "successful+failed 应等于5"
-    assert stats.get("total_lessons") == 3, f"total_lessons 应为3，实际为 {stats.get('total_lessons')}"
+    assert stats.get("total_tasks") == 5, (
+        f"total_tasks 应为5，实际为 {stats.get('total_tasks')}"
+    )
+    assert stats.get("successful_tasks") == 3, (
+        f"successful_tasks 应为3，实际为 {stats.get('successful_tasks')}"
+    )
+    assert stats.get("failed_tasks") == 2, (
+        f"failed_tasks 应为2，实际为 {stats.get('failed_tasks')}"
+    )
+    assert stats.get("successful_tasks") + stats.get("failed_tasks") == 5, (
+        "successful+failed 应等于5"
+    )
+    assert stats.get("total_lessons") == 3, (
+        f"total_lessons 应为3，实际为 {stats.get('total_lessons')}"
+    )
 
     # 同时验证顶层字段（兼容）
     assert report.get("total_tasks") == 5, "顶层字段 total_tasks 也应等于5"
@@ -98,16 +154,59 @@ def test_elder_02_semantic_correctness():
 
     # 5条任务：2失败3成功（失败率40% > 30%，且任务数>=5，应触发建议）
     tasks = [
-        {"task_id": "t01", "sop": "DEV-001", "status": "failed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "failed", "output": "合规校验未通过：缺少审查阶段"}]},
-        {"task_id": "t02", "sop": "DEV-001", "status": "failed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "failed", "output": "合规校验失败：包含禁止Skill"}]},
-        {"task_id": "t03", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t04", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t05", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
+        {
+            "task_id": "t01",
+            "sop": "DEV-001",
+            "status": "failed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {
+                    "name": "编码",
+                    "status": "failed",
+                    "output": "合规校验未通过：缺少审查阶段",
+                },
+            ],
+        },
+        {
+            "task_id": "t02",
+            "sop": "DEV-001",
+            "status": "failed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {
+                    "name": "编码",
+                    "status": "failed",
+                    "output": "合规校验失败：包含禁止Skill",
+                },
+            ],
+        },
+        {
+            "task_id": "t03",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t04",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t05",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
     ]
     for t in tasks:
         asset_store.save(f"task:{t['task_id']}", t)
@@ -120,12 +219,16 @@ def test_elder_02_semantic_correctness():
     # 验证：findings 中应提及任务执行情况
     assert len(findings) >= 1, "findings 应至少包含1条发现"
     finding_text = " ".join(findings)
-    assert "失败" in finding_text or "执行" in finding_text, "findings 应包含关于失败的描述"
+    assert "失败" in finding_text or "执行" in finding_text, (
+        "findings 应包含关于失败的描述"
+    )
 
     # 验证：失败率 100% > 30%，应触发建议
     assert len(recommendations) >= 1, "失败率100%应触发至少1条建议"
     rec_text = " ".join(recommendations)
-    assert "失败率" in rec_text or "优化" in rec_text, "recommendations 应包含失败率或优化相关描述"
+    assert "失败率" in rec_text or "优化" in rec_text, (
+        "recommendations 应包含失败率或优化相关描述"
+    )
 
     print("✅ PASS")
     return True
@@ -143,9 +246,15 @@ def test_elder_03_logic_consistency():
 
     # 5条任务，2条失败（失败率40%）
     tasks = [
-        {"task_id": f"t{i:02d}", "sop": "DEV-001",
-         "status": "completed" if i < 3 else "failed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success" if i < 3 else "failed"}]}
+        {
+            "task_id": f"t{i:02d}",
+            "sop": "DEV-001",
+            "status": "completed" if i < 3 else "failed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success" if i < 3 else "failed"},
+            ],
+        }
         for i in range(5)
     ]
     # 修复第4、5条任务的 stage output
@@ -167,7 +276,9 @@ def test_elder_03_logic_consistency():
     assert failure_rate > 0.3, f"失败率应>30%，实际为 {failure_rate:.0%}"
 
     # 验证：失败率>30% 且任务数>=5，应触发建议
-    assert len(recommendations) >= 1, f"失败率{failure_rate:.0%}>30%应触发建议，但 recommendations 为空"
+    assert len(recommendations) >= 1, (
+        f"失败率{failure_rate:.0%}>30%应触发建议，但 recommendations 为空"
+    )
     print("✅ PASS")
     return True
 
@@ -184,8 +295,15 @@ def test_elder_04_logic_consistency_full_success():
 
     # 5条任务，全部成功
     tasks = [
-        {"task_id": f"t{i:02d}", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]}
+        {
+            "task_id": f"t{i:02d}",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        }
         for i in range(5)
     ]
     for t in tasks:
@@ -227,7 +345,9 @@ def test_elder_05_empty_store():
     stats = report.get("statistics", {})
 
     # 验证统计数字
-    assert stats.get("total_tasks") == 0, f"空Store时 total_tasks 应为0，实际为 {stats.get('total_tasks')}"
+    assert stats.get("total_tasks") == 0, (
+        f"空Store时 total_tasks 应为0，实际为 {stats.get('total_tasks')}"
+    )
     assert stats.get("successful_tasks") == 0
     assert stats.get("failed_tasks") == 0
     assert stats.get("total_lessons") == 0
@@ -236,8 +356,9 @@ def test_elder_05_empty_store():
     findings = report.get("findings", [])
     assert len(findings) >= 1, "空Store时 findings 应至少包含1条"
     finding_text = " ".join(findings)
-    assert "尚未执行" in finding_text or "无任务" in finding_text or "0个" in finding_text, \
-        f"findings 应提示无任务，实际为: {findings}"
+    assert (
+        "尚未执行" in finding_text or "无任务" in finding_text or "0个" in finding_text
+    ), f"findings 应提示无任务，实际为: {findings}"
 
     print("✅ PASS")
     return True
@@ -260,8 +381,12 @@ def test_elder_06_no_asset_store():
 
     # 验证：应返回错误报告，而不是崩溃
     assert report is not None, "无Asset Store时应返回报告，不应返回None"
-    assert report.get("status") == "error", f"无Asset Store时 status 应为 'error'，实际为 {report.get('status')}"
-    assert "无资产" in report.get("reason", ""), f"reason 应提及无资产Store，实际为: {report.get('reason')}"
+    assert report.get("status") == "error", (
+        f"无Asset Store时 status 应为 'error'，实际为 {report.get('status')}"
+    )
+    assert "无资产" in report.get("reason", ""), (
+        f"reason 应提及无资产Store，实际为: {report.get('reason')}"
+    )
 
     print("✅ PASS")
     return True

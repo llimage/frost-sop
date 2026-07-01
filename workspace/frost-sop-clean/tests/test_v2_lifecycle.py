@@ -13,18 +13,19 @@ import os
 import pytest
 
 # 启用 mock 模式，跳过真实 LLM
-os.environ['FROST_TESTING'] = '1'
+os.environ["FROST_TESTING"] = "1"
 
 from core.agent import Agent
 from core.skill import Skill
-from core.store import Store
 
 
 def make_noop_skill(name="noop"):
     """创建一个什么都不做的 Skill，直接返回 context"""
+
     def noop(context: dict) -> dict:
         context["_noop_ran"] = True
         return context
+
     return Skill(name, noop)
 
 
@@ -53,6 +54,7 @@ class TestAgentLifecycle:
     def test_v2_03_destroyed_at_timestamp_set(self):
         """destroy() 后 _destroyed_at 时间戳被设置"""
         from datetime import datetime
+
         agent = Agent(name="test_v2_ts", skills={"noop": make_noop_skill()})
         before = datetime.now()
         agent.run(["noop"])
@@ -72,6 +74,7 @@ class TestAgentLifecycle:
 
     def test_v2_05_status_destroyed_on_exception(self):
         """即使 run() 内部抛异常，destroy() 也会被调用"""
+
         def failing_skill(context: dict) -> dict:
             raise RuntimeError("intentional failure")
 
@@ -105,8 +108,6 @@ class TestAgentLifecycle:
         """执行后 agent_status 表有 destroyed 记录"""
         # 需要隔离 DB（使用内存或测试 DB）
         import tempfile
-        import importlib
-        import sys
 
         # 使用临时数据库避免污染主库
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
@@ -115,6 +116,7 @@ class TestAgentLifecycle:
         try:
             # 重置 DB 单例使用临时路径
             import core.db as db_module
+
             old_instance = db_module.DBManager._instance
             old_conn = db_module.DBManager._connection
             old_global = db_module._db_manager
@@ -137,9 +139,13 @@ class TestAgentLifecycle:
                 agent.run(["noop"])
 
                 # 验证 agent_status 表有记录
-                status_row = test_db.select_one("agent_status", "agent_id", "test_v2_db_lifecycle")
+                status_row = test_db.select_one(
+                    "agent_status", "agent_id", "test_v2_db_lifecycle"
+                )
                 assert status_row is not None, "agent_status 表应有记录"
-                assert status_row["status"] == "destroyed", f"状态应为 destroyed，实际: {status_row['status']}"
+                assert status_row["status"] == "destroyed", (
+                    f"状态应为 destroyed，实际: {status_row['status']}"
+                )
 
             finally:
                 # 恢复 DB 单例
@@ -149,6 +155,7 @@ class TestAgentLifecycle:
 
         finally:
             import os as _os
+
             try:
                 _os.unlink(tmp_db)
             except Exception:

@@ -4,15 +4,17 @@ core/path_safety.py 单元测试
 测试路径安全验证函数。
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("FROST_TESTING", "1")
 
-import pytest
 from pathlib import Path
-from core.path_safety import validate_path, safe_open, get_project_root
+
+import pytest
+
+from core.path_safety import get_project_root, safe_open, validate_path
 
 
 class TestGetProjectRoot:

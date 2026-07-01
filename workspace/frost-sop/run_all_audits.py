@@ -201,10 +201,10 @@ def generate_final_report(results):
     # 生成 Markdown 版本
     md_content = f"""# FROST-SOP V3.0 审计报告
 
-**项目**: FROST-SOP  
-**版本**: V3.0.0-beta  
-**审计时间**: {report["audit_time"]}  
-**审计人**: {report["auditor"]}  
+**项目**: FROST-SOP
+**版本**: V3.0.0-beta
+**审计时间**: {report["audit_time"]}
+**审计人**: {report["auditor"]}
 
 ---
 

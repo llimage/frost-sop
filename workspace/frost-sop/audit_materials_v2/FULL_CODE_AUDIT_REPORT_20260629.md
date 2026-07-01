@@ -1,8 +1,8 @@
 # FROST-SOP 全量代码审计报告
 
-**审计日期**: 2026-06-29  
-**审计范围**: `core/` + `skills/` + `renderers/` + `api/` + `tests/` + `app.py` + `frontend/`  
-**审计原则**: 颗粒度最低、最严苛、诚实、中肯  
+**审计日期**: 2026-06-29
+**审计范围**: `core/` + `skills/` + `renderers/` + `api/` + `tests/` + `app.py` + `frontend/`
+**审计原则**: 颗粒度最低、最严苛、诚实、中肯
 **代码基线**: 137 Python 文件，~17,000 行核心代码，68 个测试文件，15,463 行测试代码
 
 ---
@@ -27,7 +27,7 @@
 
 ### S-001: core/db.py SQL注入风险（select_all方法）
 
-**位置**: `core/db.py:592-594`  
+**位置**: `core/db.py:592-594`
 **风险等级**: 🔴 **高危**
 
 ```python
@@ -46,7 +46,7 @@ def select_all(self, table: str, where: str = None, params: List[Any] = None):
     ALLOWED_TABLES = {"tasks", "agents", "skills", ...}
     if table not in ALLOWED_TABLES:
         raise ValueError(f"Invalid table: {table}")
-    
+
     sql = f"SELECT * FROM {table}"
     if where:
         sql += f" WHERE {where}"  # 仍需要调用方确保 where 安全
@@ -59,7 +59,7 @@ def select_all(self, table: str, where: str = None, params: List[Any] = None):
 
 ### S-002: core/db.py SQL注入风险（insert/update/delete方法表名）
 
-**位置**: `core/db.py` 多处  
+**位置**: `core/db.py` 多处
 **风险等级**: 🟡 **中危**
 
 ```python
@@ -78,7 +78,7 @@ sql = f"SELECT * FROM {table} WHERE ..."
 
 ### S-003: core/db.py SQL注入风险（ALTER TABLE迁移）
 
-**位置**: `core/db.py:410,429,445,476`  
+**位置**: `core/db.py:410,429,445,476`
 **风险等级**: 🟡 **中危**
 
 ```python
@@ -91,7 +91,7 @@ cursor.execute(f"ALTER TABLE energy_log ADD COLUMN {col_name} {col_def}")
 
 ### S-004: frontend/ 目录仍然存在（Next.js前端）
 
-**位置**: `frontend/`  
+**位置**: `frontend/`
 **风险等级**: 🟡 **中危（工程化）**
 
 **问题**:
@@ -108,7 +108,7 @@ cursor.execute(f"ALTER TABLE energy_log ADD COLUMN {col_name} {col_def}")
 
 ### A-001: app.py 过大（2,477行，519处Streamlit调用）
 
-**位置**: `app.py`  
+**位置**: `app.py`
 **严重程度**: 🔴 **高**
 
 **问题**: 单文件2,477行，包含：
@@ -144,7 +144,7 @@ cursor.execute(f"ALTER TABLE energy_log ADD COLUMN {col_name} {col_def}")
 
 **严重程度**: 🟡 **中**
 
-**问题**: 文件使用 CRLF 行尾（`\r\n`），在 Unix 环境下可能导致问题。  
+**问题**: 文件使用 CRLF 行尾（`\r\n`），在 Unix 环境下可能导致问题。
 **修复**: `dos2unix requirements.txt` 或重新保存为 LF。
 
 ---
@@ -163,7 +163,7 @@ cursor.execute(f"ALTER TABLE energy_log ADD COLUMN {col_name} {col_def}")
 
 ### A-005: 6处 TODO/FIXME 标记
 
-**位置**: `core/armory.py:1012`, `core/graph_executor.py:317,354`, `skills/hunt.py:115,259,497`  
+**位置**: `core/armory.py:1012`, `core/graph_executor.py:317,354`, `skills/hunt.py:115,259,497`
 **严重程度**: 🟡 **中**
 
 说明这些功能是**未完成的占位符**。

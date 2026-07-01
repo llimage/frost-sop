@@ -2,6 +2,7 @@
 FROST-SOP 长老审计端到端验证
 验证 audit_family Skill 能正确读取资产Store数据并生成审计报告。
 """
+
 import sys
 import os
 
@@ -49,7 +50,11 @@ PRESET_TASKS = [
         "status": "failed",
         "stages": [
             {"name": "问题定位", "status": "success"},
-            {"name": "修复方案", "status": "failed", "output": "合规校验未通过：缺少审查阶段"},
+            {
+                "name": "修复方案",
+                "status": "failed",
+                "output": "合规校验未通过：缺少审查阶段",
+            },
         ],
     },
     {
@@ -58,7 +63,11 @@ PRESET_TASKS = [
         "status": "failed",
         "stages": [
             {"name": "需求分析", "status": "success"},
-            {"name": "代码实现", "status": "failed", "output": "合规校验失败：包含禁止Skill"},
+            {
+                "name": "代码实现",
+                "status": "failed",
+                "output": "合规校验失败：包含禁止Skill",
+            },
         ],
     },
 ]
@@ -97,7 +106,9 @@ def test_elder_e2e():
         key = f"lesson:{lesson['task_id']}:{lesson['error_type']}"
         asset_store.save(key, lesson)
 
-    print(f"✅ 预置数据完成：{len(PRESET_TASKS)} 条任务，{len(PRESET_LESSONS)} 条错题本")
+    print(
+        f"✅ 预置数据完成：{len(PRESET_TASKS)} 条任务，{len(PRESET_LESSONS)} 条错题本"
+    )
 
     # 2. 创建长老Agent
     elder = create_elder("test_elder", asset_store=asset_store)
@@ -122,7 +133,7 @@ def test_elder_e2e():
     failed_tasks = stats.get("failed_tasks")
     total_lessons = stats.get("total_lessons")
 
-    print(f"\n   统计数字：")
+    print("\n   统计数字：")
     print(f"     total_tasks = {total_tasks}")
     print(f"     successful_tasks = {successful_tasks}")
     print(f"     failed_tasks = {failed_tasks}")
@@ -158,7 +169,9 @@ def test_elder_e2e():
 
     # 失败率=2/5=40% > 30%，应触发SOP优化建议
     if len(recommendations) < 1:
-        print(f"❌ AC-2 失败：审计报告应包含至少 1 条建议，实际为 {len(recommendations)}")
+        print(
+            f"❌ AC-2 失败：审计报告应包含至少 1 条建议，实际为 {len(recommendations)}"
+        )
         return False
 
     print("✅ AC-2 通过：审计报告包含发现和建议")

@@ -3,8 +3,7 @@ F16 FastAPI — Pydantic 请求/响应模型
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional, List, Any
-from datetime import datetime
+from typing import Optional, List
 
 
 # ── Projects ──

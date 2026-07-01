@@ -4,8 +4,8 @@ api/main.py 集成测试
 使用 FastAPI TestClient 测试关键端点。
 """
 
-import sys
 import os
+import sys
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -39,6 +39,7 @@ def client():
 
     with patch("api.main.get_db", return_value=mock_db):
         from api.main import app
+
         yield TestClient(app)
 
 
@@ -87,18 +88,23 @@ class TestTasks:
         mock_parent = MagicMock()
         mock_parent.run.return_value = {"_current_stage_result": {"output": "mock output"}}
 
-        with patch("core.sop.SOP") as mock_sop_cls, \
-             patch("agents.ancestor.create_ancestor", return_value=MagicMock()), \
-             patch("agents.parent.create_parent", return_value=mock_parent), \
-             patch("stores.asset.create_asset_store", return_value=MagicMock()), \
-             patch("stores.constitution.create_constitution_store", return_value=MagicMock()):
+        with (
+            patch("core.sop.SOP") as mock_sop_cls,
+            patch("agents.ancestor.create_ancestor", return_value=MagicMock()),
+            patch("agents.parent.create_parent", return_value=mock_parent),
+            patch("stores.asset.create_asset_store", return_value=MagicMock()),
+            patch("stores.constitution.create_constitution_store", return_value=MagicMock()),
+        ):
             mock_sop_cls.load_from_yaml.return_value = mock_sop_instance
 
-            r = client.post("/api/tasks", json={
-                "description": "Test task",
-                "sop_id": "DEV-001",
-                "use_real_llm": False,
-            })
+            r = client.post(
+                "/api/tasks",
+                json={
+                    "description": "Test task",
+                    "sop_id": "DEV-001",
+                    "use_real_llm": False,
+                },
+            )
             assert r.status_code == 200
 
 
@@ -141,15 +147,21 @@ class TestDecisions:
 
 class TestChat:
     def test_chat_mock(self, client):
-        with patch("skills.llm.call_llm", return_value={
-            "_llm_response": "Hello from FROST-SOP!",
-            "tokens_used": {"total": 10},
-            "model": "mock",
-        }):
-            r = client.post("/api/chat", json={
-                "message": "Hello",
-                "use_real_llm": False,
-            })
+        with patch(
+            "skills.llm.call_llm",
+            return_value={
+                "_llm_response": "Hello from FROST-SOP!",
+                "tokens_used": {"total": 10},
+                "model": "mock",
+            },
+        ):
+            r = client.post(
+                "/api/chat",
+                json={
+                    "message": "Hello",
+                    "use_real_llm": False,
+                },
+            )
             assert r.status_code == 200
             assert "reply" in r.json()
 

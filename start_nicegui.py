@@ -10,13 +10,14 @@ import os
 import sys
 
 # 修复 Windows 终端编码（GBK -> UTF-8）
-if sys.platform == 'win32':
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 # 检查NiceGUI是否已安装
 try:
     import nicegui
+
     print(f"[OK] NiceGUI version: {nicegui.__version__}")
 except ImportError:
     print("[!] NiceGUI not found. Installing...")
@@ -30,4 +31,5 @@ print()
 
 # 启动应用
 from app import create_ui
+
 create_ui()

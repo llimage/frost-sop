@@ -141,7 +141,9 @@ class CostTracker:
             )
         # 仅检查预算，不在此处追踪成本（成本追踪在实际LLM调用后进行，避免重复计数）
 
-    def update_budget_config(self, monthly_budget: float | None = None, alert_ratio: float | None = None):
+    def update_budget_config(
+        self, monthly_budget: float | None = None, alert_ratio: float | None = None
+    ):
         """
         更新预算配置
 

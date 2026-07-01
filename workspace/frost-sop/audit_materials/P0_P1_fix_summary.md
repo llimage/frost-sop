@@ -121,7 +121,7 @@
 
 ```
 P0-2 重试机制:      8 passed
-P0-5 加密存储:      6 passed  
+P0-5 加密存储:      6 passed
 P1-7 意图解析:     10 passed
 F8 决策管理:        6 passed
 F9 创始人工具:     13 passed

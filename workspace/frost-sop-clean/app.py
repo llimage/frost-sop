@@ -5,11 +5,11 @@ PHILOSOPHY: 表现层与核心层完全解耦。
 
 版本: F11 (Project Workbench)
 """
+
 import streamlit as st
 import sys
 import os
-import time
-from datetime import datetime, date
+from datetime import datetime
 import json
 
 # 确保项目根目录在路径中
@@ -30,7 +30,6 @@ from core.workbench import (
     get_project_defaults,
     get_project_by_mode,
     get_recommended_task,
-    get_business_radar_data,
     get_today_review,
     generate_daily_narrative,
     save_daily_review,
@@ -45,13 +44,15 @@ st.set_page_config(
     layout="wide",
 )
 
+
 # ================================================================
 # CSS 注入 — 专业 SaaS 后台视觉设计规范
 # 色调：中性冷灰底色，蓝色强调，拒绝暖色和花哨渐变
 # ================================================================
 def inject_css():
     """注入全局CSS样式——专业SaaS后台风格"""
-    st.markdown("""
+    st.markdown(
+        """
     <style>
     /* === 全局底色 === */
     .stApp {
@@ -62,7 +63,7 @@ def inject_css():
         max-width: 100%;
         background-color: #F4F6F8;
     }
-    
+
     /* === 顶部导航栏 === */
     .saas-navbar {
         background: #1E293B;
@@ -136,12 +137,12 @@ def inject_css():
         background: #0F172A;
         border-radius: 12px;
     }
-    
+
     /* === 主内容区 === */
     .saas-content {
         padding: 20px 24px;
     }
-    
+
     /* === KPI 卡片 === */
     .saas-stat-card {
         background: #FFFFFF;
@@ -169,7 +170,7 @@ def inject_css():
         color: #64748B;
         margin-top: 2px;
     }
-    
+
     /* === 项目概览卡片 === */
     .saas-project-header {
         background: #FFFFFF;
@@ -217,7 +218,7 @@ def inject_css():
         background: #F8FAFC;
         color: #94A3B8;
     }
-    
+
     /* === 成本条 === */
     .saas-cost-bar {
         background: #FFFFFF;
@@ -250,7 +251,7 @@ def inject_css():
     .saas-progress-fill.danger {
         background: #EF4444;
     }
-    
+
     /* === AI 员工卡片 === */
     .saas-agent-grid {
         display: grid;
@@ -309,7 +310,7 @@ def inject_css():
         font-style: italic;
         margin-top: 2px;
     }
-    
+
     /* === 侧边栏/对话面板 === */
     .saas-panel {
         background: #FFFFFF;
@@ -343,7 +344,7 @@ def inject_css():
         color: #FFFFFF;
         border-color: #3B82F6;
     }
-    
+
     /* === 日志窗口 === */
     .saas-log-window {
         background: #0F172A;
@@ -365,7 +366,7 @@ def inject_css():
     .saas-log-success { color: #4ADE80; }
     .saas-log-warn { color: #FBBF24; }
     .saas-log-error { color: #F87171; }
-    
+
     /* === 日终回顾 === */
     .daily-review-panel {
         background: #FFFFFF;
@@ -374,7 +375,7 @@ def inject_css():
         border: 1px solid #E2E8F0;
         box-shadow: 0 4px 16px rgba(0,0,0,0.08);
     }
-    
+
     /* === Streamlit 原生元素覆盖 === */
     div[data-testid="stHorizontalBlock"] {
         gap: 12px;
@@ -411,7 +412,7 @@ def inject_css():
         background: #E2E8F0;
         color: #0F172A;
     }
-    
+
     /* === 移动端适配 === */
     @media (max-width: 768px) {
         .saas-content { padding: 12px; }
@@ -421,7 +422,9 @@ def inject_css():
         .saas-agent-grid { grid-template-columns: 1fr; }
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 # ================================================================
@@ -458,14 +461,17 @@ if "initialized" not in st.session_state:
     st.session_state.wb_alt_index = 0  # 备选任务索引
     st.session_state.wb_nav = "dashboard"  # 导航激活项
 
+
 def add_log(message: str, level: str = "info"):
     """追加日志到会话状态"""
     timestamp = datetime.now().strftime("%H:%M:%S")
-    st.session_state.logs.append({
-        "time": timestamp,
-        "message": message,
-        "level": level,
-    })
+    st.session_state.logs.append(
+        {
+            "time": timestamp,
+            "message": message,
+            "level": level,
+        }
+    )
 
 
 # F8 决策对话框渲染函数
@@ -482,13 +488,18 @@ def render_decision_dialog():
 
         decision_id = pending["id"]
         question = pending["question"]
-        options = json.loads(pending["options_json"]) if isinstance(pending["options_json"], str) else pending["options_json"]
+        options = (
+            json.loads(pending["options_json"])
+            if isinstance(pending["options_json"], str)
+            else pending["options_json"]
+        )
         created_at = pending.get("created_at")
 
         # —— 清理残留决策：超过 24 小时的 pending 决策自动取消 ——
         if created_at:
             try:
                 from datetime import timedelta
+
                 created_dt = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
                 now = datetime.now()
                 if now - created_dt > timedelta(hours=24):
@@ -498,22 +509,32 @@ def render_decision_dialog():
                         cursor.execute(
                             "UPDATE decision_points SET status='auto_cancelled', "
                             "user_note='上次会话残留决策，已自动关闭', responded_at=? WHERE id=?",
-                            (now.strftime("%Y-%m-%d %H:%M:%S"), str(decision_id))
+                            (now.strftime("%Y-%m-%d %H:%M:%S"), str(decision_id)),
                         )
                         db.get_connection().commit()
                     except Exception:
                         pass
-                    add_log(f"🔄 自动清理残留决策: {decision_id} (创建于 {created_at})", level="info")
+                    add_log(
+                        f"🔄 自动清理残留决策: {decision_id} (创建于 {created_at})",
+                        level="info",
+                    )
                     return  # 不弹出对话框
             except Exception:
                 pass  # 解析失败就正常弹出
 
         # —— 英→中 fallback 映射 ——
         LABEL_MAP = {
-            "confirm": "确认", "reject": "驳回", "modify": "修改",
-            "approve": "批准", "deny": "拒绝", "cancel": "取消",
-            "accept": "接受", "decline": "谢绝", "skip": "跳过",
-            "yes": "是", "no": "否",
+            "confirm": "确认",
+            "reject": "驳回",
+            "modify": "修改",
+            "approve": "批准",
+            "deny": "拒绝",
+            "cancel": "取消",
+            "accept": "接受",
+            "decline": "谢绝",
+            "skip": "跳过",
+            "yes": "是",
+            "no": "否",
         }
         options_display = [LABEL_MAP.get(o.lower(), o) for o in options]
 
@@ -527,7 +548,7 @@ def render_decision_dialog():
                 send_timeout_notification(
                     decision_id=decision_id,
                     task_id=pending.get("task_id", "unknown"),
-                    stage_id=pending.get("stage_id", "unknown")
+                    stage_id=pending.get("stage_id", "unknown"),
                 )
                 st.session_state[timeout_notified_key] = True
                 add_log(f"🔔 决策 {decision_id} 超时通知已发送", level="warning")
@@ -544,7 +565,9 @@ def render_decision_dialog():
                 if latest_energy:
                     energy_level = latest_energy.get("level")
                     if energy_level is not None and energy_level < 30:
-                        st.warning(f"🧘 您当前能量较低（{energy_level}%），建议先休息片刻再做决策。")
+                        st.warning(
+                            f"🧘 您当前能量较低（{energy_level}%），建议先休息片刻再做决策。"
+                        )
             except Exception:
                 pass
 
@@ -556,31 +579,40 @@ def render_decision_dialog():
             cols = st.columns(len(options))
             for i, option in enumerate(options):
                 with cols[i]:
-                    if st.button(f"{options_display[i]}", key=f"btn_decision_{i}", use_container_width=True):
+                    if st.button(
+                        f"{options_display[i]}",
+                        key=f"btn_decision_{i}",
+                        use_container_width=True,
+                    ):
                         try:
                             decision_manager.resume_decision(
                                 decision_id=decision_id,
                                 user_choice=option,
-                                user_note=user_note
+                                user_note=user_note,
                             )
                             st.success(f"✅ 已选择：{option}")
                             add_log(f"📋 用户决策：{option}（决策ID: {decision_id}）")
                             try:
                                 db = get_db()
-                                db.log_audit({
-                                    "action": "decision_made",
-                                    "agent_id": "founder",
-                                    "details": json.dumps({
-                                        "decision_id": decision_id,
-                                        "choice": option,
-                                        "note": user_note
-                                    })
-                                })
+                                db.log_audit(
+                                    {
+                                        "action": "decision_made",
+                                        "agent_id": "founder",
+                                        "details": json.dumps(
+                                            {
+                                                "decision_id": decision_id,
+                                                "choice": option,
+                                                "note": user_note,
+                                            }
+                                        ),
+                                    }
+                                )
                             except Exception:
                                 pass
                             st.rerun()
                         except Exception as e:
                             st.error(f"❌ 恢复决策失败: {e}")
+
         show_dialog()
     except Exception as e:
         st.error(f"❌ 渲染决策对话框失败: {e}")
@@ -590,6 +622,7 @@ def render_decision_dialog():
 # ================================================================
 # F11: 指挥官工作台渲染（SaaS 专业风格）
 # ================================================================
+
 
 def get_agent_team():
     """获取模拟 AI 员工团队数据"""
@@ -604,47 +637,92 @@ def get_agent_team():
         pass
 
     # 从 session_state 和日志中推断活跃 agent
-    running_count = sum(1 for t in st.session_state.tasks.values() if t.get("status") == "running")
-    completed_count = sum(1 for t in st.session_state.tasks.values() if t.get("status") == "completed")
+    running_count = sum(
+        1 for t in st.session_state.tasks.values() if t.get("status") == "running"
+    )
+    completed_count = sum(
+        1 for t in st.session_state.tasks.values() if t.get("status") == "completed"
+    )
 
     # 构建 agent 列表（从 runtime + db 数据）
     agents = []
     if st.session_state.get("ancestor"):
         ancestor_agent = st.session_state.ancestor
         status = "running" if running_count > 0 else "standby"
-        agents.append({
-            "name": "祖辈·家族长老",
-            "role": "任务拆解 / 合规审计 / 家族健康守护",
-            "status": status,
-            "model": "Claude 3.5 Sonnet",
-            "cost": "~¥0.15/次",
-            "depends_on": None,
-        })
+        agents.append(
+            {
+                "name": "祖辈·家族长老",
+                "role": "任务拆解 / 合规审计 / 家族健康守护",
+                "status": status,
+                "model": "Claude 3.5 Sonnet",
+                "cost": "~¥0.15/次",
+                "depends_on": None,
+            }
+        )
     if running_count > 0 or completed_count > 0:
-        agents.append({
-            "name": "父辈·指挥官",
-            "role": "SOP 搜索 / 阶段调度 / 资源协调",
-            "status": "running" if running_count > 0 else "completed",
-            "model": "Claude 3.5 Sonnet",
-            "cost": "~¥0.25/次",
-            "depends_on": "祖辈·家族长老" if running_count > 0 else None,
-        })
-        agents.append({
-            "name": "孙辈·执行者",
-            "role": "代码生成 / 文档撰写 / 测试执行",
-            "status": "running" if running_count > 0 else "completed",
-            "model": "Claude 3 Haiku",
-            "cost": "~¥0.08/次",
-            "depends_on": "父辈·指挥官",
-        })
+        agents.append(
+            {
+                "name": "父辈·指挥官",
+                "role": "SOP 搜索 / 阶段调度 / 资源协调",
+                "status": "running" if running_count > 0 else "completed",
+                "model": "Claude 3.5 Sonnet",
+                "cost": "~¥0.25/次",
+                "depends_on": "祖辈·家族长老" if running_count > 0 else None,
+            }
+        )
+        agents.append(
+            {
+                "name": "孙辈·执行者",
+                "role": "代码生成 / 文档撰写 / 测试执行",
+                "status": "running" if running_count > 0 else "completed",
+                "model": "Claude 3 Haiku",
+                "cost": "~¥0.08/次",
+                "depends_on": "父辈·指挥官",
+            }
+        )
 
     # 基础 agent（始终存在）
     base_agents = [
-        {"name": "成本·CFO", "role": "预算追踪 / 成本分析 / 异常预警", "status": "standby", "model": "GPT-4o-mini", "cost": "~¥0.02/次", "depends_on": None},
-        {"name": "Skill·基因库", "role": "Skill 提取 / 验证激活 / 版本管理", "status": "standby", "model": "Claude 3 Haiku", "cost": "~¥0.05/次", "depends_on": None},
-        {"name": "宪法·守护者", "role": "合规审计 / 规则执行 / 安全校验", "status": "standby", "model": "Claude 3 Haiku", "cost": "~¥0.03/次", "depends_on": None},
-        {"name": "错题·复盘师", "role": "失败分析 / 经验提取 / 知识沉淀", "status": "standby", "model": "GPT-4o-mini", "cost": "~¥0.02/次", "depends_on": None},
-        {"name": "日程·管家", "role": "日程提醒 / 时间规划 / 能量记录", "status": "standby", "model": "Local", "cost": "免费", "depends_on": None},
+        {
+            "name": "成本·CFO",
+            "role": "预算追踪 / 成本分析 / 异常预警",
+            "status": "standby",
+            "model": "GPT-4o-mini",
+            "cost": "~¥0.02/次",
+            "depends_on": None,
+        },
+        {
+            "name": "Skill·基因库",
+            "role": "Skill 提取 / 验证激活 / 版本管理",
+            "status": "standby",
+            "model": "Claude 3 Haiku",
+            "cost": "~¥0.05/次",
+            "depends_on": None,
+        },
+        {
+            "name": "宪法·守护者",
+            "role": "合规审计 / 规则执行 / 安全校验",
+            "status": "standby",
+            "model": "Claude 3 Haiku",
+            "cost": "~¥0.03/次",
+            "depends_on": None,
+        },
+        {
+            "name": "错题·复盘师",
+            "role": "失败分析 / 经验提取 / 知识沉淀",
+            "status": "standby",
+            "model": "GPT-4o-mini",
+            "cost": "~¥0.02/次",
+            "depends_on": None,
+        },
+        {
+            "name": "日程·管家",
+            "role": "日程提醒 / 时间规划 / 能量记录",
+            "status": "standby",
+            "model": "Local",
+            "cost": "免费",
+            "depends_on": None,
+        },
     ]
     agents.extend(base_agents)
     return agents, running_count, completed_count
@@ -700,6 +778,7 @@ def _call_ceo_llm(user_message: str) -> str:
     if not api_key:
         try:
             from core.secrets import get_decrypted_key
+
             api_key = get_decrypted_key("DEEPSEEK_API_KEY", prompt_if_missing=False)
         except Exception:
             pass
@@ -717,10 +796,8 @@ def _call_ceo_llm(user_message: str) -> str:
 
     try:
         from openai import OpenAI
-        client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.deepseek.com"
-        )
+
+        client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
@@ -760,12 +837,20 @@ def _render_skills_view():
         if skills:
             active_count = sum(1 for s in skills if s.get("status") == "active")
             draft_count = sum(1 for s in skills if s.get("status") == "draft")
-            st.markdown(f"**统计**: {len(skills)} 个技能 | {active_count} 活跃 | {draft_count} 草稿")
+            st.markdown(
+                f"**统计**: {len(skills)} 个技能 | {active_count} 活跃 | {draft_count} 草稿"
+            )
 
             for s in skills:
                 status = s.get("status", "unknown")
-                badge = "🟢" if status == "active" else ("🟡" if status == "draft" else "⚪")
-                with st.expander(f"{badge} {s['name']} ({s.get('skill_type','通用')})"):
+                badge = (
+                    "🟢"
+                    if status == "active"
+                    else ("🟡" if status == "draft" else "⚪")
+                )
+                with st.expander(
+                    f"{badge} {s['name']} ({s.get('skill_type', '通用')})"
+                ):
                     st.caption(f"状态: {status}")
                     if s.get("trigger_keywords"):
                         st.caption(f"触发词: {s['trigger_keywords']}")
@@ -781,12 +866,16 @@ def _render_skills_view():
     st.subheader("📋 SOP 教练模板")
     templates_dir = "sops/templates"
     if os.path.exists(templates_dir):
-        templates = sorted([f for f in os.listdir(templates_dir) if f.endswith(".yaml")])
+        templates = sorted(
+            [f for f in os.listdir(templates_dir) if f.endswith(".yaml")]
+        )
         if templates:
             for tpl in templates:
                 with st.expander(f"📄 {tpl}"):
                     try:
-                        with open(os.path.join(templates_dir, tpl), "r", encoding="utf-8") as f:
+                        with open(
+                            os.path.join(templates_dir, tpl), "r", encoding="utf-8"
+                        ) as f:
                             st.code(f.read(), language="yaml")
                     except Exception as e:
                         st.caption(f"读取失败: {e}")
@@ -807,6 +896,7 @@ def _render_costs_view():
 
     # 调用现有成本渲染
     from core.cost import get_cost_tracker
+
     try:
         cost_tracker = get_cost_tracker()
         budget = cost_tracker.check_budget()
@@ -823,8 +913,7 @@ def _render_costs_view():
             st.metric("剩余", f"¥{budget['monthly_budget'] - budget['total_cost']:.2f}")
 
         st.progress(
-            min(budget.get("usage_ratio", 0), 1.0),
-            text=f"预算使用 {usage_pct:.1f}%"
+            min(budget.get("usage_ratio", 0), 1.0), text=f"预算使用 {usage_pct:.1f}%"
         )
     except Exception as e:
         st.error(f"成本数据加载失败: {e}")
@@ -840,6 +929,7 @@ def _render_costs_view():
         )
         if records:
             import pandas as pd
+
             df = pd.DataFrame(records)
             if not df.empty:
                 df["estimated_cost"] = df["estimated_cost"].apply(lambda x: f"¥{x:.4f}")
@@ -882,17 +972,31 @@ def _render_outputs_view():
     search = st.text_input("🔍 搜索文件名", key="output_search")
     filtered = all_files
     if search:
-        filtered = [(r, m, s, p) for r, m, s, p in all_files if search.lower() in r.lower()]
+        filtered = [
+            (r, m, s, p) for r, m, s, p in all_files if search.lower() in r.lower()
+        ]
 
     # 分页
     page_size = 30
-    page = st.number_input("页码", min_value=1, max_value=max(1, (len(filtered)-1)//page_size+1), value=1, key="output_page")
+    page = st.number_input(
+        "页码",
+        min_value=1,
+        max_value=max(1, (len(filtered) - 1) // page_size + 1),
+        value=1,
+        key="output_page",
+    )
     start = (page - 1) * page_size
-    page_files = filtered[start:start+page_size]
+    page_files = filtered[start : start + page_size]
 
     for relpath, mtime, size, fpath in page_files:
         mtime_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
-        size_str = f"{size:,}B" if size < 1024 else f"{size/1024:.1f}KB" if size < 1024*1024 else f"{size/1024/1024:.1f}MB"
+        size_str = (
+            f"{size:,}B"
+            if size < 1024
+            else f"{size / 1024:.1f}KB"
+            if size < 1024 * 1024
+            else f"{size / 1024 / 1024:.1f}MB"
+        )
         col1, col2, col3 = st.columns([5, 2, 1])
         with col1:
             st.caption(f"📄 {relpath}")
@@ -904,10 +1008,27 @@ def _render_outputs_view():
         # 文件内容预览
         with st.expander(f"预览: {relpath}"):
             try:
-                if relpath.endswith(('.py', '.yaml', '.yml', '.json', '.md', '.txt', '.html', '.css', '.js', '.toml', '.cfg', '.ini', '.sh', '.bat')):
+                if relpath.endswith(
+                    (
+                        ".py",
+                        ".yaml",
+                        ".yml",
+                        ".json",
+                        ".md",
+                        ".txt",
+                        ".html",
+                        ".css",
+                        ".js",
+                        ".toml",
+                        ".cfg",
+                        ".ini",
+                        ".sh",
+                        ".bat",
+                    )
+                ):
                     with open(fpath, "r", encoding="utf-8", errors="replace") as ff:
                         content = ff.read()
-                    st.code(content[:5000], language=relpath.split('.')[-1])
+                    st.code(content[:5000], language=relpath.split(".")[-1])
                 else:
                     st.caption(f"二进制文件 ({size_str})，无法预览")
             except Exception as e:
@@ -933,6 +1054,7 @@ def _render_settings_view():
         if st.button("🔐 加密存储", key="btn_encrypt_setup", use_container_width=True):
             try:
                 from core.secrets import setup_wizard
+
                 setup_wizard()
                 st.success("加密存储已配置")
             except Exception as e:
@@ -944,10 +1066,16 @@ def _render_settings_view():
     try:
         db = get_db()
         conn = db.get_connection()
-        st.caption(f"数据库连接: ✅ 正常")
+        st.caption("数据库连接: ✅ 正常")
 
         # 各表行数
-        tables = ["skills", "skill_versions", "cost_log", "decision_points", "audit_log"]
+        tables = [
+            "skills",
+            "skill_versions",
+            "cost_log",
+            "decision_points",
+            "audit_log",
+        ]
         for table in tables:
             try:
                 result = db.execute_sql(f"SELECT COUNT(*) as cnt FROM {table}")
@@ -970,7 +1098,9 @@ def _render_settings_view():
     st.subheader("🛠️ 维护操作")
     col_a, col_b = st.columns(2)
     with col_a:
-        if st.button("🗑️ 清理 cost_log 未知记录", use_container_width=True, key="btn_cleanup_cost"):
+        if st.button(
+            "🗑️ 清理 cost_log 未知记录", use_container_width=True, key="btn_cleanup_cost"
+        ):
             try:
                 db = get_db()
                 conn = db.get_connection()
@@ -981,7 +1111,9 @@ def _render_settings_view():
             except Exception as e:
                 st.error(f"清理失败: {e}")
     with col_b:
-        if st.button("🔄 重置导航到仪表盘", use_container_width=True, key="btn_reset_nav"):
+        if st.button(
+            "🔄 重置导航到仪表盘", use_container_width=True, key="btn_reset_nav"
+        ):
             st.session_state.wb_nav = "dashboard"
             st.session_state.wb_view = "dashboard"
             st.rerun()
@@ -1027,17 +1159,22 @@ def render_commander_dashboard():
     current_nav = st.session_state.get("wb_nav", "dashboard")
 
     # 渲染品牌 + 导航栏布局
-    nav_brand = f'<span class="brand">FROST-SOP</span><span class="brand-sub">| 家族AI指挥平台</span>'
+    nav_brand = '<span class="brand">FROST-SOP</span><span class="brand-sub">| 家族AI指挥平台</span>'
     nav_right = f'<span style="font-size:12px;color:#94A3B8;">{mode_labels.get(mode, mode)}</span>'
-    nav_right += f'<span class="task-badge">{running_cnt} running · {completed_cnt} done</span>'
+    nav_right += (
+        f'<span class="task-badge">{running_cnt} running · {completed_cnt} done</span>'
+    )
     nav_right += '<span class="user-avatar">L</span>'
 
-    st.markdown(f'''
+    st.markdown(
+        f"""
     <div class="saas-navbar">
         <div>{nav_brand}</div>
         <div class="nav-right">{nav_right}</div>
     </div>
-    ''', unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     # 可点击导航按钮行
     nav_cols = st.columns([1, 1, 1, 1, 1, 4])
@@ -1081,7 +1218,8 @@ def render_commander_dashboard():
         # --- 项目概览卡片 ---
         project_name = proj["name"] if proj else "默认项目"
         project_icon = proj.get("icon", "◈") if proj else "◈"
-        st.markdown(f"""
+        st.markdown(
+            f"""
         <div class="saas-project-header">
             <div>
                 <span class="project-title">{project_icon} {project_name}</span>
@@ -1090,35 +1228,49 @@ def render_commander_dashboard():
             </div>
             <div style="text-align:right;">
                 <div style="font-size:14px;font-weight:700;color:#0F172A;">
-                    {task['progress']}% 完成
+                    {task["progress"]}% 完成
                 </div>
                 <div style="font-size:11px;color:#64748B;">
-                    预计剩余 {task.get('duration', '2h')}
+                    预计剩余 {task.get("duration", "2h")}
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         # --- 进度条 ---
         progress_val = task.get("progress", 0)
-        st.markdown(f"""
+        st.markdown(
+            f"""
         <div style="margin-bottom:16px;font-size:12px;color:#64748B;">
-            当前任务 · {task['task_name'][:60]}
+            当前任务 · {task["task_name"][:60]}
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
         st.progress(progress_val / 100, text=f"{progress_val}%")
         # 操作按钮
         col_a, col_b = st.columns([3, 1])
         with col_a:
-            if st.button("▶ 开始工作", key="btn_saas_start", type="primary", use_container_width=True):
+            if st.button(
+                "▶ 开始工作",
+                key="btn_saas_start",
+                type="primary",
+                use_container_width=True,
+            ):
                 st.session_state.wb_view = "project_detail"
-                st.session_state.wb_active_project = task.get("project_id", st.session_state.wb_mode)
+                st.session_state.wb_active_project = task.get(
+                    "project_id", st.session_state.wb_mode
+                )
                 add_log(f"🎯 开始任务: {task['task_name']}")
                 st.rerun()
         with col_b:
             alt_idx = st.session_state.get("wb_alt_index", 0)
             alts = task.get("alternatives", [])
-            if alts and st.button("↻ 换一个", key="btn_saas_switch", use_container_width=True):
+            if alts and st.button(
+                "↻ 换一个", key="btn_saas_switch", use_container_width=True
+            ):
                 new_idx = (alt_idx + 1) % len(alts)
                 st.session_state.wb_alt_index = new_idx
                 st.rerun()
@@ -1139,29 +1291,38 @@ def render_commander_dashboard():
         # --- KPI 卡片行 ---
         k1, k2, k3, k4 = st.columns(4)
         with k1:
-            st.markdown(f"""
+            st.markdown(
+                f"""
             <div class="saas-stat-card">
                 <div class="stat-label">任务进度</div>
                 <div class="stat-value">{progress_val}%</div>
-                <div class="stat-delta">{task['task_name'][:20]}...</div>
+                <div class="stat-delta">{task["task_name"][:20]}...</div>
             </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
         with k2:
-            st.markdown(f"""
+            st.markdown(
+                f"""
             <div class="saas-stat-card">
                 <div class="stat-label">运行中 Agent</div>
                 <div class="stat-value">{running_cnt}</div>
                 <div class="stat-delta">共 {len(agents)} 个成员</div>
             </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
         with k3:
-            st.markdown(f"""
+            st.markdown(
+                f"""
             <div class="saas-stat-card">
                 <div class="stat-label">已消耗成本</div>
                 <div class="stat-value">¥{total_cost:.2f}</div>
                 <div class="stat-delta">预算 ¥{monthly_budget:,.0f}</div>
             </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
         with k4:
             energy = None
             try:
@@ -1171,14 +1332,23 @@ def render_commander_dashboard():
                 pass
             e_level = energy.get("level", 75) if energy else 75
             e_text = "充足" if e_level >= 60 else "适中" if e_level >= 30 else "偏低"
-            e_color = "#22C55E" if e_level >= 60 else "#F59E0B" if e_level >= 30 else "#EF4444"
-            st.markdown(f"""
+            e_color = (
+                "#22C55E"
+                if e_level >= 60
+                else "#F59E0B"
+                if e_level >= 30
+                else "#EF4444"
+            )
+            st.markdown(
+                f"""
             <div class="saas-stat-card">
                 <div class="stat-label">创始人能量</div>
                 <div class="stat-value" style="color:{e_color};">{e_level}%</div>
                 <div class="stat-delta">状态: {e_text}</div>
             </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
 
         st.markdown('<div style="height:12px;"></div>', unsafe_allow_html=True)
 
@@ -1194,30 +1364,36 @@ def render_commander_dashboard():
         for model_name, tokens in sorted(model_costs.items(), key=lambda x: -x[1])[:4]:
             model_detail += f'<span style="margin-right:16px;font-size:12px;color:#64748B;">{model_name}: {tokens:,} tokens</span>'
 
-        st.markdown(f"""
+        st.markdown(
+            f"""
         <div class="saas-cost-bar">
             <div class="cost-header">
                 <div>
                     <span style="font-size:14px;font-weight:700;color:#0F172A;">预算消耗</span>
                     <span style="font-size:12px;color:#64748B;margin-left:8px;">已消耗 ¥{total_cost:.2f} / 预算 ¥{monthly_budget:,.0f}</span>
                 </div>
-                <div style="font-size:14px;font-weight:700;color:{'#EF4444' if pct>80 else '#3B82F6'};">
+                <div style="font-size:14px;font-weight:700;color:{"#EF4444" if pct > 80 else "#3B82F6"};">
                     {pct:.1f}%
                 </div>
             </div>
             <div class="saas-progress">
-                <div class="saas-progress-fill {pfill_class}" style="width:{min(pct,100):.1f}%;"></div>
+                <div class="saas-progress-fill {pfill_class}" style="width:{min(pct, 100):.1f}%;"></div>
             </div>
             <div style="margin-top:10px;">{model_detail}</div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         # --- AI 员工团队 — 可交互卡片 ---
-        st.markdown("""
+        st.markdown(
+            """
         <div style="font-size:13px;font-weight:700;color:#0F172A;margin-bottom:12px;">
             AI 员工团队
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         agent_skill_map = {
             "祖辈·家族长老": ["任务拆解", "合规审计", "家族健康", "长老建议"],
@@ -1232,11 +1408,24 @@ def render_commander_dashboard():
 
         for ag in agents[:8]:
             s = ag["status"]
-            status_label = {"running": "运行中", "completed": "已完成", "waiting": "等待中", "standby": "待命中"}.get(s, s)
-            status_icon = {"running": "🟢", "completed": "✅", "waiting": "🟡", "standby": "⚪"}.get(s, "⚪")
+            status_label = {
+                "running": "运行中",
+                "completed": "已完成",
+                "waiting": "等待中",
+                "standby": "待命中",
+            }.get(s, s)
+            status_icon = {
+                "running": "🟢",
+                "completed": "✅",
+                "waiting": "🟡",
+                "standby": "⚪",
+            }.get(s, "⚪")
             skills = agent_skill_map.get(ag["name"], ["通用任务"])
 
-            with st.expander(f"{status_icon} {ag['name']} — {status_label}", expanded=(s == "running")):
+            with st.expander(
+                f"{status_icon} {ag['name']} — {status_label}",
+                expanded=(s == "running"),
+            ):
                 col_a, col_b = st.columns([3, 1])
                 with col_a:
                     st.caption(f"**角色**: {ag['role']}")
@@ -1254,17 +1443,29 @@ def render_commander_dashboard():
                 with col_b:
                     # 操作按钮
                     if s == "standby":
-                        if st.button("▶ 唤醒", key=f"agent_wake_{ag['name']}", use_container_width=True):
+                        if st.button(
+                            "▶ 唤醒",
+                            key=f"agent_wake_{ag['name']}",
+                            use_container_width=True,
+                        ):
                             add_log(f"🔔 唤醒 Agent: {ag['name']}")
                             st.toast(f"{ag['name']} 已收到唤醒指令")
                             st.rerun()
                     elif s == "running":
-                        if st.button("⏸ 暂停", key=f"agent_pause_{ag['name']}", use_container_width=True):
+                        if st.button(
+                            "⏸ 暂停",
+                            key=f"agent_pause_{ag['name']}",
+                            use_container_width=True,
+                        ):
                             add_log(f"⏸ 暂停 Agent: {ag['name']}")
                             st.toast(f"{ag['name']} 暂停请求已发送")
                             st.rerun()
                     elif s == "completed":
-                        if st.button("🔄 重用", key=f"agent_reuse_{ag['name']}", use_container_width=True):
+                        if st.button(
+                            "🔄 重用",
+                            key=f"agent_reuse_{ag['name']}",
+                            use_container_width=True,
+                        ):
                             add_log(f"🔄 重用 Agent: {ag['name']}")
                             st.toast(f"{ag['name']} 再次激活")
                             st.rerun()
@@ -1272,24 +1473,32 @@ def render_commander_dashboard():
                 # 进度展示（running 状态）
                 if s == "running":
                     import random
+
                     random.seed(hash(ag["name"]) % 10000)
                     fake_progress = random.randint(30, 90)
                     st.progress(fake_progress / 100, text=f"任务进度: {fake_progress}%")
 
         # --- 实时日志窗口 ---
-        st.markdown("""
+        st.markdown(
+            """
         <div style="font-size:13px;font-weight:700;color:#0F172A;margin-bottom:8px;">
             实时日志
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
         log_lines = st.session_state.logs[-12:] if st.session_state.logs else []
         if log_lines:
             log_html = '<div class="saas-log-window">'
             for log in reversed(log_lines):
                 lvl = log.get("level", "info")
-                lvl_class = f"saas-log-{lvl}" if lvl in ("info", "success", "warn", "error") else "saas-log-info"
+                lvl_class = (
+                    f"saas-log-{lvl}"
+                    if lvl in ("info", "success", "warn", "error")
+                    else "saas-log-info"
+                )
                 log_html += f'<div class="saas-log-line"><span class="saas-log-time">[{log["time"]}]</span> <span class="{lvl_class}">{log["message"][:100]}</span></div>'
-            log_html += '</div>'
+            log_html += "</div>"
         else:
             log_html = '<div class="saas-log-window"><span class="saas-log-time">系统就绪，等待任务...</span></div>'
         st.markdown(log_html, unsafe_allow_html=True)
@@ -1305,18 +1514,21 @@ def render_commander_dashboard():
             st.session_state.ceo_pending_msg = None
 
         # CEO Agent panel
-        st.markdown("""
+        st.markdown(
+            """
         <div class="saas-panel">
             <div class="saas-panel-title">CEO Agent 对话</div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         ceo_msg = st.text_area(
             "输入指令",
             placeholder="向 CEO Agent 提问或下达指令...",
             key="ceo_chat_input",
             height=80,
-            label_visibility="collapsed"
+            label_visibility="collapsed",
         )
         if st.button("发送", key="btn_ceo_send", use_container_width=True):
             if ceo_msg.strip():
@@ -1333,7 +1545,9 @@ def render_commander_dashboard():
             with st.spinner("CEO Agent 思考中..."):
                 response = _call_ceo_llm(msg)
             st.session_state.ceo_conversation.append({"role": "user", "content": msg})
-            st.session_state.ceo_conversation.append({"role": "assistant", "content": response})
+            st.session_state.ceo_conversation.append(
+                {"role": "assistant", "content": response}
+            )
             add_log(f"✅ CEO回复: {response[:60]}")
             st.rerun()
 
@@ -1348,11 +1562,14 @@ def render_commander_dashboard():
             st.caption("_向 CEO Agent 提问以开始对话_")
 
         # 快捷指令
-        st.markdown("""
+        st.markdown(
+            """
         <div class="saas-panel" style="margin-top:8px;">
             <div class="saas-panel-title">快捷指令</div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         q1, q2, q3 = st.columns(3)
         with q1:
@@ -1360,8 +1577,12 @@ def render_commander_dashboard():
                 prompt = f"当前项目进度: {progress_val}%，请评估状态并给出建议"
                 with st.spinner("CEO 分析中..."):
                     resp = _call_ceo_llm(prompt)
-                st.session_state.ceo_conversation.append({"role": "user", "content": "📊 进度如何"})
-                st.session_state.ceo_conversation.append({"role": "assistant", "content": resp})
+                st.session_state.ceo_conversation.append(
+                    {"role": "user", "content": "📊 进度如何"}
+                )
+                st.session_state.ceo_conversation.append(
+                    {"role": "assistant", "content": resp}
+                )
                 add_log("📊 CEO进度分析完成")
                 st.rerun()
         with q2:
@@ -1370,8 +1591,12 @@ def render_commander_dashboard():
                 prompt = f"成本使用率 {pct:.1f}%，状态：{status}，月度预算 ¥{monthly_budget}，请分析并给出建议"
                 with st.spinner("CEO 分析中..."):
                     resp = _call_ceo_llm(prompt)
-                st.session_state.ceo_conversation.append({"role": "user", "content": "💰 成本正常吗"})
-                st.session_state.ceo_conversation.append({"role": "assistant", "content": resp})
+                st.session_state.ceo_conversation.append(
+                    {"role": "user", "content": "💰 成本正常吗"}
+                )
+                st.session_state.ceo_conversation.append(
+                    {"role": "assistant", "content": resp}
+                )
                 add_log("💰 CEO成本分析完成")
                 st.rerun()
         with q3:
@@ -1379,23 +1604,37 @@ def render_commander_dashboard():
                 prompt = f"当前项目: {project_name}，进度 {progress_val}%，模式 {st.session_state.wb_mode}。请给出下一步行动建议"
                 with st.spinner("CEO 分析中..."):
                     resp = _call_ceo_llm(prompt)
-                st.session_state.ceo_conversation.append({"role": "user", "content": "🎯 下一步做什么"})
-                st.session_state.ceo_conversation.append({"role": "assistant", "content": resp})
+                st.session_state.ceo_conversation.append(
+                    {"role": "user", "content": "🎯 下一步做什么"}
+                )
+                st.session_state.ceo_conversation.append(
+                    {"role": "assistant", "content": resp}
+                )
                 add_log("🎯 CEO建议已生成")
                 st.rerun()
 
         # 模式快速切换
-        st.markdown("""
+        st.markdown(
+            """
         <div class="saas-panel" style="margin-top:8px;">
             <div class="saas-panel-title">上下文模式</div>
         </div>
-        """, unsafe_allow_html=True)
-        for mode_key, label in [("dev", "🔧 开发模式"), ("create", "✍️ 创作模式"), ("client", "💼 客户模式")]:
+        """,
+            unsafe_allow_html=True,
+        )
+        for mode_key, label in [
+            ("dev", "🔧 开发模式"),
+            ("create", "✍️ 创作模式"),
+            ("client", "💼 客户模式"),
+        ]:
             is_active = st.session_state.wb_mode == mode_key
             btn_type = "primary" if is_active else "secondary"
-            if st.button(label, key=f"saas_mode_{mode_key}",
-                         type=btn_type if is_active else "secondary",
-                         use_container_width=True):
+            if st.button(
+                label,
+                key=f"saas_mode_{mode_key}",
+                type=btn_type if is_active else "secondary",
+                use_container_width=True,
+            ):
                 if st.session_state.wb_mode != mode_key:
                     st.session_state.wb_mode = mode_key
                     st.session_state.wb_alt_index = 0
@@ -1404,7 +1643,7 @@ def render_commander_dashboard():
                     add_log(f"🔄 上下文切换: {label}")
                     st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)  # close saas-content
+    st.markdown("</div>", unsafe_allow_html=True)  # close saas-content
 
     # --- 日终回顾检查 ---
     check_daily_review()
@@ -1428,32 +1667,44 @@ def check_daily_review():
         st.caption("一天的工作即将结束，来看看今天的成果——")
 
         narrative = generate_daily_narrative()
-        st.markdown(f"""
+        st.markdown(
+            f"""
         <div style="background:#F8FAFC; border-radius:6px; padding:14px; margin:10px 0;
                     font-size:13px; color:#0F172A; line-height:1.7; white-space:pre-line;">
         {narrative}
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         col_a, col_b, col_c = st.columns(3)
         with col_a:
-            if st.button("✅ 确认打卡", key="btn_review_confirm", type="primary", use_container_width=True):
+            if st.button(
+                "✅ 确认打卡",
+                key="btn_review_confirm",
+                type="primary",
+                use_container_width=True,
+            ):
                 save_daily_review(narrative=narrative, confirmed=True)
                 st.session_state.wb_daily_review_dismissed = True
                 st.toast("🎉 今日打卡完成！辛苦了，明天见～")
                 add_log("🌅 日终回顾已确认")
                 st.rerun()
         with col_b:
-            if st.button("📝 修改叙事", key="btn_review_edit", use_container_width=True):
+            if st.button(
+                "📝 修改叙事", key="btn_review_edit", use_container_width=True
+            ):
                 st.session_state.wb_view = "daily_review"
                 st.rerun()
         with col_c:
-            if st.button("⏭️ 稍后再说", key="btn_review_dismiss", use_container_width=True):
+            if st.button(
+                "⏭️ 稍后再说", key="btn_review_dismiss", use_container_width=True
+            ):
                 st.session_state.wb_daily_review_dismissed = True
                 add_log("🌅 日终回顾已延后")
                 st.rerun()
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ================================================================
@@ -1474,7 +1725,7 @@ def render_project_detail():
             st.session_state.wb_active_project = None
             st.rerun()
     with col_title:
-        st.markdown(f"## {proj.get('icon','📂')} {proj.get('name','项目详情')}")
+        st.markdown(f"## {proj.get('icon', '📂')} {proj.get('name', '项目详情')}")
     st.caption(proj.get("description", ""))
 
     # ========== 保留现有3标签页功能 ==========
@@ -1496,11 +1747,13 @@ def render_project_detail():
         if os.path.exists(sop_file):
             try:
                 sop = SOP.load_from_yaml(sop_file)
-                stages = getattr(sop, 'stages', [])
+                stages = getattr(sop, "stages", [])
                 for i, stage in enumerate(stages):
-                    phase_id = stage.get('phase_id', stage.get('name', f'Phase {i+1}'))
+                    phase_id = stage.get(
+                        "phase_id", stage.get("name", f"Phase {i + 1}")
+                    )
                     st.markdown(
-                        f"🔄 **Phase {i+1}/{len(stages)}** — {phase_id} — "
+                        f"🔄 **Phase {i + 1}/{len(stages)}** — {phase_id} — "
                         f"{stage.get('description', '')[:60]}"
                     )
             except Exception:
@@ -1514,7 +1767,11 @@ def render_project_detail():
     st.subheader("📂 最近产出")
     output_dir = "output"
     if os.path.exists(output_dir):
-        files = sorted(os.listdir(output_dir), key=lambda f: os.path.getmtime(os.path.join(output_dir, f)), reverse=True)[:10]
+        files = sorted(
+            os.listdir(output_dir),
+            key=lambda f: os.path.getmtime(os.path.join(output_dir, f)),
+            reverse=True,
+        )[:10]
         if files:
             for f in files:
                 st.caption(f"📄 {f}")
@@ -1532,7 +1789,7 @@ def render_project_detail():
         )
         if skills_raw:
             for s in skills_raw:
-                st.caption(f"- {s['name']} ({s.get('skill_type','通用')})")
+                st.caption(f"- {s['name']} ({s.get('skill_type', '通用')})")
         else:
             st.caption("暂无活跃 Skill")
     except Exception:
@@ -1565,7 +1822,9 @@ def render_daily_review_detail():
     st.title("🌅 日终回顾")
 
     narrative = generate_daily_narrative()
-    edited = st.text_area("今日叙事总结（可编辑）", value=narrative, height=300, key="review_narrative")
+    edited = st.text_area(
+        "今日叙事总结（可编辑）", value=narrative, height=300, key="review_narrative"
+    )
 
     # 能量曲线
     try:
@@ -1573,6 +1832,7 @@ def render_daily_review_detail():
         history = db.get_energy_history(7)
         if history:
             import pandas as pd
+
             st.subheader("📈 近7天能量曲线")
             df = pd.DataFrame(history)
             if "timestamp" in df.columns:
@@ -1585,7 +1845,12 @@ def render_daily_review_detail():
 
     col_a, col_b = st.columns(2)
     with col_a:
-        if st.button("✅ 确认打卡", key="btn_review_detail_confirm", type="primary", use_container_width=True):
+        if st.button(
+            "✅ 确认打卡",
+            key="btn_review_detail_confirm",
+            type="primary",
+            use_container_width=True,
+        ):
             save_daily_review(narrative=edited, confirmed=True)
             st.session_state.wb_daily_review_dismissed = True
             st.session_state.wb_view = "dashboard"
@@ -1593,7 +1858,9 @@ def render_daily_review_detail():
             add_log("🌅 日终回顾已确认")
             st.rerun()
     with col_b:
-        if st.button("💾 保存草稿", key="btn_review_detail_save", use_container_width=True):
+        if st.button(
+            "💾 保存草稿", key="btn_review_detail_save", use_container_width=True
+        ):
             save_daily_review(narrative=edited, confirmed=False)
             st.toast("📝 叙事先保存了，之后可以再改")
             add_log("🌅 日终回顾草稿已保存")
@@ -1604,36 +1871,45 @@ def render_daily_review_detail():
 # ================================================================
 def render_mobile_view():
     """移动端简化视图 — SaaS 风格"""
-    st.markdown("""
+    st.markdown(
+        """
     <div style="background:#1E293B;color:#F8FAFC;padding:10px 14px;border-radius:6px;margin-bottom:12px;
                 display:flex;align-items:center;justify-content:space-between;">
         <span style="font-size:14px;font-weight:700;">FROST-SOP</span>
         <span style="font-size:11px;color:#94A3B8;">移动指挥台</span>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     task = get_recommended_task(st.session_state.wb_mode)
 
     # 焦点任务
-    st.markdown(f"""
+    st.markdown(
+        f"""
     <div style="background:#FFFFFF;border-radius:8px;padding:14px;border:1px solid #E2E8F0;margin-bottom:12px;">
         <div style="font-size:11px;color:#64748B;font-weight:600;text-transform:uppercase;margin-bottom:4px;">
             今日任务
         </div>
-        <div style="font-size:15px;font-weight:700;color:#0F172A;">{task['task_name'][:40]}</div>
-        <div style="font-size:12px;color:#94A3B8;margin-top:6px;">{task['duration']} · {task['match_text']}</div>
+        <div style="font-size:15px;font-weight:700;color:#0F172A;">{task["task_name"][:40]}</div>
+        <div style="font-size:12px;color:#94A3B8;margin-top:6px;">{task["duration"]} · {task["match_text"]}</div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     # 模式切换（紧凑版）
     cols = st.columns(3)
-    for i, (mode_key, label) in enumerate([
-        ("dev", "🔧 开发"), ("create", "✍️ 创作"), ("client", "💼 客户")
-    ]):
+    for i, (mode_key, label) in enumerate(
+        [("dev", "🔧 开发"), ("create", "✍️ 创作"), ("client", "💼 客户")]
+    ):
         with cols[i]:
-            if st.button(label, key=f"mobile_mode_{mode_key}",
-                         type="primary" if st.session_state.wb_mode == mode_key else "secondary",
-                         use_container_width=True):
+            if st.button(
+                label,
+                key=f"mobile_mode_{mode_key}",
+                type="primary" if st.session_state.wb_mode == mode_key else "secondary",
+                use_container_width=True,
+            ):
                 st.session_state.wb_mode = mode_key
                 st.rerun()
 
@@ -1650,6 +1926,7 @@ def render_mobile_view():
 # ================================================================
 # 保留的现有功能（F1-F10）
 # ================================================================
+
 
 def render_command_panel():
     """Tab 1: 指挥面板（保留原有功能）"""
@@ -1677,7 +1954,9 @@ def render_command_panel():
     st.subheader("💾 F6.5 撒豆成兵")
     col_save, col_load = st.columns(2)
     with col_save:
-        if st.button("💾 保存当前配置", use_container_width=True, key="btn_save_config"):
+        if st.button(
+            "💾 保存当前配置", use_container_width=True, key="btn_save_config"
+        ):
             available_skills = []
             try:
                 conn = get_db().get_connection()
@@ -1687,7 +1966,11 @@ def render_command_panel():
                 )
                 active_skills = cursor.fetchall()
                 available_skills = [
-                    {"id": s["id"], "name": s["name"], "task_type": s["task_type"] or s["skill_type"]}
+                    {
+                        "id": s["id"],
+                        "name": s["name"],
+                        "task_type": s["task_type"] or s["skill_type"],
+                    }
                     for s in active_skills
                 ]
             except Exception:
@@ -1707,7 +1990,9 @@ def render_command_panel():
             st.success(f"✅ 配置已保存为：{filename}，下次一键唤醒")
 
     with col_load:
-        if st.button("🔄 唤醒上次配置", use_container_width=True, key="btn_load_config"):
+        if st.button(
+            "🔄 唤醒上次配置", use_container_width=True, key="btn_load_config"
+        ):
             asset_store = AssetStore()
             config = asset_store.load_latest()
             if config:
@@ -1718,7 +2003,9 @@ def render_command_panel():
                 st.warning("⚠️ 没有找到可唤醒的配置，请先保存一次")
 
     # 执行按钮
-    if st.button("🚀 执行任务", type="primary", use_container_width=True, key="btn_execute"):
+    if st.button(
+        "🚀 执行任务", type="primary", use_container_width=True, key="btn_execute"
+    ):
         execute_task(task_input or st.session_state.get("task_input", ""))
 
 
@@ -1754,17 +2041,19 @@ def execute_task(task_text: str):
                 initial_context={
                     "_prompt": f"分析以下任务，拆解为1-3个父辈Agent，返回JSON: {task_text}",
                     "_system_prompt": "你是一个任务拆解助手。请返回有效的JSON。",
-                }
+                },
             )
             llm_response = context.get("_llm_response", "")
             tokens = context.get("_llm_tokens", {}).get("total", 0)
             st.session_state.total_tokens += tokens
-            st.session_state.cost_log.append({
-                "timestamp": datetime.now().isoformat(),
-                "tokens": tokens,
-                "task_id": task_id,
-                "agent": "ancestor",
-            })
+            st.session_state.cost_log.append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "tokens": tokens,
+                    "task_id": task_id,
+                    "agent": "ancestor",
+                }
+            )
             add_log(f"✅ Step 1完成: 拆解结果({tokens} Token)")
 
             # Step 2: 创建父辈并搜索SOP
@@ -1778,7 +2067,7 @@ def execute_task(task_text: str):
                     "_search_query": "DEV-001",
                     "_asset_store": st.session_state.asset_store,
                     "_search_external": True,
-                }
+                },
             )
             search_results = search_context.get("_search_results", [])
             add_log(f"✅ Step 2完成: 找到 {len(search_results)} 个SOP模板")
@@ -1803,9 +2092,9 @@ def execute_task(task_text: str):
             context = st.session_state.ancestor.run(
                 sop_steps=["validate_sop"],
                 initial_context={
-                    "_sop_to_validate": type('SOP', (), sop_to_use)(),
+                    "_sop_to_validate": type("SOP", (), sop_to_use)(),
                     "_compliance_rules": compliance_rules,
-                }
+                },
             )
             validation = context.get("_validation_result", {})
             if validation.get("valid"):
@@ -1823,7 +2112,7 @@ def execute_task(task_text: str):
             add_log("--- Step 4/6: 内化SOP ---")
             context = parent.run(
                 sop_steps=["internalize_sop"],
-                initial_context={"_sop_to_internalize": sop_to_use}
+                initial_context={"_sop_to_internalize": sop_to_use},
             )
             sop_stages_detail = context.get("_sop_stages", [])
             add_log(f"✅ Step 4完成: 内化完成，共{len(sop_stages_detail)}个阶段")
@@ -1832,35 +2121,39 @@ def execute_task(task_text: str):
             stage_context = {"_stage_results": [], "_parent_agent": parent}
             progress_bar = st.progress(0)
             for i, stage in enumerate(sop_stages_detail):
-                stage_name = stage.get("name", f"阶段{i+1}")
+                stage_name = stage.get("name", f"阶段{i + 1}")
                 status_status.update(
-                    label=f"Step 5/6: 孙辈执行「{stage_name}」({i+1}/{len(sop_stages_detail)})...",
-                    state="running"
+                    label=f"Step 5/6: 孙辈执行「{stage_name}」({i + 1}/{len(sop_stages_detail)})...",
+                    state="running",
                 )
-                add_log(f"--- Step 5.{i+1}: 孙辈执行「{stage_name}」---")
+                add_log(f"--- Step 5.{i + 1}: 孙辈执行「{stage_name}」---")
                 stage_context["_current_stage"] = stage
                 stage_context = parent.run(
-                    sop_steps=["execute_stage"],
-                    initial_context=stage_context
+                    sop_steps=["execute_stage"], initial_context=stage_context
                 )
                 result = stage_context.get("_current_stage_result", {})
                 add_log(f"✅ 阶段「{stage_name}」完成")
-                task["stages"].append({
-                    "name": stage_name,
-                    "status": result.get("status", "unknown"),
-                    "output": result.get("output", ""),
-                })
+                task["stages"].append(
+                    {
+                        "name": stage_name,
+                        "status": result.get("status", "unknown"),
+                        "output": result.get("output", ""),
+                    }
+                )
                 progress_bar.progress((i + 1) / len(sop_stages_detail))
 
             # Step 6: 收割产出
             status_status.update(label="Step 6/6: 收割产出...", state="running")
             add_log("--- Step 6/6: 收割产出 ---")
             all_results = stage_context.get("_stage_results", [])
-            st.session_state.asset_store.save("task:latest", {
-                "task": task_text,
-                "stages_completed": len(all_results),
-                "stage_results": all_results,
-            })
+            st.session_state.asset_store.save(
+                "task:latest",
+                {
+                    "task": task_text,
+                    "stages_completed": len(all_results),
+                    "stage_results": all_results,
+                },
+            )
             task["status"] = "completed"
             task["results"] = all_results
             save_tasks_to_store()
@@ -1872,8 +2165,7 @@ def execute_task(task_text: str):
             add_log(f"🎉 任务全部完成! {len(all_results)}个阶段产出已存入资产Store")
             st.session_state.task_result = all_results
             status_status.update(
-                label=f"✅ 任务完成! ({len(all_results)}个阶段)",
-                state="complete"
+                label=f"✅ 任务完成! ({len(all_results)}个阶段)", state="complete"
             )
 
         except Exception as e:
@@ -1905,13 +2197,21 @@ def render_cost_dashboard():
         usage_ratio = total_cost / monthly_budget if monthly_budget > 0 else 0
         remaining = monthly_budget - total_cost
 
-    alert_text = "🔴 超标" if usage_ratio >= 1.0 else ("🟡 预警" if usage_ratio >= 0.8 else "🟢 正常")
+    alert_text = (
+        "🔴 超标"
+        if usage_ratio >= 1.0
+        else ("🟡 预警" if usage_ratio >= 0.8 else "🟢 正常")
+    )
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("已用成本", f"¥{total_cost:.2f}", delta=f"预算: ¥{monthly_budget:.2f}")
+        st.metric(
+            "已用成本", f"¥{total_cost:.2f}", delta=f"预算: ¥{monthly_budget:.2f}"
+        )
     with col2:
-        st.metric("剩余预算", f"¥{remaining:.2f}", delta=f"{usage_ratio*100:.1f}% 已用")
+        st.metric(
+            "剩余预算", f"¥{remaining:.2f}", delta=f"{usage_ratio * 100:.1f}% 已用"
+        )
     with col3:
         st.metric("使用状态", alert_text)
     with col4:
@@ -1919,18 +2219,25 @@ def render_cost_dashboard():
 
     st.write("**预算使用进度:**")
     st.progress(min(usage_ratio, 1.0))
-    st.write(f"{usage_ratio*100:.1f}% 已用 (¥{total_cost:.2f} / ¥{monthly_budget:.2f})")
+    st.write(
+        f"{usage_ratio * 100:.1f}% 已用 (¥{total_cost:.2f} / ¥{monthly_budget:.2f})"
+    )
 
 
 # ================================================================
 # 保留的辅助函数（F4兵器库、F9能量、F9日程）
 # ================================================================
 
+
 def _count_gene_templates():
     """统计能力基因库中的教练模板数量"""
     if not st.session_state.get("asset_store"):
         return 0
-    return sum(1 for key in st.session_state.asset_store.list_keys() if key.startswith("skill_gene:"))
+    return sum(
+        1
+        for key in st.session_state.asset_store.list_keys()
+        if key.startswith("skill_gene:")
+    )
 
 
 def _show_armory_templates():
@@ -1971,32 +2278,51 @@ def render_energy_logger():
         st.session_state.energy_emotion = ""
     energy_level = st.slider("当前能量", 0, 100, 50, key="energy_level")
     if energy_level < 30:
-        st.markdown('<span style="color:#FB6B4B">🔴 低能量，建议休息</span>', unsafe_allow_html=True)
+        st.markdown(
+            '<span style="color:#FB6B4B">🔴 低能量，建议休息</span>',
+            unsafe_allow_html=True,
+        )
     elif energy_level < 60:
-        st.markdown('<span style="color:#F97316">🟡 中等能量</span>', unsafe_allow_html=True)
+        st.markdown(
+            '<span style="color:#F97316">🟡 中等能量</span>', unsafe_allow_html=True
+        )
     else:
-        st.markdown('<span style="color:#2D6A4F">🟢 能量充沛</span>', unsafe_allow_html=True)
+        st.markdown(
+            '<span style="color:#2D6A4F">🟢 能量充沛</span>', unsafe_allow_html=True
+        )
 
     emotions = ["专注", "疲惫", "焦虑", "平静", "兴奋", "低落"]
     for row_idx in range(0, 6, 3):
         cols = st.columns(3)
-        for col_idx, emotion in enumerate(emotions[row_idx:row_idx+3]):
+        for col_idx, emotion in enumerate(emotions[row_idx : row_idx + 3]):
             with cols[col_idx]:
                 is_selected = st.session_state.energy_emotion == emotion
                 btn_label = f"{'✅ ' if is_selected else ''}{emotion}"
-                if st.button(btn_label, key=f"emotion_{emotion}", use_container_width=True):
+                if st.button(
+                    btn_label, key=f"emotion_{emotion}", use_container_width=True
+                ):
                     st.session_state.energy_emotion = emotion
                     st.rerun()
 
-    energy_note = st.text_area("备注（可选）", key="energy_note_sidebar", height=60,
-                                placeholder="记录此刻的想法...")
+    energy_note = st.text_area(
+        "备注（可选）",
+        key="energy_note_sidebar",
+        height=60,
+        placeholder="记录此刻的想法...",
+    )
     if st.button("📝 记录此刻", key="record_energy", use_container_width=True):
         if st.session_state.energy_emotion:
             try:
                 db = get_db()
-                db.add_energy_log(level=energy_level, emotion=st.session_state.energy_emotion, note=energy_note)
+                db.add_energy_log(
+                    level=energy_level,
+                    emotion=st.session_state.energy_emotion,
+                    note=energy_note,
+                )
                 st.toast("✅ 能量状态已记录")
-                add_log(f"⚡ 能量记录: {energy_level}% ({st.session_state.energy_emotion})")
+                add_log(
+                    f"⚡ 能量记录: {energy_level}% ({st.session_state.energy_emotion})"
+                )
                 st.session_state.energy_emotion = ""
                 st.rerun()
             except Exception as e:
@@ -2011,6 +2337,7 @@ def render_energy_logger():
         history = db.get_energy_history(30)
         if history:
             import pandas as pd
+
             df = pd.DataFrame(history)
             if "timestamp" in df.columns:
                 df["timestamp"] = pd.to_datetime(df["timestamp"])
@@ -2032,18 +2359,35 @@ def render_schedule_page():
         col1, col2 = st.columns(2)
         with col1:
             title = st.text_input("标题", key="schedule_title")
-            start_dt = st.text_input("开始时间 (YYYY-MM-DD HH:MM)", key="schedule_start")
+            start_dt = st.text_input(
+                "开始时间 (YYYY-MM-DD HH:MM)", key="schedule_start"
+            )
         with col2:
-            repeat_type = st.selectbox("重复", ["none", "daily", "weekly", "monthly"], key="schedule_repeat",
-                                       format_func=lambda x: {"none":"不重复","daily":"每天","weekly":"每周","monthly":"每月"}.get(x,x))
+            repeat_type = st.selectbox(
+                "重复",
+                ["none", "daily", "weekly", "monthly"],
+                key="schedule_repeat",
+                format_func=lambda x: {
+                    "none": "不重复",
+                    "daily": "每天",
+                    "weekly": "每周",
+                    "monthly": "每月",
+                }.get(x, x),
+            )
             end_dt = st.text_input("结束时间 (YYYY-MM-DD HH:MM)", key="schedule_end")
         description = st.text_area("描述（可选）", key="schedule_desc", height=80)
         if st.button("✅ 添加日程", key="add_schedule_btn", use_container_width=True):
             if title and start_dt and end_dt:
                 try:
                     db = get_db()
-                    db.add_schedule(title=title, description=description, start_time=start_dt,
-                                    end_time=end_dt, repeat_type=repeat_type, repeat_end="")
+                    db.add_schedule(
+                        title=title,
+                        description=description,
+                        start_time=start_dt,
+                        end_time=end_dt,
+                        repeat_type=repeat_type,
+                        repeat_end="",
+                    )
                     st.toast("✅ 日程已添加")
                     add_log(f"📅 日程添加: {title}")
                     st.rerun()
@@ -2060,6 +2404,7 @@ def render_schedule_page():
             st.info("暂无日程，请添加第一个日程")
         else:
             from collections import defaultdict
+
             grouped = defaultdict(list)
             for s in schedules:
                 start = s.get("start_time", "")
@@ -2073,7 +2418,9 @@ def render_schedule_page():
                         with col_main:
                             title_text = s.get("title") or s.get("name", "无标题")
                             st.write(f"**{title_text}**")
-                            st.caption(f"{s.get('start_time','?')} → {s.get('end_time','?')}")
+                            st.caption(
+                                f"{s.get('start_time', '?')} → {s.get('end_time', '?')}"
+                            )
                         with col_del:
                             if st.button("🗑️", key=f"del_sch_{s['id']}"):
                                 db.delete_schedule(s["id"])
@@ -2094,7 +2441,10 @@ def render_health_dashboard():
     with st.spinner("长老正在审计家族健康度..."):
         try:
             elder = create_elder("health_elder", asset_store=asset_store)
-            context = {"_asset_store": asset_store, "_constitution_store": st.session_state.get("constitution_store")}
+            context = {
+                "_asset_store": asset_store,
+                "_constitution_store": st.session_state.get("constitution_store"),
+            }
             result = elder.run(["audit_family"], context)
             report = result.get("_audit_report", {})
         except Exception as e:
@@ -2121,6 +2471,7 @@ def render_health_dashboard():
 # 核心初始化函数
 # ================================================================
 
+
 def init_family():
     """初始化家族系统"""
     if not st.session_state.initialized:
@@ -2130,7 +2481,8 @@ def init_family():
             st.session_state.asset_store = create_asset_store()
             add_log("✅ 资产Store初始化完成")
             st.session_state.ancestor = create_ancestor(
-                st.session_state.constitution_store, st.session_state.asset_store)
+                st.session_state.constitution_store, st.session_state.asset_store
+            )
             add_log("✅ 祖辈Agent初始化完成")
             st.session_state.initialized = True
             add_log("家族系统初始化完成 - 祖辈Agent已就绪")
@@ -2149,14 +2501,20 @@ def load_tasks_from_store():
     """从SQLite恢复历史任务"""
     try:
         db = get_db()
-        rows = db.select_all("tasks", where="status IN ('pending', 'running', 'completed')")
+        rows = db.select_all(
+            "tasks", where="status IN ('pending', 'running', 'completed')"
+        )
         for row in rows:
             task_id = row["id"]
             if task_id not in st.session_state.tasks:
                 st.session_state.tasks[task_id] = {
-                    "id": row["id"], "title": row["title"],
-                    "description": row["description"], "status": row["status"],
-                    "created_at": str(row["created_at"]), "stages": [], "results": []
+                    "id": row["id"],
+                    "title": row["title"],
+                    "description": row["description"],
+                    "status": row["status"],
+                    "created_at": str(row["created_at"]),
+                    "stages": [],
+                    "results": [],
                 }
         if rows:
             add_log(f"📂 从 SQLite 恢复了 {len(rows)} 个历史任务")
@@ -2190,13 +2548,24 @@ def create_task_internal(title: str, description: str = ""):
     task_id = "task_{}".format(st.session_state.task_id_counter)
     st.session_state.task_id_counter += 1
     st.session_state.tasks[task_id] = {
-        "id": task_id, "title": title, "description": description,
-        "status": "pending", "created_at": datetime.now().isoformat(),
-        "stages": [], "results": [],
+        "id": task_id,
+        "title": title,
+        "description": description,
+        "status": "pending",
+        "created_at": datetime.now().isoformat(),
+        "stages": [],
+        "results": [],
     }
     try:
         db = get_db()
-        db.save_task({"id": task_id, "title": title, "description": description, "status": "pending"})
+        db.save_task(
+            {
+                "id": task_id,
+                "title": title,
+                "description": description,
+                "status": "pending",
+            }
+        )
     except Exception:
         pass
     save_tasks_to_store()
@@ -2207,6 +2576,7 @@ def create_task_internal(title: str, description: str = ""):
 # ================================================================
 # 主入口
 # ================================================================
+
 
 def main():
     """主渲染入口"""
@@ -2224,6 +2594,7 @@ def main():
     if not st.session_state.reminder_checked:
         try:
             from core.notifier import send_windows_notification
+
             db = get_db()
             upcoming = db.get_upcoming_reminders(15)
             for item in upcoming:
@@ -2231,7 +2602,7 @@ def main():
                     title_text = item.get("title") or item.get("name", "日程提醒")
                     send_windows_notification(
                         "📅 FROST-SOP 日程提醒",
-                        f"{title_text} 即将在 {item.get('start_time', '?')} 开始"
+                        f"{title_text} 即将在 {item.get('start_time', '?')} 开始",
                     )
                     db.mark_schedule_notified(item["id"])
                 except Exception:
@@ -2250,7 +2621,7 @@ def main():
             cursor.execute(
                 "UPDATE decision_points SET status='auto_cancelled', "
                 "user_note='应用启动清理', responded_at=? WHERE status='pending'",
-                (st.session_state.wb_session_start,)
+                (st.session_state.wb_session_start,),
             )
             db.get_connection().commit()
         except Exception:
@@ -2296,14 +2667,18 @@ def main():
         with col2:
             st.metric("Token消耗", f"{st.session_state.total_tokens:,}")
         with col3:
-            running = sum(1 for t in st.session_state.tasks.values() if t.get("status") == "running")
+            running = sum(
+                1
+                for t in st.session_state.tasks.values()
+                if t.get("status") == "running"
+            )
             st.metric("运行中", running)
 
         # 任务产出
         if st.session_state.get("task_result"):
             with st.expander("📦 最新任务产出"):
                 for i, stage_result in enumerate(st.session_state.task_result):
-                    st.write(f"阶段{i+1}: {stage_result.get('stage', '未知')}")
+                    st.write(f"阶段{i + 1}: {stage_result.get('stage', '未知')}")
 
 
 def render_sidebar():
@@ -2313,8 +2688,11 @@ def render_sidebar():
     for proj in get_project_defaults():
         is_current = proj["mode"] == st.session_state.wb_mode
         prefix = "●" if is_current else "○"
-        if st.button(f"{prefix} {proj['icon']} {proj['name']}", key=f"sidebar_proj_{proj['id']}",
-                     use_container_width=True):
+        if st.button(
+            f"{prefix} {proj['icon']} {proj['name']}",
+            key=f"sidebar_proj_{proj['id']}",
+            use_container_width=True,
+        ):
             st.session_state.wb_mode = proj["mode"]
             st.session_state.wb_view = "dashboard"
             st.session_state.wb_active_project = None
@@ -2328,10 +2706,14 @@ def render_sidebar():
     st.caption("雇佣兵: 3 个预置")
     col_a, col_b = st.columns(2)
     with col_a:
-        if st.button("🔍 浏览模板", use_container_width=True, key="sidebar_browse_templates"):
+        if st.button(
+            "🔍 浏览模板", use_container_width=True, key="sidebar_browse_templates"
+        ):
             st.session_state.show_armory = "templates"
     with col_b:
-        if st.button("⚔️ 查看雇佣兵", use_container_width=True, key="sidebar_view_mercenaries"):
+        if st.button(
+            "⚔️ 查看雇佣兵", use_container_width=True, key="sidebar_view_mercenaries"
+        ):
             st.session_state.show_armory = "mercenaries"
     if st.session_state.get("show_armory") == "templates":
         _show_armory_templates()

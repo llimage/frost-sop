@@ -196,14 +196,16 @@ class TestSkillExtractor:
 
     def test_scan_and_extract_all(self):
         """T10.6: 批量提取并去重"""
-        from core.skill_extractor import SkillExtractor
         from core.db import get_db
+        from core.skill_extractor import SkillExtractor
 
         # 确保干净状态：先清理已有 drafts，保证第一次提取有产出
         db = get_db()
         conn = db.get_connection()
         # 先删子表（skill_versions 外键引用 skills）
-        conn.execute("DELETE FROM skill_versions WHERE skill_id IN (SELECT id FROM skills WHERE name LIKE 'f10_test_skill_%')")
+        conn.execute(
+            "DELETE FROM skill_versions WHERE skill_id IN (SELECT id FROM skills WHERE name LIKE 'f10_test_skill_%')"
+        )
         conn.execute("DELETE FROM skills WHERE name LIKE 'f10_test_skill_%'")
         conn.commit()
 
@@ -225,7 +227,9 @@ class TestSkillExtractor:
         # 确保有 draft 数据：先清理子表再清理主表
         db = get_db()
         conn = db.get_connection()
-        conn.execute("DELETE FROM skill_versions WHERE skill_id IN (SELECT id FROM skills WHERE name LIKE 'f10_test_skill_%')")
+        conn.execute(
+            "DELETE FROM skill_versions WHERE skill_id IN (SELECT id FROM skills WHERE name LIKE 'f10_test_skill_%')"
+        )
         conn.execute("DELETE FROM skills WHERE name LIKE 'f10_test_skill_%'")
         conn.commit()
 
@@ -250,13 +254,15 @@ class TestSkillExtractor:
 
     def test_validate_skill_becomes_active(self):
         """T10.8: 验证通过后 Skill 变为 active"""
-        from core.skill_extractor import SkillExtractor
         from core.db import get_db
+        from core.skill_extractor import SkillExtractor
 
         # 确保有 draft 数据
         db = get_db()
         conn = db.get_connection()
-        conn.execute("DELETE FROM skill_versions WHERE skill_id IN (SELECT id FROM skills WHERE name LIKE 'f10_test_skill_%')")
+        conn.execute(
+            "DELETE FROM skill_versions WHERE skill_id IN (SELECT id FROM skills WHERE name LIKE 'f10_test_skill_%')"
+        )
         conn.execute("DELETE FROM skills WHERE name LIKE 'f10_test_skill_%'")
         conn.commit()
 
@@ -276,14 +282,16 @@ class TestSkillExtractor:
 
     def test_validate_all_drafts(self):
         """T10.9: 批量验证所有 draft Skill"""
-        from core.skill_extractor import SkillExtractor
         from core.db import get_db
+        from core.skill_extractor import SkillExtractor
 
         db = get_db()
         conn = db.get_connection()
 
         # 确保有 draft：先清子表再清主表，再提取
-        conn.execute("DELETE FROM skill_versions WHERE skill_id IN (SELECT id FROM skills WHERE name LIKE 'f10_test_skill_%')")
+        conn.execute(
+            "DELETE FROM skill_versions WHERE skill_id IN (SELECT id FROM skills WHERE name LIKE 'f10_test_skill_%')"
+        )
         conn.execute("DELETE FROM skills WHERE name LIKE 'f10_test_skill_%'")
         conn.commit()
 
@@ -420,8 +428,8 @@ class TestF10Integration:
     @classmethod
     def teardown_class(cls):
         try:
-            from core.db import DBManager
             import core.db as db_mod
+            from core.db import DBManager
 
             if DBManager._instance:
                 DBManager._instance.close()

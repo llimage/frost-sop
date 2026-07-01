@@ -15,11 +15,10 @@ import os
 import sys
 import json
 import uuid
-import time
 from datetime import datetime
 from typing import Optional, List
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import asyncio
@@ -28,10 +27,18 @@ import asyncio
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from api.models import (
-    ProjectResponse, TaskCreateRequest, TaskResponse, TaskStageResponse,
-    TaskExecuteResponse, AgentResponse, CostLogResponse, CostSummaryResponse,
-    ChatRequest, ChatResponse, SkillResponse, SkillVersionResponse,
-    ScheduleCreateRequest, ScheduleResponse, ErrorResponse,
+    ProjectResponse,
+    TaskCreateRequest,
+    TaskResponse,
+    TaskStageResponse,
+    TaskExecuteResponse,
+    AgentResponse,
+    CostSummaryResponse,
+    ChatRequest,
+    ChatResponse,
+    SkillResponse,
+    ScheduleCreateRequest,
+    ScheduleResponse,
 )
 from core.db import get_db
 
@@ -74,14 +81,17 @@ def _ensure_project_exists(db, project_id="default"):
     """Ensure a default project exists."""
     existing = db.select_one("projects", "id", project_id)
     if not existing:
-        db.insert("projects", {
-            "id": project_id,
-            "name": "默认项目",
-            "description": "FROST-SOP 默认项目",
-            "status": "active",
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-        })
+        db.insert(
+            "projects",
+            {
+                "id": project_id,
+                "name": "默认项目",
+                "description": "FROST-SOP 默认项目",
+                "status": "active",
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+            },
+        )
     return project_id
 
 
@@ -122,43 +132,55 @@ def create_and_run_task(req: TaskCreateRequest):
     _ensure_project_exists(db, req.project_id)
 
     # 初始化任务记录
-    db.insert("tasks", {
-        "id": task_id,
-        "title": req.description[:60],
-        "description": req.description,
-        "project_id": req.project_id,
-        "status": "running",
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-    })
+    db.insert(
+        "tasks",
+        {
+            "id": task_id,
+            "title": req.description[:60],
+            "description": req.description,
+            "project_id": req.project_id,
+            "status": "running",
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+        },
+    )
 
     # 加载 SOP 模板并记录
     from core.sop import SOP
+
     sop = SOP.load_from_yaml("sops/templates/DEV-001.yaml")
 
     sop_template_id = f"sop_template:{sop.sop_id}"
     existing_sop = db.select_one("sop_templates", "id", sop_template_id)
     if not existing_sop:
-        db.insert("sop_templates", {
-            "id": sop_template_id,
-            "sop_id": sop.sop_id,
-            "name": sop.name,
-            "version": sop.version,
-            "content": json.dumps(sop.stages if hasattr(sop, "stages") else {}, ensure_ascii=False),
-            "is_preset": 1,
-            "is_validated": 1,
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-        })
+        db.insert(
+            "sop_templates",
+            {
+                "id": sop_template_id,
+                "sop_id": sop.sop_id,
+                "name": sop.name,
+                "version": sop.version,
+                "content": json.dumps(
+                    sop.stages if hasattr(sop, "stages") else {}, ensure_ascii=False
+                ),
+                "is_preset": 1,
+                "is_validated": 1,
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+            },
+        )
 
-    sop_execution_id = db.insert("sop_executions", {
-        "task_id": task_id,
-        "sop_template_id": sop_template_id,
-        "started_at": datetime.now().isoformat(),
-        "status": "running",
-        "total_stages": len(sop.stages) if hasattr(sop, "stages") else 5,
-        "completed_stages": 0,
-    })
+    sop_execution_id = db.insert(
+        "sop_executions",
+        {
+            "task_id": task_id,
+            "sop_template_id": sop_template_id,
+            "started_at": datetime.now().isoformat(),
+            "status": "running",
+            "total_stages": len(sop.stages) if hasattr(sop, "stages") else 5,
+            "completed_stages": 0,
+        },
+    )
 
     # 执行 SOP（使用 FROST 家族体系）
     stages_result = []
@@ -177,14 +199,13 @@ def create_and_run_task(req: TaskCreateRequest):
         stage_context = {"_stage_results": [], "_parent_agent": parent}
 
         for i, phase in enumerate(phases):
-            stage_name = phase.get("name", phase.get("phase_id", f"阶段{i+1}"))
+            stage_name = phase.get("name", phase.get("phase_id", f"阶段{i + 1}"))
             stage_order = i + 1
             started = datetime.now().isoformat()
 
             stage_context["_current_stage"] = phase
             stage_context = parent.run(
-                sop_steps=["execute_stage"],
-                initial_context=stage_context
+                sop_steps=["execute_stage"], initial_context=stage_context
             )
 
             result = stage_context.get("_current_stage_result", {})
@@ -192,39 +213,54 @@ def create_and_run_task(req: TaskCreateRequest):
             completed = datetime.now().isoformat()
 
             # 写入 task_stages
-            stage_id = db.insert("task_stages", {
-                "task_id": task_id,
-                "stage_name": stage_name,
-                "stage_order": stage_order,
-                "status": "completed",
-                "output": output,
-                "started_at": started,
-                "completed_at": completed,
-            })
+            stage_id = db.insert(
+                "task_stages",
+                {
+                    "task_id": task_id,
+                    "stage_name": stage_name,
+                    "stage_order": stage_order,
+                    "status": "completed",
+                    "output": output,
+                    "started_at": started,
+                    "completed_at": completed,
+                },
+            )
 
-            stages_result.append(TaskStageResponse(
-                id=stage_id,
-                task_id=task_id,
-                stage_name=stage_name,
-                stage_order=stage_order,
-                status="completed",
-                output=output,
-                started_at=started,
-                completed_at=completed,
-            ))
+            stages_result.append(
+                TaskStageResponse(
+                    id=stage_id,
+                    task_id=task_id,
+                    stage_name=stage_name,
+                    stage_order=stage_order,
+                    status="completed",
+                    output=output,
+                    started_at=started,
+                    completed_at=completed,
+                )
+            )
 
         # 标记任务完成
-        db.update("tasks", "id", task_id, {
-            "status": "completed",
-            "completed_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
-            "result_summary": f"SOP {sop.name} 执行完成，{len(phases)} 个阶段全部通过",
-        })
-        db.update("sop_executions", "id", sop_execution_id, {
-            "status": "completed",
-            "completed_stages": len(phases),
-            "completed_at": datetime.now().isoformat(),
-        })
+        db.update(
+            "tasks",
+            "id",
+            task_id,
+            {
+                "status": "completed",
+                "completed_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+                "result_summary": f"SOP {sop.name} 执行完成，{len(phases)} 个阶段全部通过",
+            },
+        )
+        db.update(
+            "sop_executions",
+            "id",
+            sop_execution_id,
+            {
+                "status": "completed",
+                "completed_stages": len(phases),
+                "completed_at": datetime.now().isoformat(),
+            },
+        )
 
         return TaskExecuteResponse(
             task_id=task_id,
@@ -234,15 +270,25 @@ def create_and_run_task(req: TaskCreateRequest):
         )
 
     except Exception as e:
-        db.update("tasks", "id", task_id, {
-            "status": "failed",
-            "updated_at": datetime.now().isoformat(),
-            "result_summary": str(e)[:200],
-        })
-        db.update("sop_executions", "id", sop_execution_id, {
-            "status": "failed",
-            "error": str(e)[:200],
-        })
+        db.update(
+            "tasks",
+            "id",
+            task_id,
+            {
+                "status": "failed",
+                "updated_at": datetime.now().isoformat(),
+                "result_summary": str(e)[:200],
+            },
+        )
+        db.update(
+            "sop_executions",
+            "id",
+            sop_execution_id,
+            {
+                "status": "failed",
+                "error": str(e)[:200],
+            },
+        )
         return TaskExecuteResponse(
             task_id=task_id,
             status="failed",
@@ -282,7 +328,9 @@ def list_tasks(
 @app.get("/api/tasks/{task_id}/stages", response_model=List[TaskStageResponse])
 def get_task_stages(task_id: str):
     db = get_db()
-    rows = db.select_all("task_stages", "task_id = ? ORDER BY stage_order ASC", [task_id])
+    rows = db.select_all(
+        "task_stages", "task_id = ? ORDER BY stage_order ASC", [task_id]
+    )
     return _rows_to_list(rows)
 
 
@@ -320,15 +368,14 @@ def get_costs(
         }
 
     # 最近日志
-    recent = db.execute_sql(
-        "SELECT * FROM cost_log ORDER BY id DESC LIMIT 20"
-    )
+    recent = db.execute_sql("SELECT * FROM cost_log ORDER BY id DESC LIMIT 20")
     recent_logs = _rows_to_list(recent)
 
     # 预算限制
     budget_limit = None
     try:
         from core.config import get_config
+
         budget_limit = float(get_config("budget_limit", "50.0"))
     except Exception:
         budget_limit = 50.0
@@ -410,7 +457,7 @@ async def stream_logs():
             try:
                 rows = db.execute_sql(
                     "SELECT * FROM audit_log WHERE id > ? ORDER BY id DESC LIMIT 10",
-                    [last_id]
+                    [last_id],
                 )
                 if rows:
                     for row in reversed(rows):
@@ -519,10 +566,10 @@ def list_sops():
     """
     import yaml
     from pathlib import Path
-    
+
     sops_dir = Path(__file__).parent.parent / "sops" / "templates"
     sops = []
-    
+
     if sops_dir.exists():
         for yaml_file in sorted(sops_dir.glob("*.yaml")):
             try:
@@ -530,23 +577,27 @@ def list_sops():
                     data = yaml.safe_load(f)
                 sop_id = data.get("sop_id", yaml_file.stem)
                 stages = data.get("stages", [])
-                sops.append({
-                    "id": sop_id,
-                    "name": data.get("name", sop_id),
-                    "version": data.get("version", "1.0"),
-                    "stage_count": len(stages),
-                    "stages": [s.get("name", "?") for s in stages],
-                    "description": data.get("description", ""),
-                    "required_stages": data.get("required_stages", []),
-                    "category": data.get("category", "general"),
-                })
+                sops.append(
+                    {
+                        "id": sop_id,
+                        "name": data.get("name", sop_id),
+                        "version": data.get("version", "1.0"),
+                        "stage_count": len(stages),
+                        "stages": [s.get("name", "?") for s in stages],
+                        "description": data.get("description", ""),
+                        "required_stages": data.get("required_stages", []),
+                        "category": data.get("category", "general"),
+                    }
+                )
             except Exception as e:
-                sops.append({
-                    "id": yaml_file.stem,
-                    "name": yaml_file.stem,
-                    "error": str(e),
-                })
-    
+                sops.append(
+                    {
+                        "id": yaml_file.stem,
+                        "name": yaml_file.stem,
+                        "error": str(e),
+                    }
+                )
+
     return sops
 
 

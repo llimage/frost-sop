@@ -2,6 +2,7 @@
 FROST-SOP STR-002 自进化端到端验证
 验证父辈能基于历史任务数据生成 SOP 优化建议。
 """
+
 import sys
 import os
 
@@ -10,7 +11,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from stores.asset import create_asset_store
 from agents.parent import create_parent
 from core.store import Store
-from core.sop import SOP
 
 
 # 预置任务数据（与规格书一致）
@@ -126,7 +126,9 @@ def test_evolution_e2e():
 
     # AC-5: suggestions 包含至少1条优化建议
     if len(suggestions) < 1:
-        print(f"❌ AC-5 失败：suggestions 应包含至少 1 条建议，实际为 {len(suggestions)}")
+        print(
+            f"❌ AC-5 失败：suggestions 应包含至少 1 条建议，实际为 {len(suggestions)}"
+        )
         return False
     print("✅ AC-5 通过：suggestions 包含至少 1 条优化建议")
 

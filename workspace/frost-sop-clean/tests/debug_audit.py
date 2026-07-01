@@ -1,7 +1,10 @@
 """
 调试：audit_family 数据读取问题
 """
-import sys, os
+
+import sys
+import os
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.store import Store, HierarchicalStore
@@ -10,7 +13,9 @@ from agents.elder import audit_family_skill
 # 创建测试数据
 own_store = Store()
 own_store.save("task:test-001", {"status": "completed", "stage_results": []})
-own_store.save("task:test-002", {"status": "failed", "stage_results": [{"status": "failed"}]})
+own_store.save(
+    "task:test-002", {"status": "failed", "stage_results": [{"status": "failed"}]}
+)
 own_store.save("lesson:test-001", {"error_type": "test"})
 
 parent_store = Store()
@@ -43,4 +48,6 @@ print(f"h_store.list_keys(): {h_store.list_keys()}")
 print("=" * 60)
 print("测试3：直接调用list_keys")
 print(f"store1.list_keys(): {store1.list_keys()}")
-print(f"  task: 前缀键数: {len([k for k in store1.list_keys() if k.startswith('task:')])}")
+print(
+    f"  task: 前缀键数: {len([k for k in store1.list_keys() if k.startswith('task:')])}"
+)

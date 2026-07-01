@@ -11,12 +11,8 @@ FROST-SOP 性能基准测试 (pytest-benchmark)
     pytest tests/test_benchmark.py --benchmark-only --benchmark-compare --benchmark-autosave
 """
 
-import tempfile
-from pathlib import Path
-
 import pytest
 import yaml
-
 
 # ──────────────────────────────────────────────────────────────
 # Store 性能基准
@@ -30,6 +26,7 @@ class TestStoreBenchmark:
     @pytest.fixture
     def store(self):
         from core.store import Store
+
         return Store()
 
     def test_store_save_small(self, benchmark, store):
@@ -87,13 +84,15 @@ class TestSOPBenchmark:
         """创建包含10个阶段的 SOP 文件。"""
         stages = []
         for i in range(10):
-            stages.append({
-                "name": f"Phase {i + 1}",
-                "description": f"This is a detailed description for phase {i + 1}.",
-                "inputs": [f"input_{i}_a", f"input_{i}_b"],
-                "outputs": [f"output_{i}_a", f"output_{i}_b"],
-                "skill": f"skill_{i + 1}",
-            })
+            stages.append(
+                {
+                    "name": f"Phase {i + 1}",
+                    "description": f"This is a detailed description for phase {i + 1}.",
+                    "inputs": [f"input_{i}_a", f"input_{i}_b"],
+                    "outputs": [f"output_{i}_a", f"output_{i}_b"],
+                    "skill": f"skill_{i + 1}",
+                }
+            )
 
         sop_data = {
             "sop_id": "BENCH-001",
@@ -155,7 +154,7 @@ class TestEncryptionBenchmark:
 
     def test_encrypt_decrypt_roundtrip(self, benchmark):
         """基准：加密+解密往返。"""
-        from core.secrets import encrypt_api_key, decrypt_api_key
+        from core.secrets import decrypt_api_key, encrypt_api_key
 
         text = "sk-test-api-key-1234567890-abcdef"
 
@@ -187,11 +186,12 @@ class TestEventBusBenchmark:
     @pytest.fixture(autouse=True)
     def _reset_bus(self):
         from core.event_bus import EventBus
+
         EventBus.reset()
 
     def test_publish_no_subscribers(self, benchmark):
         """基准：发布事件（无订阅者）。"""
-        from core.event_bus import EventBus, Event
+        from core.event_bus import Event, EventBus
 
         bus = EventBus()
         event = Event("test.event", source="benchmark")
@@ -203,7 +203,7 @@ class TestEventBusBenchmark:
 
     def test_publish_with_subscribers(self, benchmark):
         """基准：发布事件（10个订阅者）。"""
-        from core.event_bus import EventBus, Event
+        from core.event_bus import Event, EventBus
 
         bus = EventBus()
         call_count = [0]
@@ -223,7 +223,7 @@ class TestEventBusBenchmark:
 
     def test_publish_100_events(self, benchmark):
         """基准：连续发布100个事件。"""
-        from core.event_bus import EventBus, Event
+        from core.event_bus import Event, EventBus
 
         bus = EventBus()
 
@@ -254,9 +254,18 @@ class TestImportBenchmark:
 
     def test_import_core_modules(self, benchmark):
         """基准：导入所有核心模块的耗时。"""
+
         def import_all():
             import importlib
-            modules = ["core.store", "core.sop", "core.db", "core.secrets", "core.event_bus", "core.json_safety"]
+
+            modules = [
+                "core.store",
+                "core.sop",
+                "core.db",
+                "core.secrets",
+                "core.event_bus",
+                "core.json_safety",
+            ]
             for mod in modules:
                 importlib.import_module(mod)
 

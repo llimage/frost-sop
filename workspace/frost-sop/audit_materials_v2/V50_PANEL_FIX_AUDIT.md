@@ -1,8 +1,8 @@
 # V5.0 Panel 修复代码审计报告
 
-**审计日期**: 2026-06-28  
-**审计范围**: `skills/orchestration.py` 修复后的代码 + `core/panel_decision.py` 新增单例  
-**审计原则**: 颗粒度最低、最严苛、诚实、中肯  
+**审计日期**: 2026-06-28
+**审计范围**: `skills/orchestration.py` 修复后的代码 + `core/panel_decision.py` 新增单例
+**审计原则**: 颗粒度最低、最严苛、诚实、中肯
 
 ---
 

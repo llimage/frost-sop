@@ -11,12 +11,12 @@
 """
 
 import os
-import sys
 import sqlite3
+import sys
 import tempfile
 import threading
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 # Helper: DB singleton reset (inline to avoid conftest import issues)
 def _reset_db(db_path=":memory:"):
     import core.db as db_mod
+
     db_mod.close_db()
     db_mod.DBManager._instance = None
     db_mod.DBManager._connection = None
@@ -45,9 +46,9 @@ class TestDBConnectionFailure:
     def test_db_locked_error_handled(self):
         """数据库被锁时，写入操作应优雅失败而非崩溃。"""
         # 使用临时文件 DB 测试锁场景
+        import os as _os
         import sqlite3
         import tempfile
-        import os as _os
 
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tf:
             db_path = tf.name
@@ -76,9 +77,9 @@ class TestDBConnectionFailure:
 
     def test_corrupted_db_handled_gracefully(self):
         """损坏的数据库文件不应导致进程崩溃。"""
+        import os as _os
         import sqlite3
         import tempfile
-        import os as _os
 
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tf:
             tf.write(b"this is not a valid sqlite database file!!!\x00\xff")
@@ -102,9 +103,9 @@ class TestDBConnectionFailure:
 
     def test_readonly_db_write_fails(self):
         """只读数据库写入操作应产生明确错误。"""
+        import os as _os
         import sqlite3
         import tempfile
-        import os as _os
 
         fd, db_path = tempfile.mkstemp(suffix=".db")
         _os.close(fd)
@@ -201,9 +202,9 @@ class TestConcurrency:
 
     def test_concurrent_reads_safe(self):
         """多个线程同时连接 DB 应安全——验证不崩溃。"""
+        import os as _os
         import sqlite3
         import tempfile
-        import os as _os
 
         fd, db_path = tempfile.mkstemp(suffix=".db")
         _os.close(fd)
@@ -327,6 +328,7 @@ class TestAPIFaultInjection:
     def test_db_error_during_request_returns_500(self):
         """DB 故障时 API 应返回 4xx/5xx 而非崩溃。"""
         from fastapi.testclient import TestClient
+
         from api.main import app
 
         client = TestClient(app)
@@ -347,6 +349,7 @@ class TestAPIFaultInjection:
     def test_import_failure_during_task_creation(self):
         """模块导入失败时任务创建应妥善处理。"""
         from fastapi.testclient import TestClient
+
         from api.main import app
 
         client = TestClient(app)
@@ -364,6 +367,7 @@ class TestAPIFaultInjection:
     def test_malformed_json_body(self):
         """畸形 JSON body 应返回 422。"""
         from fastapi.testclient import TestClient
+
         from api.main import app
 
         client = TestClient(app)
@@ -378,6 +382,7 @@ class TestAPIFaultInjection:
     def test_oversized_payload(self):
         """超大请求体应正确处理。"""
         from fastapi.testclient import TestClient
+
         from api.main import app
 
         client = TestClient(app)
@@ -450,4 +455,5 @@ class TestPathSafetyEdge:
                 pass
         finally:
             import shutil
+
             shutil.rmtree(base_dir, ignore_errors=True)

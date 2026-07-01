@@ -631,11 +631,8 @@ class ArmoryRegistry:
         return [w for w, _ in results]
 
 
-
 # WeaponLifecycle, WeaponLoader, ArmoryDispatcher 已拆分至 core/armory_lifecycle.py
 # 保持向后兼容：便捷函数内部使用延迟导入，避免循环依赖
-
-
 
 
 # ────────────────────────────────────────────────────────────────────────────

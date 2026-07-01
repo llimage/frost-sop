@@ -4,9 +4,9 @@ core/memory.py 单元测试
 测试 MemoryStore — 回退模式和 ChromaDB 模式。
 """
 
-import sys
 import os
-from unittest.mock import MagicMock, patch
+import sys
+from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("FROST_TESTING", "1")

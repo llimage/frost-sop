@@ -5,14 +5,19 @@ DASH-01 至 DASH-03 共3个深度测试用例
 注意：本测试通过 mock Streamlit 组件来验证逻辑正确性，
 不测试实际的 UI 渲染效果。
 """
-import sys, os
+
+import sys
+import os
+
 # 把 frost-sop/ 目录加入 sys.path
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _PROJECT_ROOT)
 
+
 # Mock streamlit 组件，避免实际渲染 UI
 class _MockStreamlit:
     """模拟 Streamlit 组件，捕获输出"""
+
     def __init__(self):
         self.outputs = []
         self.warnings = []
@@ -60,7 +65,6 @@ class _MockStreamlit:
 
 
 # 安装 mock
-import unittest.mock as mock
 
 # 导入被测试函数之前的准备
 # 先不实际导入 app，而是直接测试 audit_family 的输出
@@ -83,7 +87,8 @@ def _get_audit_stats(asset_store):
     # 兼容顶层字段
     return {
         "total_tasks": stats.get("total_tasks") or report.get("total_tasks", 0),
-        "successful_tasks": stats.get("successful_tasks") or report.get("successful_tasks", 0),
+        "successful_tasks": stats.get("successful_tasks")
+        or report.get("successful_tasks", 0),
         "failed_tasks": stats.get("failed_tasks") or report.get("failed_tasks", 0),
         "total_lessons": stats.get("total_lessons") or report.get("total_lessons", 0),
     }
@@ -101,12 +106,33 @@ def test_dash_01_data_integrity():
 
     asset_store = create_asset_store(backend="memory")
     tasks = [
-        {"task_id": "t01", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t02", "sop": "DEV-001", "status": "completed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "success"}]},
-        {"task_id": "t03", "sop": "DEV-001", "status": "failed",
-         "stages": [{"name": "需求", "status": "success"}, {"name": "编码", "status": "failed"}]},
+        {
+            "task_id": "t01",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t02",
+            "sop": "DEV-001",
+            "status": "completed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "success"},
+            ],
+        },
+        {
+            "task_id": "t03",
+            "sop": "DEV-001",
+            "status": "failed",
+            "stages": [
+                {"name": "需求", "status": "success"},
+                {"name": "编码", "status": "failed"},
+            ],
+        },
     ]
     for t in tasks:
         asset_store.save(f"task:{t['task_id']}", t)
@@ -114,15 +140,23 @@ def test_dash_01_data_integrity():
     lessons = [
         {"task_id": "t03", "error_type": "compliance", "description": "测试"},
     ]
-    asset_store.save(f"lesson:t03:compliance", lessons[0])
+    asset_store.save("lesson:t03:compliance", lessons[0])
 
     stats = _get_audit_stats(asset_store)
 
     # 验证：统计数字正确
-    assert stats["total_tasks"] == 3, f"total_tasks 应为3，实际为 {stats['total_tasks']}"
-    assert stats["successful_tasks"] == 2, f"successful_tasks 应为2，实际为 {stats['successful_tasks']}"
-    assert stats["failed_tasks"] == 1, f"failed_tasks 应为1，实际为 {stats['failed_tasks']}"
-    assert stats["total_lessons"] == 1, f"total_lessons 应为1，实际为 {stats['total_lessons']}"
+    assert stats["total_tasks"] == 3, (
+        f"total_tasks 应为3，实际为 {stats['total_tasks']}"
+    )
+    assert stats["successful_tasks"] == 2, (
+        f"successful_tasks 应为2，实际为 {stats['successful_tasks']}"
+    )
+    assert stats["failed_tasks"] == 1, (
+        f"failed_tasks 应为1，实际为 {stats['failed_tasks']}"
+    )
+    assert stats["total_lessons"] == 1, (
+        f"total_lessons 应为1，实际为 {stats['total_lessons']}"
+    )
 
     # 验证：如果 render_health_dashboard 正确读取了这些数据，KPI 应显示相同数字
     # （这里无法直接测试 Streamlit UI，但验证了数据源的正确性）
@@ -179,7 +213,9 @@ def test_dash_03_empty_tasks():
     report = result.get("_audit_report", {})
 
     # 验证：KPI 均为0
-    assert stats["total_tasks"] == 0, f"空任务时 total_tasks 应为0，实际为 {stats['total_tasks']}"
+    assert stats["total_tasks"] == 0, (
+        f"空任务时 total_tasks 应为0，实际为 {stats['total_tasks']}"
+    )
     assert stats["successful_tasks"] == 0
     assert stats["failed_tasks"] == 0
     assert stats["total_lessons"] == 0
@@ -188,8 +224,9 @@ def test_dash_03_empty_tasks():
     findings = report.get("findings", [])
     assert len(findings) >= 1, "空任务时 findings 应至少包含1条"
     finding_text = " ".join(findings)
-    assert "尚未执行" in finding_text or "无任务" in finding_text, \
+    assert "尚未执行" in finding_text or "无任务" in finding_text, (
         f"findings 应提示无任务，实际为: {findings}"
+    )
 
     # 验证：recommendations 应为空（失败率 0% < 30%）
     recommendations = report.get("recommendations", [])

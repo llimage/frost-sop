@@ -12,7 +12,7 @@ import re
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
-from core.db import get_db, get_db_connection
+from core.db import get_db
 
 
 class SkillExtractor:
@@ -42,10 +42,7 @@ class SkillExtractor:
         if not os.path.exists(self.tool_calls_dir):
             return []
 
-        files = [
-            f for f in os.listdir(self.tool_calls_dir)
-            if f.endswith(".json")
-        ]
+        files = [f for f in os.listdir(self.tool_calls_dir) if f.endswith(".json")]
         calls = []
         for f in sorted(files, reverse=True)[:limit]:
             filepath = os.path.join(self.tool_calls_dir, f)
@@ -67,7 +64,7 @@ class SkillExtractor:
         格式：skill_extracted_{skill_name}_{timestamp}
         同时确保没有非法字符。
         """
-        safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', skill_name.lower())
+        safe_name = re.sub(r"[^a-zA-Z0-9_\-]", "_", skill_name.lower())
         safe_name = safe_name[:40]  # 限制长度
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         return f"skill_ext_{safe_name}_{timestamp}"
@@ -93,35 +90,37 @@ class SkillExtractor:
 
         # 构造 SKILL.md 内容
         steps = extracted.get("analysis_dimensions", [])
-        steps_text = "\n".join(
-            [f"{i+1}. {step}" for i, step in enumerate(steps)]
-        ) if steps else "1. 执行任务\n2. 输出结果"
+        steps_text = (
+            "\n".join([f"{i + 1}. {step}" for i, step in enumerate(steps)])
+            if steps
+            else "1. 执行任务\n2. 输出结果"
+        )
 
         skill_md = f"""# {skill_name}
 
 ## 描述
-{hints.get('description', '从历史工具调用中提取的 Skill')}
+{hints.get("description", "从历史工具调用中提取的 Skill")}
 
 ## 触发条件
-- 任务类型：{hints.get('task_type', 'unknown')}
-- 关键词：{', '.join(hints.get('trigger_keywords', []))}
+- 任务类型：{hints.get("task_type", "unknown")}
+- 关键词：{", ".join(hints.get("trigger_keywords", []))}
 
 ## 输入格式
 ```json
-{json.dumps(extracted.get('input_types', []), ensure_ascii=False)}
+{json.dumps(extracted.get("input_types", []), ensure_ascii=False)}
 ```
 
 ## 执行步骤
 {steps_text}
 
 ## 输出格式
-{extracted.get('output_structure', '结构化报告')}
+{extracted.get("output_structure", "结构化报告")}
 
 ## 来源
-- 原始调用 ID：{call.get('call_id')}
-- 工具名称：{call.get('tool_name')}
+- 原始调用 ID：{call.get("call_id")}
+- 工具名称：{call.get("tool_name")}
 - 提取时间：{datetime.now().isoformat()}
-- 成功率参考：{hints.get('success_rate', '待验证')}
+- 成功率参考：{hints.get("success_rate", "待验证")}
 """
         return {
             "name": skill_name,
@@ -147,7 +146,7 @@ class SkillExtractor:
         os.makedirs(self.skills_dir, exist_ok=True)
 
         # 生成文件名
-        safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', draft["name"].lower())
+        safe_name = re.sub(r"[^a-zA-Z0-9_\-]", "_", draft["name"].lower())
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{safe_name}_draft_{timestamp}.md"
         filepath = os.path.join(self.skills_dir, filename)
@@ -162,27 +161,35 @@ class SkillExtractor:
 
         try:
             # 插入 skills 表
-            db.insert("skills", {
-                "id": skill_id,
-                "name": draft["name"],
-                "description": draft["description"],
-                "skill_type": draft["task_type"],
-                "task_type": draft["task_type"],
-                "trigger_keywords": json.dumps(draft["trigger_keywords"], ensure_ascii=False),
-                "success_rate": 0.0,
-                "status": "draft",
-                "version": "1.0",
-                "content": draft["content"],
-            })
+            db.insert(
+                "skills",
+                {
+                    "id": skill_id,
+                    "name": draft["name"],
+                    "description": draft["description"],
+                    "skill_type": draft["task_type"],
+                    "task_type": draft["task_type"],
+                    "trigger_keywords": json.dumps(
+                        draft["trigger_keywords"], ensure_ascii=False
+                    ),
+                    "success_rate": 0.0,
+                    "status": "draft",
+                    "version": "1.0",
+                    "content": draft["content"],
+                },
+            )
 
             # 插入 skill_versions 表
-            db.insert("skill_versions", {
-                "skill_id": skill_id,
-                "version": "1.0",
-                "content": draft["content"],
-                "file_path": filepath,
-                "changelog": f"初始提取自 {draft['source_call_id']}",
-            })
+            db.insert(
+                "skill_versions",
+                {
+                    "skill_id": skill_id,
+                    "version": "1.0",
+                    "content": draft["content"],
+                    "file_path": filepath,
+                    "changelog": f"初始提取自 {draft['source_call_id']}",
+                },
+            )
         except Exception as e:
             print(f"⚠️ 写入数据库失败: {e}")
 
@@ -208,10 +215,7 @@ class SkillExtractor:
             db = get_db()
             conn = db.get_connection()
             cursor = conn.cursor()
-            cursor.execute(
-                "SELECT id FROM skills WHERE name = ?",
-                (skill_name,)
-            )
+            cursor.execute("SELECT id FROM skills WHERE name = ?", (skill_name,))
             exists = cursor.fetchone()
 
             if exists:
@@ -246,7 +250,7 @@ class SkillExtractor:
         cursor = conn.cursor()
         cursor.execute(
             "SELECT name, task_type, trigger_keywords, content FROM skills WHERE id = ?",
-            (skill_id,)
+            (skill_id,),
         )
         row = cursor.fetchone()
 
@@ -282,10 +286,15 @@ class SkillExtractor:
         status = "active" if success_rate >= 0.8 else "rejected"
 
         # 更新 skills 表
-        db.update("skills", "id", skill_id, {
-            "success_rate": success_rate,
-            "status": status,
-        })
+        db.update(
+            "skills",
+            "id",
+            skill_id,
+            {
+                "success_rate": success_rate,
+                "status": status,
+            },
+        )
 
         return {
             "skill_id": skill_id,

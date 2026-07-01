@@ -2,6 +2,7 @@
 F6 测试辅助：Mock LLM 响应生成器（v3）
 通过 mock skils.llm.OpenAI 引用，使集成测试不依赖真实LLM调用。
 """
+
 import unittest.mock as mock
 
 
@@ -50,7 +51,9 @@ def _generate_mock_content(prompt: str) -> str:
     if "方案" in prompt or "solution" in p:
         return "# 项目技术方案\n\n采用分形架构，核心模块：Agent编排引擎、SOP执行引擎。"
     if "资源" in prompt or "resource" in p or "时间" in p:
-        return "# 资源规划\n\n需要2名开发者，预计8周完成。里程碑：M1核心框架，M2 SOP库。"
+        return (
+            "# 资源规划\n\n需要2名开发者，预计8周完成。里程碑：M1核心框架，M2 SOP库。"
+        )
     if "历史" in prompt or "history" in p or "任务" in prompt:
         return '{"task-001": {"sop": "DEV-001", "status": "completed"}, "task-002": {"sop": "DEV-001", "status": "completed"}, "task-003": {"sop": "DEV-001", "status": "completed"}, "task-004": {"sop": "DEV-002", "status": "failed"}, "task-005": {"sop": "DEV-001", "status": "failed"}}'
     if "趋势" in prompt or "trend" in p:
@@ -67,7 +70,7 @@ def patch_openai():
     """
     返回一个 context manager，在 with 块内 mock skils.llm.OpenAI 引用。
     这样 call_llm 函数中的 OpenAI(...) 调用会使用 mock 客户端。
-    
+
     用法：
     with patch_openai():
         # 在此范围内，所有 LLM API 调用均被 mock

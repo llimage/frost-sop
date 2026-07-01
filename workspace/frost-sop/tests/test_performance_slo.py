@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 # Helper: DB singleton reset (inline to avoid conftest import issues)
 def _reset_db(db_path=":memory:"):
     import core.db as db_mod
+
     # 使用 core.db.close_db() 正确关闭连接
     db_mod.close_db()
     # 额外确保类级别单例也被清除
@@ -38,17 +39,17 @@ def _reset_db(db_path=":memory:"):
 
 # 单位: 秒
 SLO = {
-    "db_select_simple": 0.010,      # 10ms — 简单 SELECT
-    "db_insert_simple": 0.020,      # 20ms — 简单 INSERT
-    "db_select_with_join": 0.050,   # 50ms — 联表查询
-    "api_health_check": 0.050,      # 50ms — 健康检查
-    "api_list_projects": 0.100,     # 100ms — 列表查询
-    "api_list_tasks": 0.200,        # 200ms — 任务列表
-    "store_read_memory": 0.005,     # 5ms — 内存 Store 读
-    "store_write_memory": 0.010,    # 10ms — 内存 Store 写
-    "sop_load_yaml": 0.100,         # 100ms — SOP YAML 加载
-    "event_bus_publish": 0.010,     # 10ms — 事件发布
-    "event_bus_deliver": 0.020,     # 20ms — 事件投递
+    "db_select_simple": 0.010,  # 10ms — 简单 SELECT
+    "db_insert_simple": 0.020,  # 20ms — 简单 INSERT
+    "db_select_with_join": 0.050,  # 50ms — 联表查询
+    "api_health_check": 0.050,  # 50ms — 健康检查
+    "api_list_projects": 0.100,  # 100ms — 列表查询
+    "api_list_tasks": 0.200,  # 200ms — 任务列表
+    "store_read_memory": 0.005,  # 5ms — 内存 Store 读
+    "store_write_memory": 0.010,  # 10ms — 内存 Store 写
+    "sop_load_yaml": 0.100,  # 100ms — SOP YAML 加载
+    "event_bus_publish": 0.010,  # 10ms — 事件发布
+    "event_bus_deliver": 0.020,  # 20ms — 事件投递
 }
 
 
@@ -122,11 +123,14 @@ class TestAPIPerformance:
     @pytest.fixture
     def client(self):
         from fastapi.testclient import TestClient
+
         from api.main import app
+
         return TestClient(app)
 
     def test_health_check_performance(self, client, benchmark):
         """健康检查应在 50ms 内完成。"""
+
         def health():
             return client.get("/api/health")
 
@@ -140,6 +144,7 @@ class TestAPIPerformance:
 
     def test_list_projects_performance(self, client, benchmark):
         """项目列表应在 100ms 内完成。"""
+
         def list_proj():
             return client.get("/api/projects")
 
@@ -153,6 +158,7 @@ class TestAPIPerformance:
 
     def test_list_tasks_performance(self, client, benchmark):
         """任务列表应在 200ms 内完成。"""
+
         def list_tasks():
             return client.get("/api/tasks")
 
@@ -245,7 +251,7 @@ class TestEventBusPerformance:
 
     def test_event_publish_performance(self, benchmark):
         """事件发布应在 10ms 内完成。"""
-        from core.event_bus import EventBus, Event
+        from core.event_bus import Event, EventBus
 
         bus = EventBus()
         bus.clear_subscribers()
@@ -278,12 +284,12 @@ def test_performance_summary():
     收集所有关键路径的原始计时（非 benchmark 模式），
     生成性能摘要用于审计报告。
     """
-    from core.db import get_db
-    from core.store import Store
-    from core.sop import SOP
     from fastapi.testclient import TestClient
 
     from api.main import app
+    from core.db import get_db
+    from core.sop import SOP
+    from core.store import Store
 
     results = {}
 
@@ -342,7 +348,7 @@ def test_performance_summary():
         status = "✅" if elapsed < slo else "❌"
         if elapsed >= slo:
             all_pass = False
-        print(f"  {status} {name:20s}: {elapsed*1000:8.2f}ms  (SLO: {slo*1000:.0f}ms)")
+        print(f"  {status} {name:20s}: {elapsed * 1000:8.2f}ms  (SLO: {slo * 1000:.0f}ms)")
 
     print("=" * 60)
     print(f"总体: {'✅ 全部通过' if all_pass else '❌ 有超标项'}")

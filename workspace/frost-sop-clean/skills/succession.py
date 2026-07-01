@@ -26,7 +26,7 @@ def propose_succession(context: dict) -> dict:
         context["_succession_proposal"] = {"recommend": False, "reason": "无资产Store"}
         return context
 
-    all_keys = asset_store.list_keys() if hasattr(asset_store, 'list_keys') else []
+    all_keys = asset_store.list_keys() if hasattr(asset_store, "list_keys") else []
 
     tasks = []
     for key in all_keys:
@@ -69,9 +69,13 @@ def propose_succession(context: dict) -> dict:
         "reason": f"合规失败率 {failure_rate:.1%} {'超过' if failure_rate >= threshold else '未超过'}阈值 {threshold:.1%}",
         "failure_rate": failure_rate,
         "total_tasks_analyzed": len(recent_tasks),
-        "suggested_successor": "需要创始人从长期表现优秀的父辈中指定" if failure_rate >= threshold else None,
+        "suggested_successor": "需要创始人从长期表现优秀的父辈中指定"
+        if failure_rate >= threshold
+        else None,
     }
-    context["_reason"] = f"交棒评估完成：分析{len(recent_tasks)}个任务，合规失败率{failure_rate:.1%}"
+    context["_reason"] = (
+        f"交棒评估完成：分析{len(recent_tasks)}个任务，合规失败率{failure_rate:.1%}"
+    )
     return context
 
 
@@ -102,6 +106,7 @@ def execute_succession(context: dict) -> dict:
     old_ancestor.name = f"elder_{old_ancestor.name}"
 
     import datetime
+
     succession_record = {
         "event": "succession",
         "timestamp": str(datetime.datetime.now()),

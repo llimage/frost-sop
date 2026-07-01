@@ -1,8 +1,8 @@
 # Solo-Ops-Platform V0.10.0 界面重构 PRD
 
-**版本**: V0.10.0 — 「员工仪表盘」专项  
-**目标**: 将混乱的多页签界面重构为单页仪表盘，用 Solo-Ops 自身开发进度作为真实数据展示  
-**风格对标**: MyCompany 仪表盘（陈杨参考图）  
+**版本**: V0.10.0 — 「员工仪表盘」专项
+**目标**: 将混乱的多页签界面重构为单页仪表盘，用 Solo-Ops 自身开发进度作为真实数据展示
+**风格对标**: MyCompany 仪表盘（陈杨参考图）
 **技术约束**: 保持 Streamlit 框架，不引入新依赖
 
 ---
@@ -118,14 +118,14 @@ PROJECT = {
     "name": "Solo-Ops-Platform V0.10.0",
     "description": "一人公司 AI 指挥平台 · 界面重构专项",
     "status": "进行中",  # 进行中 / 已完成 / 暂停
-    
+
     "kpi": {
         "task_progress": {"current": 9, "total": 10, "label": "步骤"},
         "running_agents": {"count": 1, "label": "agents"},
         "cost": {"current": 0.0, "total": 50.0, "currency": "¥", "label": ""},
         "eta": {"value": "~2", "unit": "天", "label": "预计完成"}
     },
-    
+
     "budget": {
         "used_percent": 90,
         "breakdown": [
@@ -137,7 +137,7 @@ PROJECT = {
         "total": 50.0,
         "remaining": 5.0
     },
-    
+
     "agents": [
         {
             "id": "ceo",
@@ -244,7 +244,7 @@ PROJECT = {
             "icon": "🔍"
         }
     ],
-    
+
     "logs": [
         {"time": "10:00", "agent_id": "ceo", "agent_name": "CEO", "message": "执行计划已确认，监控中"},
         {"time": "10:05", "agent_id": "researcher", "agent_name": "研究员", "message": "知识库架构分析完成"},
@@ -429,5 +429,5 @@ Agent X 卡片: running → done（绿色 ✓）
 
 ---
 
-*PRD 版本: V1.0*  
+*PRD 版本: V1.0*
 *日期: 2026-06-05*

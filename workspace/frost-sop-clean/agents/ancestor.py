@@ -9,7 +9,6 @@ V2.0: 保持原有同步调用方式（被 main() 直接调用）
 
 import logging
 from core.agent import Agent
-from core.skill import Skill
 from skills.orchestration import spawn_skill, emit_skill, validate_sop_skill
 from skills.llm import call_llm_skill
 
@@ -17,7 +16,9 @@ logger = logging.getLogger(__name__)
 import asyncio
 
 
-def create_ancestor(constitution_store, asset_store, event_driven: bool = False) -> Agent:
+def create_ancestor(
+    constitution_store, asset_store, event_driven: bool = False
+) -> Agent:
     """
     Create ancestor Agent with constitution store.
 
@@ -80,23 +81,30 @@ def _subscribe_ancestor_to_events(ancestor: Agent) -> bool:
                 sop_steps=["call_llm"],
                 initial_context={
                     "_prompt": f"Analyze the following task, decompose into 1-3 parent agents, return JSON: {task_input}"
-                }
+                },
             )
             llm_response = context.get("_llm_response", "")
 
             # 发布 TASK_DECOMPOSED
-            await bus.publish(Event(
-                event_type=EventType.TASK_DECOMPOSED,
-                source="ancestor:task_decomposer",
-                data={
-                    "task_id": task_id,
-                    "task_description": task_input,
-                    "decomposition": llm_response,
-                },
-            ))
+            await bus.publish(
+                Event(
+                    event_type=EventType.TASK_DECOMPOSED,
+                    source="ancestor:task_decomposer",
+                    data={
+                        "task_id": task_id,
+                        "task_description": task_input,
+                        "decomposition": llm_response,
+                    },
+                )
+            )
             logger.info("[V3.0] ancestor 发布 TASK_DECOMPOSED: %s", task_id)
 
-        bus.subscribe_async(EventType.TASK_CREATED if hasattr(EventType, 'TASK_CREATED') else "task_created", on_task_created)
+        bus.subscribe_async(
+            EventType.TASK_CREATED
+            if hasattr(EventType, "TASK_CREATED")
+            else "task_created",
+            on_task_created,
+        )
         logger.info("[V3.0] ancestor 已订阅 TASK_CREATED 事件")
         return True
 

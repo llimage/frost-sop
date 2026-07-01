@@ -4,15 +4,16 @@ core/monitor.py 单元测试
 测试 @monitor 装饰器和 PerfStats 聚合器。
 """
 
-import time
-import sys
 import os
+import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("FROST_TESTING", "1")
 
 import pytest
-from core.monitor import monitor, PerfStats, get_perf_stats
+
+from core.monitor import PerfStats, get_perf_stats, monitor
 
 
 class TestPerfStats:

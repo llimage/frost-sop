@@ -6,12 +6,10 @@ V2.1 修补验证：P1-6/7/8/9 新增测试
 - P1-9: agents 表 UPSERT
 """
 
-import pytest
 import json
-import threading
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from core.event_bus import EventBus, Event, EventType, get_event_bus
+from core.event_bus import Event, EventType, get_event_bus
 from core.agent import Agent
 from core.skill import Skill
 from core.store import Store
@@ -21,9 +19,10 @@ from core.store import Store
 # P1-6: TASK_DECOMPOSED 事件
 # ============================================================
 
+
 def test_task_decomposed_event_type_exists():
     """EventType.TASK_DECOMPOSED 常量存在"""
-    assert hasattr(EventType, 'TASK_DECOMPOSED')
+    assert hasattr(EventType, "TASK_DECOMPOSED")
     assert isinstance(EventType.TASK_DECOMPOSED, str)
     assert len(EventType.TASK_DECOMPOSED) > 0
 
@@ -34,7 +33,11 @@ def test_task_decomposed_event_publish():
     event = Event(
         event_type=EventType.TASK_DECOMPOSED,
         source="test",
-        data={"task_id": "t-p1-6", "stage_count": 5, "stages": ["a", "b", "c", "d", "e"]},
+        data={
+            "task_id": "t-p1-6",
+            "stage_count": 5,
+            "stages": ["a", "b", "c", "d", "e"],
+        },
     )
     notified = bus.publish(event)
     assert notified >= 0  # 可能无订阅者
@@ -54,11 +57,13 @@ def test_task_decomposed_subscriber():
 
     bus.subscribe(EventType.TASK_DECOMPOSED, handler)
     try:
-        bus.publish(Event(
-            event_type=EventType.TASK_DECOMPOSED,
-            source="test",
-            data={"task_id": "t-sub"},
-        ))
+        bus.publish(
+            Event(
+                event_type=EventType.TASK_DECOMPOSED,
+                source="test",
+                data={"task_id": "t-sub"},
+            )
+        )
         assert "t-sub" in received
     finally:
         bus.unsubscribe(EventType.TASK_DECOMPOSED, handler)
@@ -67,6 +72,7 @@ def test_task_decomposed_subscriber():
 # ============================================================
 # P1-7: 敏感数据过滤
 # ============================================================
+
 
 def test_sensitive_keys_in_filter_list():
     """敏感键列表包含标准敏感字段"""
@@ -115,8 +121,8 @@ def test_sanitize_recursive_nested_objects():
             "auth": {
                 "token": "tok-nested",
                 "username": "admin",
-            }
-        }
+            },
+        },
     }
     result = bus._sanitize_data(data)
     assert result["task_id"] == "t-001"
@@ -136,7 +142,6 @@ def test_sanitize_handles_non_dict_input():
 
 def test_persist_sanitizes_before_write():
     """_persist_event 在写入前调用 _sanitize_data"""
-    from unittest.mock import patch
     import core.db as db_module
 
     bus = get_event_bus()
@@ -147,7 +152,7 @@ def test_persist_sanitizes_before_write():
     )
 
     # 通过检查写入 DB 的数据来验证过滤效果
-    with patch.object(bus, '_sanitize_data', wraps=bus._sanitize_data) as mock_sanitize:
+    with patch.object(bus, "_sanitize_data", wraps=bus._sanitize_data) as mock_sanitize:
         bus._persist_event(event)
         assert mock_sanitize.called
 
@@ -156,7 +161,9 @@ def test_persist_sanitizes_before_write():
     rows = db.select_all("event_log", f"event_id = '{event.event_id}'")
     assert len(rows) >= 1
     stored_data = json.loads(rows[0]["data"])
-    assert stored_data["api_key"] == "***REDACTED***", f"期望 REDACTED，实际: {stored_data}"
+    assert stored_data["api_key"] == "***REDACTED***", (
+        f"期望 REDACTED，实际: {stored_data}"
+    )
     assert stored_data["token"] == "***REDACTED***"
     assert stored_data["step"] == "process"
 
@@ -164,6 +171,7 @@ def test_persist_sanitizes_before_write():
 # ============================================================
 # P1-8: 循环事件防护
 # ============================================================
+
 
 def test_circular_event_prevention():
     """源与回调同名时跳过分发，防止循环事件"""
@@ -233,6 +241,7 @@ def test_circular_prevention_lambda_always_runs():
 # P1-9: agents 表 UPSERT
 # ============================================================
 
+
 def test_agent_repeated_run_no_unique_constraint_error():
     """Agent 重复写入 agents 表不报 UNIQUE 约束错误"""
     import tempfile
@@ -277,6 +286,7 @@ def test_agent_repeated_run_no_unique_constraint_error():
         db_module.DBManager._connection = None
         db_module._db_manager = None
         import os as _os
+
         try:
             _os.unlink(tmp_db)
         except PermissionError:

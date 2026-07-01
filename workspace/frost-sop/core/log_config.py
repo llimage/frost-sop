@@ -21,13 +21,15 @@ import sys
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
-
 # 日志目录
 LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
 
 # 敏感信息过滤模式
 _SENSITIVE_PATTERNS = [
-    (re.compile(r"(api_key|apikey|secret|token|password|authorization)[=:]\s*\S+", re.I), r"\1=***"),
+    (
+        re.compile(r"(api_key|apikey|secret|token|password|authorization)[=:]\s*\S+", re.I),
+        r"\1=***",
+    ),
     (re.compile(r"sk-[a-zA-Z0-9]{20,}"), "sk-***"),
     (re.compile(r"Bearer\s+\S+"), "Bearer ***"),
 ]

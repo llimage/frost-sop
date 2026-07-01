@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 # V2.0: 事件类型常量（子阶段 4.2）
 # ============================================================
 
+
 class EventType:
     """
     FROST-SOP V2.0 标准事件类型。
@@ -43,29 +44,31 @@ class EventType:
     - STEP_*:  Agent 步骤事件
     - AGENT_*: Agent 自身生命周期事件
     """
+
     # 任务生命周期
-    TASK_CREATED    = "task_created"         # V3.0: 任务创建（main_async 发布）
-    TASK_DECOMPOSED = "task_decomposed"     # 祖辈完成任务分解
-    TASK_COMPLETED  = "task_completed"      # 任务全部阶段完成
-    TASK_FAILED     = "task_failed"         # 任务失败（不可恢复）
-    TASK_TIMEOUT    = "task_timeout"        # 任务超时（V3.0: main_async 超时触发）
+    TASK_CREATED = "task_created"  # V3.0: 任务创建（main_async 发布）
+    TASK_DECOMPOSED = "task_decomposed"  # 祖辈完成任务分解
+    TASK_COMPLETED = "task_completed"  # 任务全部阶段完成
+    TASK_FAILED = "task_failed"  # 任务失败（不可恢复）
+    TASK_TIMEOUT = "task_timeout"  # 任务超时（V3.0: main_async 超时触发）
 
     # SOP 阶段生命周期
-    STAGE_STARTED   = "stage_started"      # 阶段开始执行
-    STAGE_COMPLETED = "stage_completed"    # 阶段执行完成
-    STAGE_FAILED    = "stage_failed"       # 阶段执行失败
+    STAGE_STARTED = "stage_started"  # 阶段开始执行
+    STAGE_COMPLETED = "stage_completed"  # 阶段执行完成
+    STAGE_FAILED = "stage_failed"  # 阶段执行失败
 
     # Agent 步骤
-    STEP_COMPLETED  = "step_completed"     # Agent 单步 Skill 执行完成
+    STEP_COMPLETED = "step_completed"  # Agent 单步 Skill 执行完成
 
     # Agent 自身生命周期
-    AGENT_CREATED   = "agent_created"      # Agent 被创建
-    AGENT_DESTROYED = "agent_destroyed"    # Agent 被销毁
+    AGENT_CREATED = "agent_created"  # Agent 被创建
+    AGENT_DESTROYED = "agent_destroyed"  # Agent 被销毁
 
 
 # ============================================================
 # V2.0: Event 数据类（子阶段 4.1）
 # ============================================================
+
 
 class Event:
     """
@@ -79,12 +82,14 @@ class Event:
         timestamp:  事件创建时间
     """
 
-    def __init__(self,
-                 event_type: str,
-                 source: str = "unknown",
-                 data: Optional[Dict[str, Any]] = None,
-                 event_id: str = None,
-                 timestamp: datetime = None):
+    def __init__(
+        self,
+        event_type: str,
+        source: str = "unknown",
+        data: Optional[Dict[str, Any]] = None,
+        event_id: str = None,
+        timestamp: datetime = None,
+    ):
         self.event_type: str = event_type
         self.source: str = source
         self.data: Dict[str, Any] = data or {}
@@ -102,13 +107,16 @@ class Event:
         }
 
     def __repr__(self) -> str:
-        return (f"Event(type={self.event_type!r}, source={self.source!r}, "
-                f"id={self.event_id[:8]!r})")
+        return (
+            f"Event(type={self.event_type!r}, source={self.source!r}, "
+            f"id={self.event_id[:8]!r})"
+        )
 
 
 # ============================================================
 # V2.0: EventBus 单例（子阶段 4.1）
 # ============================================================
+
 
 class EventBus:
     """
@@ -124,10 +132,10 @@ class EventBus:
     线程安全：所有订阅/发布操作通过锁保护。
     """
 
-    _instance: Optional['EventBus'] = None
+    _instance: Optional["EventBus"] = None
     _lock: threading.Lock = threading.Lock()
 
-    def __new__(cls) -> 'EventBus':
+    def __new__(cls) -> "EventBus":
         """单例实现"""
         if cls._instance is None:
             with cls._lock:
@@ -222,7 +230,7 @@ class EventBus:
             self._event_log.append(event)
             if len(self._event_log) > self._max_log_size:
                 # FIFO：删除最旧的
-                self._event_log = self._event_log[-self._max_log_size:]
+                self._event_log = self._event_log[-self._max_log_size :]
             # 快照订阅者列表（避免回调期间修改导致问题）
             callbacks = list(self._subscribers.get(event.event_type, []))
 
@@ -233,15 +241,22 @@ class EventBus:
         notified = 0
         for callback in callbacks:
             # P1-8: 循环事件防护 — 源与订阅者同名时跳过（排除 lambda）
-            if (hasattr(callback, '__name__') and callback.__name__ != '<lambda>'
-                    and callback.__name__ == event.source):
+            if (
+                hasattr(callback, "__name__")
+                and callback.__name__ != "<lambda>"
+                and callback.__name__ == event.source
+            ):
                 continue
             try:
                 callback(event)
                 notified += 1
             except Exception as e:
-                logger.error("订阅者回调异常 (event=%s, callback=%s): %s",
-                             event.event_type, callback, e)
+                logger.error(
+                    "订阅者回调异常 (event=%s, callback=%s): %s",
+                    event.event_type,
+                    callback,
+                    e,
+                )
 
         return notified
 
@@ -249,9 +264,7 @@ class EventBus:
     # 事件日志查询
     # ----------------------------------------------------------
 
-    def get_event_log(self,
-                      event_type: str = None,
-                      limit: int = 50) -> List[Event]:
+    def get_event_log(self, event_type: str = None, limit: int = 50) -> List[Event]:
         """
         从内存缓冲获取事件历史（最新在前）。
 
@@ -300,12 +313,13 @@ class EventBus:
         """
         try:
             from core.db import get_db
+
             db = get_db()
             conn = db.get_connection()
             cursor = conn.cursor()
             cursor.execute(
                 "DELETE FROM event_log WHERE timestamp < datetime('now', '-' || ? || ' days')",
-                (str(days),)
+                (str(days),),
             )
             affected = cursor.rowcount
             conn.commit()
@@ -321,8 +335,17 @@ class EventBus:
     # ----------------------------------------------------------
 
     # P1-7: 敏感数据键名列表
-    _SENSITIVE_KEYS = {"api_key", "token", "password", "secret", "authorization",
-                       "access_token", "refresh_token", "private_key", "credential"}
+    _SENSITIVE_KEYS = {
+        "api_key",
+        "token",
+        "password",
+        "secret",
+        "authorization",
+        "access_token",
+        "refresh_token",
+        "private_key",
+        "credential",
+    }
 
     def _sanitize_data(self, data: dict) -> dict:
         """递归过滤敏感键，替换为 '***REDACTED***'。"""
@@ -345,15 +368,23 @@ class EventBus:
         """
         try:
             from core.db import get_db
+
             db = get_db()
-            safe_data = self._sanitize_data(event.data) if isinstance(event.data, dict) else event.data
-            db.insert("event_log", {
-                "event_id": event.event_id,
-                "event_type": event.event_type,
-                "source": event.source,
-                "data": json.dumps(safe_data, ensure_ascii=False),
-                "timestamp": event.timestamp.isoformat(),
-            })
+            safe_data = (
+                self._sanitize_data(event.data)
+                if isinstance(event.data, dict)
+                else event.data
+            )
+            db.insert(
+                "event_log",
+                {
+                    "event_id": event.event_id,
+                    "event_type": event.event_type,
+                    "source": event.source,
+                    "data": json.dumps(safe_data, ensure_ascii=False),
+                    "timestamp": event.timestamp.isoformat(),
+                },
+            )
         except Exception as e:
             # 持久化失败不影响事件分发
             logger.error("事件持久化失败 (%s): %s", event.event_type, e)
@@ -372,6 +403,7 @@ class EventBus:
 # 模块级便捷函数
 # ============================================================
 
+
 def get_event_bus() -> EventBus:
     """
     获取 EventBus 全局单例。
@@ -387,6 +419,7 @@ def get_event_bus() -> EventBus:
 # ============================================================
 
 import asyncio
+
 
 class AsyncEventBus:
     """
@@ -405,9 +438,9 @@ class AsyncEventBus:
     - 两者各自独立单例，互不干扰
     """
 
-    _instance: Optional['AsyncEventBus'] = None
+    _instance: Optional["AsyncEventBus"] = None
 
-    def __new__(cls) -> 'AsyncEventBus':
+    def __new__(cls) -> "AsyncEventBus":
         if cls._instance is None:
             instance = super().__new__(cls)
             instance._initialized = False
@@ -460,15 +493,17 @@ class AsyncEventBus:
             self._subscribers[event_type] = []
         self._subscribers[event_type].append((callback, True))
 
-    def unsubscribe(self, event_type: str, callback: Callable, is_async: bool = None) -> int:
+    def unsubscribe(
+        self, event_type: str, callback: Callable, is_async: bool = None
+    ) -> int:
         """
         取消订阅。
-        
+
         Args:
             event_type: 事件类型
             callback: 回调函数
             is_async: 是否异步回调（None=匹配所有，True=只匹配异步，False=只匹配同步）
-        
+
         Returns:
             实际移除的订阅数量
         """
@@ -514,7 +549,7 @@ class AsyncEventBus:
         async with lock:
             self._event_log.append(event)
             if len(self._event_log) > self._max_log_size:
-                self._event_log = self._event_log[-self._max_log_size:]
+                self._event_log = self._event_log[-self._max_log_size :]
             callbacks = list(self._subscribers.get(event.event_type, []))
 
         # 2. 持久化（同步 DB 写，通过 to_thread 避免阻塞事件循环）
@@ -533,16 +568,22 @@ class AsyncEventBus:
                     await asyncio.to_thread(cb, evt)
                 return True
             except Exception as e:
-                logger.error("[AsyncEventBus] 订阅者回调异常 "
-                               "(event=%s, callback=%s): %s",
-                               evt.event_type, cb, e)
+                logger.error(
+                    "[AsyncEventBus] 订阅者回调异常 (event=%s, callback=%s): %s",
+                    evt.event_type,
+                    cb,
+                    e,
+                )
                 return False
 
         tasks = []
         for callback, is_async in callbacks:
             # 循环事件防护
-            if (hasattr(callback, '__name__') and callback.__name__ != '<lambda>'
-                    and callback.__name__ == event.source):
+            if (
+                hasattr(callback, "__name__")
+                and callback.__name__ != "<lambda>"
+                and callback.__name__ == event.source
+            ):
                 continue
             tasks.append(_run_one(callback, is_async, event))
 
@@ -562,9 +603,9 @@ class AsyncEventBus:
     # 事件日志查询
     # ----------------------------------------------------------
 
-    async def get_event_log(self,
-                            event_type: str = None,
-                            limit: int = 50) -> List[Event]:
+    async def get_event_log(
+        self, event_type: str = None, limit: int = 50
+    ) -> List[Event]:
         """从内存缓冲获取事件历史（最新在前）"""
         lock = self._get_lock()
         async with lock:
@@ -586,8 +627,17 @@ class AsyncEventBus:
     # 持久化（复用 V2.0 逻辑）
     # ----------------------------------------------------------
 
-    _SENSITIVE_KEYS = {"api_key", "token", "password", "secret", "authorization",
-                       "access_token", "refresh_token", "private_key", "credential"}
+    _SENSITIVE_KEYS = {
+        "api_key",
+        "token",
+        "password",
+        "secret",
+        "authorization",
+        "access_token",
+        "refresh_token",
+        "private_key",
+        "credential",
+    }
 
     def _sanitize_data(self, data: dict) -> dict:
         """递归过滤敏感键"""
@@ -607,15 +657,23 @@ class AsyncEventBus:
         """持久化到 event_log 表（同步，通过 to_thread 调用）"""
         try:
             from core.db import get_db
+
             db = get_db()
-            safe_data = self._sanitize_data(event.data) if isinstance(event.data, dict) else event.data
-            db.insert("event_log", {
-                "event_id": event.event_id,
-                "event_type": event.event_type,
-                "source": event.source,
-                "data": json.dumps(safe_data, ensure_ascii=False),
-                "timestamp": event.timestamp.isoformat(),
-            })
+            safe_data = (
+                self._sanitize_data(event.data)
+                if isinstance(event.data, dict)
+                else event.data
+            )
+            db.insert(
+                "event_log",
+                {
+                    "event_id": event.event_id,
+                    "event_type": event.event_type,
+                    "source": event.source,
+                    "data": json.dumps(safe_data, ensure_ascii=False),
+                    "timestamp": event.timestamp.isoformat(),
+                },
+            )
         except Exception as e:
             logger.error("[AsyncEventBus] 持久化失败 (%s): %s", event.event_type, e)
 

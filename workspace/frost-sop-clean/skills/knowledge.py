@@ -27,13 +27,17 @@ def archive_sop(context: dict) -> dict:
     task_id = context.get("_task_id", "unknown")
 
     if not sop_data or not asset_store:
-        context["_archive_result"] = {"success": False, "reason": "缺少SOP数据或资产Store"}
+        context["_archive_result"] = {
+            "success": False,
+            "reason": "缺少SOP数据或资产Store",
+        }
         return context
 
     sop_id = sop_data.get("sop_id", f"sop_{task_id}")
     sop_name = sop_data.get("name", "未命名SOP")
 
     import datetime
+
     archive_record = {
         "sop_id": sop_id,
         "name": sop_name,
@@ -74,13 +78,17 @@ def archive_lesson(context: dict) -> dict:
     asset_store = context.get("_asset_store")
 
     if not lesson or not asset_store:
-        context["_archive_result"] = {"success": False, "reason": "缺少教训数据或资产Store"}
+        context["_archive_result"] = {
+            "success": False,
+            "reason": "缺少教训数据或资产Store",
+        }
         return context
 
     task_id = lesson.get("task_id", "unknown")
     error_type = lesson.get("error_type", "unknown")
 
     import datetime
+
     lesson_record = {
         "task_id": task_id,
         "error_type": error_type,
@@ -133,7 +141,10 @@ def query_lessons(context: dict) -> dict:
         if key.startswith("lesson:"):
             lesson_data = asset_store.load(key)
             if lesson_data:
-                if not error_type or error_type.lower() in lesson_data.get("error_type", "").lower():
+                if (
+                    not error_type
+                    or error_type.lower() in lesson_data.get("error_type", "").lower()
+                ):
                     lessons.append(lesson_data)
 
     lessons.sort(key=lambda x: x.get("times_encountered", 0), reverse=True)

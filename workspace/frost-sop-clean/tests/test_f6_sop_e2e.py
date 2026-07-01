@@ -4,6 +4,7 @@ F6 SOP端到端测试
 验证7个SOP（DEV-001, DEV-002, STR-002, MT-001, OPS-001, OPS-006, STR-001）
 完整执行链路，所有阶段均能正确完成。
 """
+
 import sys
 import os
 
@@ -12,19 +13,24 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tests.test_f6_mock_llm import patch_openai
 from core.sop import SOP
 from stores.asset import create_asset_store
-from stores.constitution import create_constitution_store
 from agents.parent import create_parent
 from core.store import Store
 
 
 SOP_SPECS = [
     {"id": "DEV-001", "name": "新功能开发", "stages": 5, "exists": True},
-    {"id": "DEV-002", "name": "Bug修复",    "stages": 4, "exists": False},
+    {"id": "DEV-002", "name": "Bug修复", "stages": 4, "exists": False},
     {"id": "STR-002", "name": "自进化验证", "stages": 4, "exists": True},
-    {"id": "MT-001",  "name": "内容发布",   "stages": 4, "exists": True, "note": "规格书称MKT-001"},
-    {"id": "OPS-001", "name": "财务月结",   "stages": 3, "exists": True},
+    {
+        "id": "MT-001",
+        "name": "内容发布",
+        "stages": 4,
+        "exists": True,
+        "note": "规格书称MKT-001",
+    },
+    {"id": "OPS-001", "name": "财务月结", "stages": 3, "exists": True},
     {"id": "OPS-006", "name": "知识资产管理", "stages": 4, "exists": True},
-    {"id": "STR-001", "name": "项目立项",   "stages": 5, "exists": True},
+    {"id": "STR-001", "name": "项目立项", "stages": 5, "exists": True},
 ]
 
 
@@ -64,14 +70,16 @@ def _run_sop(sop_id: str, task_description: str) -> dict:
             sc = parent.run(["execute_stage"], sc)
             stage_results = sc.get("_stage_results", stage_results)
         except Exception as e:
-            stage_results.append({
-                "stage": stage.get("name"),
-                "status": "failed",
-                "output": f"执行异常: {e}",
-            })
+            stage_results.append(
+                {
+                    "stage": stage.get("name"),
+                    "status": "failed",
+                    "output": f"执行异常: {e}",
+                }
+            )
 
     completed = sum(1 for r in stage_results if r.get("status") == "completed")
-    failed    = sum(1 for r in stage_results if r.get("status") == "failed")
+    failed = sum(1 for r in stage_results if r.get("status") == "failed")
 
     return {
         "sop_id": sop_id,
@@ -109,12 +117,18 @@ def test_e2e_str002():
     print("  E2E-03: STR-002 自进化验证 ... ", end="")
     asset_store = create_asset_store(backend="memory")
     for i in range(5):
-        asset_store.save(f"task:task-{i:03d}", {
-            "task_id": f"task-{i:003d}",
-            "sop": "DEV-001",
-            "status": "completed" if i < 3 else "failed",
-            "stage_results": [{"name": f"阶段{j}", "status": "success" if i < 3 else "failed"} for j in range(5)],
-        })
+        asset_store.save(
+            f"task:task-{i:03d}",
+            {
+                "task_id": f"task-{i:003d}",
+                "sop": "DEV-001",
+                "status": "completed" if i < 3 else "failed",
+                "stage_results": [
+                    {"name": f"阶段{j}", "status": "success" if i < 3 else "failed"}
+                    for j in range(5)
+                ],
+            },
+        )
     with patch_openai():
         result = _run_sop("STR-002", "分析历史任务数据")
     has_suggestions = any(
@@ -122,7 +136,11 @@ def test_e2e_str002():
         for r in result["stage_results"]
     )
     ok = result["all_passed"] and result["completed"] == 4 and has_suggestions
-    print("✅ 通过" if ok else f"❌ 失败 (完成{result['completed']}/4, 有建议={has_suggestions})")
+    print(
+        "✅ 通过"
+        if ok
+        else f"❌ 失败 (完成{result['completed']}/4, 有建议={has_suggestions})"
+    )
     return ok, result
 
 
@@ -173,7 +191,7 @@ def run_all_e2e_tests():
 
     results = []
     passed = 0
-    total  = 7
+    total = 7
 
     for test_fn, desc in [
         (test_e2e_dev001, "E2E-01"),
@@ -185,13 +203,17 @@ def run_all_e2e_tests():
         (test_e2e_str001, "E2E-07"),
     ]:
         ok, info = test_fn()
-        results.append({"test": desc, "passed": ok if ok is not None else "skipped", "info": info})
+        results.append(
+            {"test": desc, "passed": ok if ok is not None else "skipped", "info": info}
+        )
         if ok is True:
             passed += 1
         print()
 
     print("=" * 60)
-    print(f"E2E测试完成: {passed}/{total} 通过 (跳过{sum(1 for r in results if r['passed'] == 'skipped')}个)")
+    print(
+        f"E2E测试完成: {passed}/{total} 通过 (跳过{sum(1 for r in results if r['passed'] == 'skipped')}个)"
+    )
     print("=" * 60)
     return passed, total, results
 

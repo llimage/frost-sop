@@ -8,9 +8,9 @@ FROST-SOP API 负载测试 (Locust)
 然后打开 http://localhost:8089 配置并发用户数和生成速率。
 """
 
-import json
 import random
-from locust import HttpUser, task, between, events
+
+from locust import HttpUser, between, events, task
 
 
 class FROSTAPIUser(HttpUser):
@@ -169,6 +169,7 @@ class FROSTAPIUser(HttpUser):
 # 事件钩子：收集自定义指标
 # ────────────────────────────────
 
+
 @events.init.add_listener
 def on_locust_init(environment, **kwargs):
     """Locust 初始化时的自定义配置。"""
@@ -179,6 +180,7 @@ def on_locust_init(environment, **kwargs):
 # ────────────────────────────────
 # 预设场景
 # ────────────────────────────────
+
 
 class SmokeTest(HttpUser):
     """轻量冒烟测试：少量用户，验证基本功能。"""
