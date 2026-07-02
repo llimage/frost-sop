@@ -21,7 +21,7 @@ from stores.constitution import create_constitution_store
 logger = logging.getLogger(__name__)
 
 # V3.2b: DeadManSwitch 导入
-from core.dead_mans_switch import setup_dead_man_switch
+from core.dead_mans_switch import setup_dead_man_switch  # noqa: E402
 
 
 def main(task_input=None, sop_id=None):
@@ -453,7 +453,7 @@ async def main_async(task_input: str = None, sop_id: str = None, timeout: int = 
     bus = get_async_event_bus()
 
     # 3. 创建组件（event_driven=True）
-    ancestor = create_ancestor(constitution_store, asset_store, event_driven=True)
+    _ = create_ancestor(constitution_store, asset_store, event_driven=True)
     parent = create_parent(
         "parent_v3", Store(), event_driven=True, asset_store=asset_store, sop_id=sop_id
     )
@@ -564,6 +564,21 @@ def main_cli():
         "--host", type=str, default="0.0.0.0", help="FastAPI host（与 --serve 配合使用）"
     )
     parser.add_argument("--init-db", action="store_true", help="仅初始化数据库（不执行任务）")
+    # V6.0: 狩猎进化闭环
+    parser.add_argument("--hunt", action="store_true", help="触发狩猎进化闭环")
+    parser.add_argument("--hunt-target", type=str, default=None, help="狩猎目标 Skill ID")
+    parser.add_argument(
+        "--hunt-mode",
+        type=str,
+        default="continuous",
+        choices=["continuous", "predictive"],
+        help="狩猎模式: continuous(持续优化) / predictive(预测性)",
+    )
+    parser.add_argument(
+        "--auto-execute",
+        action="store_true",
+        help="自动执行狩猎产生的新SOP",
+    )
     args = parser.parse_args()
 
     # 日志配置
@@ -578,6 +593,32 @@ def main_cli():
         print("正在初始化数据库...")
         get_db()
         print("✅ 数据库初始化完成（19张表）")
+        return
+
+    # ── V6.0: 狩猎进化闭环模式 ──
+    if args.hunt:
+        print("=" * 60)
+        print("  FROST-SOP V6.0 — 狩猎进化闭环")
+        print("=" * 60)
+        from skills.hunt_orchestration import hunt_and_evolve
+
+        asset_store = create_asset_store()
+        context = {
+            "_asset_store": asset_store,
+            "_hunt_mode": args.hunt_mode,
+            "_auto_execute": args.auto_execute,
+        }
+        if args.hunt_target:
+            context["_hunt_targets"] = [{"skill_id": args.hunt_target}]
+
+        result = hunt_and_evolve(context)
+        print(
+            json.dumps(
+                result.get("_hunt_evolution_result", {}),
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
         return
 
     # --serve 模式：启动 FastAPI 服务

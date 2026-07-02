@@ -1,0 +1,72 @@
+# JUEJIN-001: 掘金技术文章发布 SOP
+# V6.0 运营能力扩展
+sop_id: "JUEJIN-001"
+name: "掘金技术文章发布"
+version: "1.0"
+category: "content"
+description: "选题确定 → 文章撰写 → 代码验证 → 掘金发布"
+trigger:
+  schedule: "const.schedule.juejin"  # 每周三 10:00
+  manual: true
+
+stages:
+  - phase_id: "j1_topic_select"
+    name: "选题确定"
+    agent: "topic_selector"
+    skills:
+      - "select_tech_topic"
+    requirement: "选择 FROST 相关技术话题，确保有价值输出。优先选择：性能优化、架构设计、最佳实践"
+    inputs: ["_topic_pool", "_tech_trends"]
+    outputs: ["_selected_topic", "_article_outline"]
+    output_type: "document"
+    decision_options: ["确认", "换题", "跳过"]
+
+  - phase_id: "j2_article_writing"
+    name: "文章撰写"
+    agent: "article_writer"
+    skills:
+      - "write_tech_article"
+    requirement: "撰写2000-3000字技术文章，含代码示例、架构图描述、实际案例"
+    inputs: ["_selected_topic", "_article_outline"]
+    outputs: ["_article_content", "_article_title", "_article_tags"]
+    output_type: "document"
+
+  - phase_id: "j3_code_validation"
+    name: "代码验证"
+    agent: "code_validator"
+    skills:
+      - "validate_code"
+    requirement: "验证文章中所有代码示例可运行，输出验证结果"
+    inputs: ["_article_content"]
+    outputs: ["_code_validation_result"]
+    output_type: "code"
+
+  - phase_id: "j4_publish"
+    name: "掘金发布"
+    agent: "juejin_publisher"
+    skills:
+      - "publish_juejin"
+    requirement: "使用 sessionid 发布到掘金平台，选择正确分类和标签。先 draft，人工确认后发布"
+    inputs: ["_article_content", "_article_title", "_article_tags"]
+    outputs: ["_publish_result"]
+    output_type: "document"
+    requires_confirmation: true
+
+required_stages:
+  - "j2_article_writing"
+forbidden_skills:
+  - "direct_db_write"
+
+# 内容约束
+content_constraints:
+  min_word_count: 2000
+  max_word_count: 3000
+  must_have_code_example: true
+  suggested_tags:
+    - "FROST"
+    - "AI"
+    - "Python"
+    - "自动化"
+  categories:
+    - "backend"
+    - "人工智能"

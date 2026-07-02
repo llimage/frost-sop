@@ -36,6 +36,7 @@ ALLOWED_TABLES = {
     "decision_points",
     "kv_store",
     "event_log",
+    "scheduled_jobs",
 }
 
 # S-001 修复：WHERE 子句危险关键字（用于非参数化部分的检测）
@@ -421,6 +422,29 @@ class DBManager:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_event_log_type ON event_log(event_type)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_event_log_source ON event_log(source)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_event_log_timestamp ON event_log(timestamp)")
+
+        # 20. scheduled_jobs — V6.0 APScheduler 定时任务持久化
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS scheduled_jobs (
+            id TEXT PRIMARY KEY,
+            job_type TEXT NOT NULL,
+            target_id TEXT,
+            cron_expr TEXT NOT NULL,
+            enabled INTEGER DEFAULT 1,
+            last_run TEXT,
+            next_run TEXT,
+            run_count INTEGER DEFAULT 0,
+            fail_count INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now', 'localtime')),
+            updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+        )
+        """)
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_scheduled_jobs_type ON scheduled_jobs(job_type)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_scheduled_jobs_enabled ON scheduled_jobs(enabled)"
+        )
 
         # A-007: 性能索引优化（高频查询列）
         self._create_performance_indexes(cursor)

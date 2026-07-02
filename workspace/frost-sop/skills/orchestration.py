@@ -7,6 +7,8 @@ import contextlib
 import logging
 import os
 import sys
+import threading
+from datetime import datetime
 
 from core.agent import Agent
 from core.panel_decision import get_decision_flow
@@ -804,10 +806,194 @@ def _trigger_elder_audit(task_id: str, asset_store=None, constitution_store=None
         logger.warning("[V2.0-长老审计] 失败（不影响任务状态）: %s", e)
 
 
+# ============================================================
+# V6.0 阶段：军师分析后台线程（执行→复盘闭环）
+# ============================================================
+
+
+def _trigger_analytics_briefing(task_id, asset_store, constitution_store):
+    """
+    V6.0: 后台线程 —— 触发军师分析简报。
+
+    流程：
+    1. 调用 skills.analytics 的6个分析函数（light模式，0成本）
+    2. 调用 integrate_briefings() 生成整合简报
+    3. 将简报保存到 asset_store: briefing:{task_id}
+    4. 将简报写入 audit_log
+    5. 如果预算使用率>80%，记录 warning
+
+    Args:
+        task_id: 关联的任务 ID
+        asset_store: 资产 Store
+        constitution_store: 宪法 Store（可为 None）
+    """
+    try:
+        from skills.analytics import (
+            analyze_audit,
+            analyze_finance,
+            analyze_heartbeat,
+            analyze_hunt,
+            analyze_skill,
+            analyze_task,
+            integrate_briefings,
+        )
+
+        logger.info("[Analytics] 后台分析开始: %s", task_id)
+
+        # 构造分析上下文（light模式不调用LLM，成本0）
+        ctx = {"_asset_store": asset_store, "_analysis_depth": "light"}
+        if constitution_store:
+            ctx["_constitution_store"] = constitution_store
+
+        # 顺序执行6个分析
+        ctx = analyze_finance(ctx)
+        ctx = analyze_skill(ctx)
+        ctx = analyze_task(ctx)
+        ctx = analyze_audit(ctx)
+        ctx = analyze_heartbeat(ctx)
+        ctx = analyze_hunt(ctx)
+
+        # 整合简报
+        ctx = integrate_briefings(ctx)
+        briefing = ctx.get("_integrated_briefing", {})
+
+        # 保存到 Store
+        if asset_store:
+            asset_store.save(f"briefing:{task_id}", briefing)
+
+        # 写入 audit_log
+        from core.db import get_db
+
+        db = get_db()
+        db.log_audit(
+            {
+                "agent_id": f"analytics_{task_id[:8]}",
+                "action": "briefing_generated",
+                "details": str(briefing)[:500],
+                "level": "info",
+            }
+        )
+
+        # 检查预算预警
+        finance = ctx.get("_analytics_finance", {})
+        if finance.get("budget_usage_rate", 0) > 0.8:
+            logger.warning("[Analytics] 预算使用率超过80%%")
+            db.log_audit(
+                {
+                    "agent_id": "system",
+                    "action": "budget_alert",
+                    "details": f"budget_usage={finance['budget_usage_rate']:.1%}",
+                    "level": "warning",
+                }
+            )
+
+        logger.info("[Analytics] 后台分析完成: %s", task_id)
+
+    except Exception as e:
+        logger.warning("[Analytics] 后台分析失败（不影响任务）: %s", e)
+        try:
+            from core.db import get_db
+
+            get_db().log_audit(
+                {
+                    "agent_id": "analytics",
+                    "action": "briefing_failed",
+                    "details": str(e)[:200],
+                    "level": "warning",
+                }
+            )
+        except Exception:
+            pass
+
+
+def _trigger_evolution_analysis(task_id, asset_store):
+    """
+    V6.0: 后台线程 —— 触发自进化分析。
+
+    流程：
+    1. 从 asset_store 加载任务历史
+    2. 调用 analyze_trends() 分析趋势
+    3. 调用 generate_suggestions() 生成建议
+    4. 如果建议非空，调用 present_for_approval() 生成报告
+    5. 将报告保存到 asset_store: evolution:{task_id}
+    6. 如果建议涉及 SOP 优化，自动调用 manage_sop_version()
+
+    Args:
+        task_id: 关联的任务 ID
+        asset_store: 资产 Store
+    """
+    try:
+        from skills.evolution import (
+            analyze_trends,
+            generate_suggestions,
+            load_task_history,
+            manage_sop_version,
+            present_for_approval,
+        )
+
+        logger.info("[Evolution] 后台进化分析开始: %s", task_id)
+
+        ctx = {"_asset_store": asset_store, "_history_limit": 20}
+
+        # 加载历史 → 分析趋势 → 生成建议
+        ctx = load_task_history(ctx)
+        ctx = analyze_trends(ctx)
+        ctx = generate_suggestions(ctx)
+
+        suggestions = ctx.get("_suggestions", [])
+
+        if suggestions:
+            # 生成报告
+            ctx = present_for_approval(ctx)
+            report = ctx.get("_approval_report", "")
+
+            # 保存
+            if asset_store:
+                asset_store.save(
+                    f"evolution:{task_id}",
+                    {
+                        "report": report,
+                        "suggestions": suggestions,
+                        "timestamp": datetime.now().isoformat(),
+                    },
+                )
+
+            # 如果有 SOP 优化建议，自动创建 v2
+            for s in suggestions:
+                if s.get("type") == "sop_optimization":
+                    ctx["_sop_optimization"] = s
+                    ctx = manage_sop_version(ctx)
+                    if ctx.get("_sop_version_created"):
+                        logger.info("[Evolution] 自动创建 SOP v2: %s", s.get("target", "unknown"))
+
+        logger.info(
+            "[Evolution] 后台进化分析完成: %s 条建议，task_id=%s", len(suggestions), task_id
+        )
+
+    except Exception as e:
+        logger.warning("[Evolution] 后台进化分析失败（不影响任务）: %s", e)
+        try:
+            from core.db import get_db
+
+            get_db().log_audit(
+                {
+                    "agent_id": "evolution",
+                    "action": "evolution_failed",
+                    "details": str(e)[:200],
+                    "level": "warning",
+                }
+            )
+        except Exception:
+            pass
+
+
 def finalize_task(context: dict) -> dict:
     """
-    V2.0: 任务收尾 Skill。
-    在所有阶段执行完成后，在后台触发长老审计。
+    V2.0+V6.0: 任务收尾 Skill。
+    在所有阶段执行完成后，在后台触发：
+    1. 长老审计
+    2. 军师分析简报
+    3. 自进化分析
 
     输入 context 键：
         _task_id: str —— 任务 ID
@@ -817,34 +1003,64 @@ def finalize_task(context: dict) -> dict:
 
     输出 context 键：
         _elder_audit_triggered: bool —— 是否已触发长老审计
+        _analytics_triggered: bool —— 是否已触发军师分析
+        _evolution_triggered: bool —— 是否已触发进化分析
         _reason: str —— 推理痕迹
     """
-    import threading
-
     task_id = context.get("_task_id", "unknown")
     asset_store = context.get("_asset_store")
     constitution_store = context.get("_constitution_store")
 
     if not task_id or task_id == "unknown":
-        # 无有效 task_id，跳过长老审计
+        # 无有效 task_id，跳过所有收尾
         context["_elder_audit_triggered"] = False
-        context["_reason"] = "finalize_task: 无有效 task_id，跳过长老审计"
+        context["_analytics_triggered"] = False
+        context["_evolution_triggered"] = False
+        context["_reason"] = "finalize_task: 无有效 task_id，跳过收尾"
         return context
 
     # 在后台线程触发长老审计（不阻塞主流程）
     audit_thread = threading.Thread(
         target=_trigger_elder_audit,
         args=(task_id, asset_store, constitution_store),
-        daemon=True,  # 守护线程：主线程结束时自动结束，不阻塞
+        daemon=True,
         name=f"elder_audit_{task_id[:8]}",
     )
     audit_thread.start()
-
     context["_elder_audit_triggered"] = True
-    context["_elder_audit_thread"] = audit_thread  # 供测试等待使用
-    context["_reason"] = f"finalize_task: 长老审计后台线程已启动，task_id={task_id}"
+    context["_elder_audit_thread"] = audit_thread
 
     logger.info("[V2.0-长老审计] 后台审计已启动，task_id=%s", task_id)
+
+    # ── V6.0: 军师分析后台线程 ──
+    analytics_thread = threading.Thread(
+        target=_trigger_analytics_briefing,
+        args=(task_id, asset_store, constitution_store),
+        daemon=True,
+        name=f"analytics_{task_id[:8]}",
+    )
+    analytics_thread.start()
+    context["_analytics_triggered"] = True
+    context["_analytics_thread"] = analytics_thread
+
+    logger.info("[V6.0-军师分析] 后台分析已启动，task_id=%s", task_id)
+
+    # ── V6.0: 自进化后台线程 ──
+    evolution_thread = threading.Thread(
+        target=_trigger_evolution_analysis,
+        args=(task_id, asset_store),
+        daemon=True,
+        name=f"evolution_{task_id[:8]}",
+    )
+    evolution_thread.start()
+    context["_evolution_triggered"] = True
+    context["_evolution_thread"] = evolution_thread
+
+    logger.info("[V6.0-自进化] 后台进化已启动，task_id=%s", task_id)
+
+    context["_reason"] = (
+        f"finalize_task: 长老审计+军师分析+自进化 后台线程已启动，task_id={task_id}"
+    )
 
     # ── A-006: 失败复盘 ──
     context = _scan_failed_calls_for_lessons(context)

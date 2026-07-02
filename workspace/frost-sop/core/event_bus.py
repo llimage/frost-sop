@@ -66,6 +66,14 @@ class EventType:
     AGENT_CREATED = "agent_created"  # Agent 被创建
     AGENT_DESTROYED = "agent_destroyed"  # Agent 被销毁
 
+    # ── V6.0: 闭环与运营事件 ──
+    HUNT_COMPLETED = "hunt_completed"  # 狩猎完成
+    BRIEFING_INTEGRATED = "briefing_integrated"  # 简报整合完成
+    EVOLUTION_SUGGESTED = "evolution_suggested"  # 进化建议已生成
+    SCHEDULED_EXECUTED = "scheduled_executed"  # 定时任务已执行
+    DAILY_SNAPSHOT_COMPLETED = "daily_snapshot_completed"  # 每日快照完成
+    WEEKLY_RETROSPECTIVE_COMPLETED = "weekly_retrospective_completed"  # 周度复盘完成
+
 
 # ============================================================
 # V2.0: Event 数据类（子阶段 4.1）

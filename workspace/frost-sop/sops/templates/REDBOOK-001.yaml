@@ -1,0 +1,89 @@
+# REDBOOK-001: 小红书笔记创作 SOP
+# V6.0 运营能力扩展
+sop_id: "REDBOOK-001"
+name: "小红书笔记创作"
+version: "1.0"
+category: "content"
+description: "选题策划 → 内容撰写 → 标题优化 → 封面设计 → 发布执行 → 数据归档"
+trigger:
+  schedule: "const.schedule.redbook"  # 每周一 9:00
+  manual: true
+
+stages:
+  - phase_id: "r1_topic_planning"
+    name: "选题策划"
+    agent: "content_planner"
+    skills:
+      - "select_topic"
+    requirement: "根据热点库、选题池、差异化评估选择今日话题"
+    inputs: ["_topic_pool", "_hot_trends"]
+    outputs: ["_selected_topic", "_topic_angle"]
+    output_type: "document"
+    decision_options: ["确认", "换题", "跳过"]
+
+  - phase_id: "r2_content_writing"
+    name: "内容撰写"
+    agent: "content_writer"
+    skills:
+      - "write_redbook_note"
+    requirement: "按清单体结构撰写300-500字小红书笔记，含痛点共鸣、方法清单、互动引导"
+    inputs: ["_selected_topic", "_topic_angle"]
+    outputs: ["_note_content", "_note_word_count"]
+    output_type: "copywriting"
+
+  - phase_id: "r3_title_optimize"
+    name: "标题优化"
+    agent: "title_optimizer"
+    skills:
+      - "optimize_title"
+    requirement: "标题格式: 数字+痛点+钩子，确保首图点击率。生成3个备选标题"
+    inputs: ["_note_content", "_selected_topic"]
+    outputs: ["_optimized_titles"]
+    output_type: "copywriting"
+
+  - phase_id: "r4_cover_design"
+    name: "封面设计"
+    agent: "cover_designer"
+    skills:
+      - "create_cover_image"
+    requirement: "生成大字报风格封面图，统一品牌色系（#FF6B6B + #FFFFFF）"
+    inputs: ["_selected_topic", "_optimized_titles"]
+    outputs: ["_cover_image_url"]
+    output_type: "document"
+    optional: true
+
+  - phase_id: "r5_publish"
+    name: "发布执行"
+    agent: "publisher"
+    skills:
+      - "publish_redbook"
+    requirement: "发布到小红书平台，设置标签和定位"
+    inputs: ["_note_content", "_optimized_titles", "_cover_image_url"]
+    outputs: ["_publish_result"]
+    output_type: "document"
+    requires_confirmation: true
+
+  - phase_id: "r6_data_archive"
+    name: "数据归档"
+    agent: "archivist"
+    skills:
+      - "archive_content"
+    requirement: "将笔记内容、标题、发布数据保存到知识库，供后续分析"
+    inputs: ["_note_content", "_optimized_titles", "_publish_result"]
+    outputs: ["_archive_result"]
+    output_type: "document"
+
+required_stages:
+  - "r2_content_writing"
+forbidden_skills:
+  - "direct_db_write"
+
+# 内容约束
+content_constraints:
+  max_word_count: 500
+  min_word_count: 300
+  must_have_emoji: true
+  avoid_phrases:
+    - "在当今时代"
+    - "众所周知"
+    - "综上所述"

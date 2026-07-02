@@ -1,0 +1,57 @@
+# EMAIL-001: Newsletter 邮件发送 SOP
+# V6.0 运营能力扩展
+sop_id: "EMAIL-001"
+name: "Newsletter 邮件发送"
+version: "1.0"
+category: "content"
+description: "内容策划 → 邮件撰写 → 邮件发送"
+trigger:
+  schedule: "const.schedule.email"  # 每周三 14:00
+  manual: true
+
+stages:
+  - phase_id: "e1_content_planning"
+    name: "内容策划"
+    agent: "newsletter_planner"
+    skills:
+      - "plan_newsletter"
+    requirement: "确定本周 Newsletter 主题和内容大纲，回顾上周简报"
+    inputs: ["_topic_pool", "_last_briefing"]
+    outputs: ["_newsletter_topic", "_newsletter_outline"]
+    output_type: "document"
+    decision_options: ["确认", "调整", "跳过"]
+
+  - phase_id: "e2_email_writing"
+    name: "邮件撰写"
+    agent: "email_writer"
+    skills:
+      - "write_newsletter"
+    requirement: "撰写 Markdown 格式邮件，含摘要、正文、CTA（号召行动）。语气专业但不失亲近"
+    inputs: ["_newsletter_topic", "_newsletter_outline"]
+    outputs: ["_email_subject", "_email_body", "_email_preview"]
+    output_type: "document"
+
+  - phase_id: "e3_email_sending"
+    name: "邮件发送"
+    agent: "email_sender"
+    skills:
+      - "send_email"
+    requirement: "使用 Buttondown API 发送邮件。先创建 draft，人工确认后发送"
+    inputs: ["_email_subject", "_email_body"]
+    outputs: ["_send_result"]
+    output_type: "document"
+    requires_confirmation: true
+
+required_stages:
+  - "e2_email_writing"
+forbidden_skills:
+  - "direct_db_write"
+
+# 内容约束
+content_constraints:
+  min_word_count: 500
+  max_word_count: 1500
+  must_have_cta: true
+  format: "markdown"
+  email_provider: "buttondown"
+  send_status_default: "draft"
