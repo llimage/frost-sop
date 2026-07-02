@@ -63,12 +63,19 @@ def test_get_endpoints_return_valid_status(path, expected_status):
     )
 
 
-# ── 测试 2b: SSE 流式端点单独测试（不阻塞） ────────────────
-@pytest.mark.skip(reason="SSE 流式端点（while True）与 TestClient 不兼容，需集成测试验证")
-def test_logs_endpoint_is_streaming():
-    """/api/logs 是 SSE 流式端点，TestClient 无法测试无限流。
-    此端点应在集成测试中用真实 HTTP 客户端验证。"""
-    pass
+# ── 测试 2b: SSE 流式端点 — 使用 max_iterations 参数限流 ────────────────
+def test_logs_endpoint_streaming_with_limit():
+    """/api/logs 是 SSE 流式端点，传入 max_iterations 控制迭代次数。"""
+    from fastapi.testclient import TestClient
+
+    from api.main import app
+
+    client = TestClient(app)
+    r = client.get("/api/logs?max_iterations=3")
+    assert r.status_code == 200, f"期望 200, 实际 {r.status_code}"
+    assert "text/event-stream" in r.headers.get("content-type", ""), (
+        f"期望 SSE content-type, 实际: {r.headers.get('content-type')}"
+    )
 
 
 # ── 测试 3: POST 端点输入校验 ──────────────────────────────

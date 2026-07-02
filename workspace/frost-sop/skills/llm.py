@@ -6,6 +6,8 @@ not hardwired into Agent. This preserves the fractal purity of the architecture.
 
 import json
 import os
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -17,6 +19,37 @@ from core.skill import Skill
 
 # 加载 .env 文件中的环境变量
 load_dotenv()
+
+# ── 失败日志目录 ──────────────────────────────────────────────────────
+_TOOL_CALLS_DIR = Path(__file__).resolve().parent.parent / "data" / "tool_calls"
+_TOOL_CALLS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _write_failure_log(
+    tool_name: str, error: str, context: dict | None = None, duration_ms: int = 0
+):
+    """LLM 调用失败时写 JSON 日志到 data/tool_calls/，供 scan_failed_calls 消费。
+
+    格式: {call_id, tool_name, success: False, error, timestamp, agent_id, task_id, duration_ms}
+    """
+    ctx = context or {}
+    ts = datetime.now(timezone.utc)
+    record = {
+        "call_id": f"llm_{ts.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}",
+        "tool_name": tool_name,
+        "success": False,
+        "error": str(error),
+        "timestamp": ts.isoformat(),
+        "agent_id": ctx.get("_agent_id", ""),
+        "task_id": ctx.get("_task_id", ""),
+        "duration_ms": duration_ms,
+    }
+    try:
+        filepath = _TOOL_CALLS_DIR / f"{record['call_id']}.json"
+        filepath.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass  # best-effort logging; never crash the caller
+
 
 # ── 离线模型全局变量 ──────────────────────────────────────────────────
 _local_llm = None
@@ -218,6 +251,7 @@ def _call_online_llm(context: dict) -> dict:
             model=context.get("_model", "deepseek-chat"),
         )
     except BudgetExceededError as e:
+        _write_failure_log("call_llm", f"预算超支: {e}", context)
         context["_llm_response"] = f"预算已用完：{str(e)}"
         context["_llm_tokens"] = {"prompt": 0, "completion": 0, "total": 0}
         context["_reason"] = f"预算检查失败：{str(e)}"
@@ -237,6 +271,7 @@ def _call_online_llm(context: dict) -> dict:
             pass
 
     if not api_key:
+        _write_failure_log("call_llm", "缺少API密钥", context)
         context["_llm_response"] = "错误：未配置 DEEPSEEK_API_KEY 环境变量"
         context["_llm_tokens"] = {"prompt": 0, "completion": 0, "total": 0}
         context["_reason"] = "LLM调用失败：缺少API密钥"
@@ -364,6 +399,7 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
             temperature=context.get("_temperature", 0.7),
         )
         if "error" in resp:
+            _write_failure_log("call_local_llm", resp["error"], context)
             context["_llm_response"] = resp["error"]
             context["_llm_tokens"] = {"prompt": 0, "completion": 0, "total": 0}
             context["_reason"] = "离线推理失败：{}".format(resp["error"])
@@ -382,6 +418,7 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
             context = _call_online_llm(context)
             context["_llm_backend"] = "online"
         except Exception as e:
+            _write_failure_log("call_llm_online", str(e), context)
             context["_llm_response"] = f"LLM调用失败：{str(e)}"
             context["_llm_tokens"] = {"prompt": 0, "completion": 0, "total": 0}
             context["_reason"] = f"LLM调用失败：{str(e)}"
@@ -394,6 +431,7 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
         context["_llm_backend"] = "online"
         return context
     except Exception as e:
+        _write_failure_log("call_llm_auto_online", str(e), context)
         print(f"Online LLM 失败，降级到离线模式: {e}")
         resp = call_local_llm(
             context.get("_prompt", ""),
@@ -401,6 +439,7 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
             temperature=context.get("_temperature", 0.7),
         )
         if "error" in resp:
+            _write_failure_log("call_llm_auto_fallback", resp["error"], context)
             context["_llm_response"] = resp["error"]
             context["_llm_tokens"] = {"prompt": 0, "completion": 0, "total": 0}
             context["_reason"] = "在线失败且离线降级也失败：{}".format(resp["error"])
@@ -430,7 +469,7 @@ def _call_llm_raw(
         "_max_tokens": max_tokens,
     }
     ctx = call_llm(ctx)
-    return ctx.get("_llm_response", "")
+    return str(ctx.get("_llm_response", ""))
 
 
 # 导出为 Skill 实例

@@ -18,7 +18,7 @@ import sys
 import uuid
 from datetime import datetime
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -85,7 +85,7 @@ app.add_middleware(
 
 
 # ── Helpers ──
-def _row_to_dict(row) -> dict:
+def _row_to_dict(row) -> dict | None:
     """Convert sqlite3.Row to dict, handling non-serializable types."""
     if row is None:
         return None
@@ -218,7 +218,7 @@ def create_and_run_task(req: TaskCreateRequest):
 
         constitution_store = create_constitution_store()
         asset_store = create_asset_store()
-        ancestor = create_ancestor(constitution_store, asset_store)
+        create_ancestor(constitution_store, asset_store)  # 注册祖辈（副作用）
         parent = create_parent(name="parent-api", coordination_store=asset_store)
 
         phases = sop.stages if hasattr(sop, "stages") else []
@@ -233,7 +233,7 @@ def create_and_run_task(req: TaskCreateRequest):
             stage_context = parent.run(sop_steps=["execute_stage"], initial_context=stage_context)
 
             result = stage_context.get("_current_stage_result", {})
-            output = str(result.get("output", ""))[:500]
+            output = str(result.get("output", ""))[:500] if isinstance(result, dict) else ""
             completed = datetime.now().isoformat()
 
             # 写入 task_stages
@@ -341,7 +341,7 @@ def list_tasks(
         params.append(status)
     clause = " AND ".join(where) if where else "1=1"
     sql = f"SELECT * FROM tasks WHERE {clause} ORDER BY created_at DESC LIMIT ?"
-    params.append(limit)
+    params.append(str(limit))
     rows = db.execute_sql(sql, params)
     return _rows_to_list(rows)
 
@@ -420,13 +420,20 @@ def list_agents():
     result = []
     for a in agents:
         ad = _row_to_dict(a)
+        if ad is None:
+            continue
         # 合并 agent_status
         status_row = db.select_one("agent_status", "agent_id", ad["id"])
         if status_row:
             sd = _row_to_dict(status_row)
-            ad["status"] = sd.get("status", "idle")
-            ad["total_tokens_used"] = sd.get("total_tokens_used", 0)
-            ad["total_cost"] = sd.get("total_cost", 0.0)
+            if sd is not None:
+                ad["status"] = sd.get("status", "idle")
+                ad["total_tokens_used"] = sd.get("total_tokens_used", 0)
+                ad["total_cost"] = sd.get("total_cost", 0.0)
+            else:
+                ad["status"] = "idle"
+                ad["total_tokens_used"] = 0
+                ad["total_cost"] = 0.0
         else:
             ad["status"] = "idle"
             ad["total_tokens_used"] = 0
@@ -470,23 +477,42 @@ def chat(req: ChatRequest):
 # 9. GET /api/logs — 实时日志 (SSE 流式输出)
 # ═══════════════════════════════════════════════════════════════
 @app.get("/api/logs", tags=["系统"])
-async def stream_logs():
+async def stream_logs(
+    request: Request,
+    max_iterations: int = Query(
+        0, alias="max_iterations", ge=0, description="最大迭代次数，0=无限"
+    ),
+):
+    """SSE 流式输出审计日志。max_iterations=0 表示无限循环（生产模式），
+    传入正数可在 N 次轮询后自动断开（测试模式）。"""
     db = get_db()
+    disconnect_check_interval = 5  # 每 N 次迭代检查一次客户端断开
 
     async def event_generator():
         last_id = 0
-        while True:
+        iteration = 0
+        while max_iterations == 0 or iteration < max_iterations:
+            # 周期性检查客户端是否断开
+            if (
+                iteration > 0
+                and iteration % disconnect_check_interval == 0
+                and await request.is_disconnected()
+            ):
+                break
             try:
                 rows = db.execute_sql(
-                    "SELECT * FROM audit_log WHERE id > ? ORDER BY id DESC LIMIT 10", [last_id]
+                    "SELECT * FROM audit_log WHERE id > ? ORDER BY id ASC LIMIT 10", [last_id]
                 )
                 if rows:
-                    for row in reversed(rows):
+                    for row in rows:
                         rd = _row_to_dict(row)
+                        if rd is None:
+                            continue
                         yield f"data: {json.dumps(rd, ensure_ascii=False)}\n\n"
-                        last_id = max(last_id, rd["id"])
+                        last_id = max(last_id, rd.get("id", 0))
             except Exception:
                 pass
+            iteration += 1
             await asyncio.sleep(2)
 
     return StreamingResponse(
@@ -661,7 +687,8 @@ def _enum_to_str(v):
 def panel_to_json(panel) -> dict:
     """把 PanelDefinition 转换成纯字典（所有 Enum → str）。"""
     d = panel.to_dict()
-    return _enum_to_str(d)
+    result = _enum_to_str(d)
+    return result if isinstance(result, dict) else {}
 
 
 # ── 13. POST /api/panels/generate — 生成 Panel JSON ─────
@@ -680,6 +707,10 @@ def generate_panel(req: PanelGenerateRequest):
 
         raise HTTPException(status_code=404, detail=f"Task {req.task_id} not found")
     task = _row_to_dict(task_row)
+    if task is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail=f"Task {req.task_id} parse failed")
 
     # 2. 读取 SOP（自动关联或手动指定）
     sop_id = req.sop_id

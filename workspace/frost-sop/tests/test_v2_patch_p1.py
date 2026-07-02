@@ -6,6 +6,7 @@ V2.1 修补验证：P1-6/7/8/9 新增测试
 - P1-9: agents 表 UPSERT
 """
 
+import contextlib
 import json
 
 from core.agent import Agent
@@ -154,7 +155,7 @@ def test_persist_sanitizes_before_write():
 
     # 验证 DB 中存储的 data 已被过滤
     db = db_module.get_db()
-    rows = db.select_all("event_log", f"event_id = '{event.event_id}'")
+    rows = db.execute_sql("SELECT * FROM event_log WHERE event_id = ?", [event.event_id])
     assert len(rows) >= 1
     stored_data = json.loads(rows[0]["data"])
     assert stored_data["api_key"] == "***REDACTED***", f"期望 REDACTED，实际: {stored_data}"
@@ -182,7 +183,7 @@ def test_circular_event_prevention():
             source="test_source",  # 与回调函数同名
             data={"step": "x"},
         )
-        notified = bus.publish(event)
+        bus.publish(event)
         # 应跳过同名的 test_source 回调
         assert called == [], f"同名回调应被跳过，但被调用了 {called}"
     finally:
@@ -204,7 +205,7 @@ def test_circular_prevention_different_source():
             source="handler_b",  # 不同于 handler_a
             data={},
         )
-        notified = bus.publish(event)
+        bus.publish(event)
         assert "a" in called, "不同名回调应正常触发"
     finally:
         bus.unsubscribe(EventType.STEP_COMPLETED, handler_a)
@@ -243,15 +244,9 @@ def test_agent_repeated_run_no_unique_constraint_error():
     import core.db as db_module
 
     # 创建临时 DB 隔离
-    f = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-    tmp_db = f.name
-    f.close()
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+        tmp_db = f.name
 
-    orig = {
-        "instance": db_module.DBManager._instance,
-        "connection": db_module.DBManager._connection,
-        "global": db_module._db_manager,
-    }
     db_module.DBManager._instance = None
     db_module.DBManager._connection = None
     db_module._db_manager = None
@@ -282,7 +277,5 @@ def test_agent_repeated_run_no_unique_constraint_error():
         db_module._db_manager = None
         import os as _os
 
-        try:
-            _os.unlink(tmp_db)
-        except PermissionError:
-            pass  # Windows 文件锁延迟释放，忽略
+        with contextlib.suppress(PermissionError):
+            _os.unlink(tmp_db)  # Windows 文件锁延迟释放，忽略

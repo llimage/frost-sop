@@ -1,0 +1,631 @@
+{
+  "timestamp": "2026-07-02T05:39:19.371969+00:00",
+  "aggregate": {
+    "total_modules": 14,
+    "total_mutations": 954,
+    "total_killed": 706,
+    "total_survived": 248,
+    "kill_rate": 74.0,
+    "duration_ms": 310043.97,
+    "pass_threshold_80pct": false
+  },
+  "modules": [
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\core\\db.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_v2_patch_p1.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_store.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_link_chain_integration.py"
+      ],
+      "total_mutations": 58,
+      "total_killed": 53,
+      "total_survived": 5,
+      "kill_rate": 91.38,
+      "batch_results": [
+        {
+          "type": "boolean",
+          "total": 35,
+          "killed": 35,
+          "survived": 0,
+          "duration_ms": 4044.1737174987793
+        },
+        {
+          "type": "comparison",
+          "total": 15,
+          "killed": 15,
+          "survived": 0,
+          "duration_ms": 4432.364702224731
+        },
+        {
+          "type": "arithmetic",
+          "total": 3,
+          "killed": 3,
+          "survived": 0,
+          "duration_ms": 5465.190172195435
+        },
+        {
+          "type": "return_const",
+          "total": 2,
+          "killed": 0,
+          "survived": 2,
+          "duration_ms": 5366.683006286621
+        },
+        {
+          "type": "numeric",
+          "total": 3,
+          "killed": 0,
+          "survived": 3,
+          "duration_ms": 5565.392732620239
+        }
+      ],
+      "duration_ms": 29348.56128692627,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\core\\store.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_store.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_f14_persistence_verify.py"
+      ],
+      "total_mutations": 48,
+      "total_killed": 46,
+      "total_survived": 2,
+      "kill_rate": 95.83,
+      "batch_results": [
+        {
+          "type": "boolean",
+          "total": 30,
+          "killed": 30,
+          "survived": 0,
+          "duration_ms": 3460.023880004883
+        },
+        {
+          "type": "comparison",
+          "total": 16,
+          "killed": 16,
+          "survived": 0,
+          "duration_ms": 3533.789873123169
+        },
+        {
+          "type": "return_const",
+          "total": 2,
+          "killed": 0,
+          "survived": 2,
+          "duration_ms": 3717.491626739502
+        }
+      ],
+      "duration_ms": 14228.052854537964,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\core\\armory.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_armory.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_armory_coverage.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_link_chain_integration.py"
+      ],
+      "total_mutations": 130,
+      "total_killed": 123,
+      "total_survived": 7,
+      "kill_rate": 94.62,
+      "batch_results": [
+        {
+          "type": "arithmetic",
+          "total": 20,
+          "killed": 20,
+          "survived": 0,
+          "duration_ms": 5295.761823654175
+        },
+        {
+          "type": "boolean",
+          "total": 52,
+          "killed": 52,
+          "survived": 0,
+          "duration_ms": 5720.219373703003
+        },
+        {
+          "type": "comparison",
+          "total": 33,
+          "killed": 33,
+          "survived": 0,
+          "duration_ms": 4329.547166824341
+        },
+        {
+          "type": "return_const",
+          "total": 7,
+          "killed": 0,
+          "survived": 7,
+          "duration_ms": 4986.9396686553955
+        },
+        {
+          "type": "numeric",
+          "total": 18,
+          "killed": 18,
+          "survived": 0,
+          "duration_ms": 5156.985521316528
+        }
+      ],
+      "duration_ms": 30983.355283737183,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\core\\armory_lifecycle.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_armory.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_armory_coverage.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_link_chain_integration.py"
+      ],
+      "total_mutations": 101,
+      "total_killed": 0,
+      "total_survived": 101,
+      "kill_rate": 0.0,
+      "batch_results": [
+        {
+          "type": "boolean",
+          "total": 59,
+          "killed": 0,
+          "survived": 59,
+          "duration_ms": 5566.510438919067
+        },
+        {
+          "type": "comparison",
+          "total": 26,
+          "killed": 0,
+          "survived": 26,
+          "duration_ms": 4496.476411819458
+        },
+        {
+          "type": "numeric",
+          "total": 5,
+          "killed": 0,
+          "survived": 5,
+          "duration_ms": 4730.124235153198
+        },
+        {
+          "type": "return_const",
+          "total": 10,
+          "killed": 0,
+          "survived": 10,
+          "duration_ms": 4436.067819595337
+        },
+        {
+          "type": "arithmetic",
+          "total": 1,
+          "killed": 0,
+          "survived": 1,
+          "duration_ms": 4676.016569137573
+        }
+      ],
+      "duration_ms": 29137.7534866333,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\core\\sop.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_sop.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_f6_all.py"
+      ],
+      "total_mutations": 10,
+      "total_killed": 10,
+      "total_survived": 0,
+      "kill_rate": 100.0,
+      "batch_results": [
+        {
+          "type": "comparison",
+          "total": 7,
+          "killed": 7,
+          "survived": 0,
+          "duration_ms": 3990.1344776153564
+        },
+        {
+          "type": "boolean",
+          "total": 3,
+          "killed": 3,
+          "survived": 0,
+          "duration_ms": 4443.943738937378
+        }
+      ],
+      "duration_ms": 12425.975561141968,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\core\\event_bus.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_v2_event_bus.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_v3_async_event_bus.py"
+      ],
+      "total_mutations": 96,
+      "total_killed": 83,
+      "total_survived": 13,
+      "kill_rate": 86.46,
+      "batch_results": [
+        {
+          "type": "numeric",
+          "total": 8,
+          "killed": 0,
+          "survived": 8,
+          "duration_ms": 4263.062953948975
+        },
+        {
+          "type": "boolean",
+          "total": 50,
+          "killed": 50,
+          "survived": 0,
+          "duration_ms": 3321.1350440979004
+        },
+        {
+          "type": "comparison",
+          "total": 30,
+          "killed": 30,
+          "survived": 0,
+          "duration_ms": 3618.999481201172
+        },
+        {
+          "type": "return_const",
+          "total": 5,
+          "killed": 0,
+          "survived": 5,
+          "duration_ms": 4358.565092086792
+        },
+        {
+          "type": "arithmetic",
+          "total": 3,
+          "killed": 3,
+          "survived": 0,
+          "duration_ms": 3954.2417526245117
+        }
+      ],
+      "duration_ms": 23602.940320968628,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\core\\json_safety.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_v2_patch_p1.py"
+      ],
+      "total_mutations": 18,
+      "total_killed": 0,
+      "total_survived": 18,
+      "kill_rate": 0.0,
+      "batch_results": [
+        {
+          "type": "boolean",
+          "total": 10,
+          "killed": 0,
+          "survived": 10,
+          "duration_ms": 3402.110815048218
+        },
+        {
+          "type": "comparison",
+          "total": 5,
+          "killed": 0,
+          "survived": 5,
+          "duration_ms": 3531.259536743164
+        },
+        {
+          "type": "return_const",
+          "total": 1,
+          "killed": 0,
+          "survived": 1,
+          "duration_ms": 3458.3613872528076
+        },
+        {
+          "type": "arithmetic",
+          "total": 2,
+          "killed": 0,
+          "survived": 2,
+          "duration_ms": 3495.7282543182373
+        }
+      ],
+      "duration_ms": 17529.776573181152,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\core\\path_safety.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_core_path_safety.py"
+      ],
+      "total_mutations": 8,
+      "total_killed": 8,
+      "total_survived": 0,
+      "kill_rate": 100.0,
+      "batch_results": [
+        {
+          "type": "boolean",
+          "total": 6,
+          "killed": 6,
+          "survived": 0,
+          "duration_ms": 3342.8897857666016
+        },
+        {
+          "type": "comparison",
+          "total": 1,
+          "killed": 1,
+          "survived": 0,
+          "duration_ms": 3220.6246852874756
+        },
+        {
+          "type": "arithmetic",
+          "total": 1,
+          "killed": 1,
+          "survived": 0,
+          "duration_ms": 3288.763999938965
+        }
+      ],
+      "duration_ms": 12873.48484992981,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\core\\skill_extractor.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_f10_skill_extractor.py"
+      ],
+      "total_mutations": 57,
+      "total_killed": 27,
+      "total_survived": 30,
+      "kill_rate": 47.37,
+      "batch_results": [
+        {
+          "type": "numeric",
+          "total": 9,
+          "killed": 0,
+          "survived": 9,
+          "duration_ms": 4199.495315551758
+        },
+        {
+          "type": "boolean",
+          "total": 27,
+          "killed": 27,
+          "survived": 0,
+          "duration_ms": 3345.5560207366943
+        },
+        {
+          "type": "return_const",
+          "total": 8,
+          "killed": 0,
+          "survived": 8,
+          "duration_ms": 4525.387525558472
+        },
+        {
+          "type": "arithmetic",
+          "total": 3,
+          "killed": 0,
+          "survived": 3,
+          "duration_ms": 4900.115251541138
+        },
+        {
+          "type": "comparison",
+          "total": 10,
+          "killed": 0,
+          "survived": 10,
+          "duration_ms": 4430.279731750488
+        }
+      ],
+      "duration_ms": 26432.299852371216,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\core\\graph_executor.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_v4_p0_a_acceptance.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_f6_all.py"
+      ],
+      "total_mutations": 61,
+      "total_killed": 55,
+      "total_survived": 6,
+      "kill_rate": 90.16,
+      "batch_results": [
+        {
+          "type": "boolean",
+          "total": 35,
+          "killed": 35,
+          "survived": 0,
+          "duration_ms": 3851.9694805145264
+        },
+        {
+          "type": "comparison",
+          "total": 20,
+          "killed": 20,
+          "survived": 0,
+          "duration_ms": 3901.188611984253
+        },
+        {
+          "type": "return_const",
+          "total": 6,
+          "killed": 0,
+          "survived": 6,
+          "duration_ms": 3828.7062644958496
+        }
+      ],
+      "duration_ms": 15395.963430404663,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\skills\\orchestration.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_orchestration_coverage.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_v3_execute_stage_subscribe.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_f6_all.py"
+      ],
+      "total_mutations": 95,
+      "total_killed": 85,
+      "total_survived": 10,
+      "kill_rate": 89.47,
+      "batch_results": [
+        {
+          "type": "boolean",
+          "total": 62,
+          "killed": 62,
+          "survived": 0,
+          "duration_ms": 4859.51042175293
+        },
+        {
+          "type": "comparison",
+          "total": 23,
+          "killed": 23,
+          "survived": 0,
+          "duration_ms": 4601.905107498169
+        },
+        {
+          "type": "arithmetic",
+          "total": 2,
+          "killed": 0,
+          "survived": 2,
+          "duration_ms": 5167.079925537109
+        },
+        {
+          "type": "return_const",
+          "total": 2,
+          "killed": 0,
+          "survived": 2,
+          "duration_ms": 5356.691122055054
+        },
+        {
+          "type": "numeric",
+          "total": 6,
+          "killed": 0,
+          "survived": 6,
+          "duration_ms": 4907.072067260742
+        }
+      ],
+      "duration_ms": 30038.794994354248,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\skills\\assemble.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_assemble.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_assemble_coverage.py"
+      ],
+      "total_mutations": 45,
+      "total_killed": 45,
+      "total_survived": 0,
+      "kill_rate": 100.0,
+      "batch_results": [
+        {
+          "type": "boolean",
+          "total": 20,
+          "killed": 20,
+          "survived": 0,
+          "duration_ms": 4039.121389389038
+        },
+        {
+          "type": "numeric",
+          "total": 8,
+          "killed": 8,
+          "survived": 0,
+          "duration_ms": 4119.72451210022
+        },
+        {
+          "type": "arithmetic",
+          "total": 4,
+          "killed": 4,
+          "survived": 0,
+          "duration_ms": 4134.114027023315
+        },
+        {
+          "type": "comparison",
+          "total": 13,
+          "killed": 13,
+          "survived": 0,
+          "duration_ms": 4148.179769515991
+        }
+      ],
+      "duration_ms": 20426.76854133606,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\skills\\llm.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_f6_mock_llm.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_link_chain_integration.py",
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_importer_coverage.py"
+      ],
+      "total_mutations": 167,
+      "total_killed": 120,
+      "total_survived": 47,
+      "kill_rate": 71.86,
+      "batch_results": [
+        {
+          "type": "boolean",
+          "total": 46,
+          "killed": 46,
+          "survived": 0,
+          "duration_ms": 4814.946889877319
+        },
+        {
+          "type": "comparison",
+          "total": 65,
+          "killed": 65,
+          "survived": 0,
+          "duration_ms": 3542.3896312713623
+        },
+        {
+          "type": "return_const",
+          "total": 19,
+          "killed": 0,
+          "survived": 19,
+          "duration_ms": 4774.061918258667
+        },
+        {
+          "type": "numeric",
+          "total": 28,
+          "killed": 0,
+          "survived": 28,
+          "duration_ms": 4708.649635314941
+        },
+        {
+          "type": "arithmetic",
+          "total": 9,
+          "killed": 9,
+          "survived": 0,
+          "duration_ms": 4517.6451206207275
+        }
+      ],
+      "duration_ms": 27116.591215133667,
+      "error": null
+    },
+    {
+      "module": "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\skills\\hunt.py",
+      "test_files": [
+        "D:\\my_ai\\Solo-Ops-Platform\\workspace\\frost-sop\\tests\\test_hunt_coverage.py"
+      ],
+      "total_mutations": 60,
+      "total_killed": 51,
+      "total_survived": 9,
+      "kill_rate": 85.0,
+      "batch_results": [
+        {
+          "type": "boolean",
+          "total": 38,
+          "killed": 38,
+          "survived": 0,
+          "duration_ms": 3886.392593383789
+        },
+        {
+          "type": "comparison",
+          "total": 11,
+          "killed": 11,
+          "survived": 0,
+          "duration_ms": 4380.531549453735
+        },
+        {
+          "type": "numeric",
+          "total": 9,
+          "killed": 0,
+          "survived": 9,
+          "duration_ms": 3978.952407836914
+        },
+        {
+          "type": "arithmetic",
+          "total": 2,
+          "killed": 2,
+          "survived": 0,
+          "duration_ms": 3956.389904022217
+        }
+      ],
+      "duration_ms": 20499.449491500854,
+      "error": null
+    }
+  ]
+}
