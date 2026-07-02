@@ -1,0 +1,96 @@
+# INIT-001: FROST-SOP 初始化问卷执行
+# V6.0 初始化流水线
+sop_id: "INIT-001"
+name: "FROST-SOP 初始化问卷执行"
+version: "1.0"
+category: "initialization"
+description: "种子用户首次初始化，从问卷采集到狩猎任务触发"
+trigger:
+  schedule: "none"  # 手动触发，非定时
+  manual: true
+
+stages:
+  - phase_id: "i1_questionnaire"
+    name: "问卷采集"
+    agent: "init_questionnaire"
+    skills:
+      - "run_questionnaire"
+    requirement: "通过8个问题识别用户身份、目标、资产、约束、内容策略、增长飞轮"
+    inputs: []
+    outputs: ["_vision_answer", "_init_results_json"]
+    output_type: "document"
+    decision_options: ["确认", "重新填写"]
+
+  - phase_id: "i2_gap_analysis"
+    name: "缺口分析"
+    agent: "gap_analyzer"
+    skills:
+      - "analyze_gaps"
+    requirement: "基于规则库识别能力缺口，生成 GapItem 列表"
+    inputs: ["_vision_answer"]
+    outputs: ["_gap_list"]
+    output_type: "document"
+
+  - phase_id: "i3_task_generation"
+    name: "任务生成"
+    agent: "task_generator"
+    skills:
+      - "generate_init_tasks"
+    requirement: "将缺口转化为可执行的狩猎任务（INIT-HUNT-xxx）"
+    inputs: ["_gap_list"]
+    outputs: ["_init_task_list"]
+    output_type: "document"
+
+  - phase_id: "i4_database_persist"
+    name: "数据库持久化"
+    agent: "task_persistor"
+    skills:
+      - "save_to_database"
+    requirement: "将任务写入 tasks 表（project_id=INIT），不新建表"
+    inputs: ["_init_task_list"]
+    outputs: ["_persist_result"]
+    output_type: "document"
+
+  - phase_id: "i5_sop_generation"
+    name: "SOP文档生成"
+    agent: "sop_generator"
+    skills:
+      - "generate_init_sop"
+    requirement: "生成 init_task_sop.md 供人工参考"
+    inputs: ["_init_task_list"]
+    outputs: ["_sop_document_path"]
+    output_type: "document"
+
+  - phase_id: "i6_first_hunt_trigger"
+    name: "首个狩猎触发"
+    agent: "hunt_trigger"
+    skills:
+      - "trigger_first_hunt"
+    requirement: "找到第一个 P0 任务，发布 HUNT_COMPLETED 事件，可选调度到 FrostScheduler"
+    inputs: ["_init_task_list"]
+    outputs: ["_hunt_trigger_info"]
+    output_type: "document"
+    requires_confirmation: true
+
+  - phase_id: "i7_human_confirm"
+    name: "人工确认"
+    agent: "human"
+    skills: []
+    requirement: "检查生成的任务是否符合预期，如有遗漏手动增补，确认首个狩猎目标"
+    inputs: ["_init_task_list", "_sop_document_path"]
+    outputs: ["_human_confirmation"]
+    output_type: "decision"
+    decision_options: ["确认并开始狩猎", "修改任务", "暂停"]
+
+required_stages:
+  - "i1_questionnaire"
+  - "i2_gap_analysis"
+  - "i3_task_generation"
+  - "i4_database_persist"
+
+forbidden_skills:
+  - "direct_db_write"
+
+content_constraints:
+  max_word_count: 500
+  min_word_count: 50
