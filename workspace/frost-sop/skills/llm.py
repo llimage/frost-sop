@@ -60,18 +60,36 @@ _LLM_CACHE_MISSES = 0
 
 
 def _cache_key(context: dict) -> str | None:
-    """生成缓存key。测试模式或bypass标记时不缓存。"""
+    """
+    生成缓存 key。测试模式或 bypass 标记时不缓存。
+
+    V2.0: 增加日期、Agent ID、任务 ID，避免：
+    - 时间敏感查询（如"今天"）返回过时结果
+    - 不同 Agent/任务共享缓存导致信息泄露
+    """
     if context.get("_llm_cache_bypass", False):
         return None
     if os.getenv("FROST_TESTING") == "1":
         return None
+
+    from datetime import date
+
+    today = date.today().isoformat()
+
     key_parts = [
+        # 用户输入（核心）
         context.get("_prompt", ""),
         context.get("_system_prompt", ""),
+        # LLM 配置
         str(context.get("_temperature", "")),
         context.get("_model", "deepseek-chat"),
         str(context.get("_max_tokens", "")),
         context.get("_llm_profile", ""),
+        # 上下文隔离（防止不同 Agent/任务共享缓存）
+        context.get("_agent_id", "default"),
+        context.get("_task_id", "default"),
+        # 时间戳（日期级别，避免"今天"查询返回昨天结果）
+        today,
     ]
     return hashlib.sha256("|".join(key_parts).encode("utf-8")).hexdigest()
 
