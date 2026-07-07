@@ -18,6 +18,9 @@ from core.db import get_db
 # ================================================================
 # 项目配置常量（李明远的三个项目）
 # ================================================================
+# TODO: DEFAULT_PROJECTS 中的 revenue_monthly 为硬编码演示数据，
+# 需从数据库或财务系统读取真实数据。
+# Issue 参考: https://github.com/llimage/frost-sop/issues/123
 DEFAULT_PROJECTS = [
     {
         "id": "saas",
@@ -29,6 +32,7 @@ DEFAULT_PROJECTS = [
         "sop_template": "DEV-001",
         "description": "效率工具 SaaS 产品迭代与维护",
         "color": "#FB6B4B",  # 珊瑚橙
+        # HARDCODED: revenue_monthly 为演示值，非真实财务数据
         "revenue_monthly": 34200,
     },
     {
@@ -41,6 +45,7 @@ DEFAULT_PROJECTS = [
         "sop_template": "MT-001",
         "description": "技术付费专栏内容创作与发布",
         "color": "#2D6A4F",  # 墨绿
+        # HARDCODED: revenue_monthly 为演示值，非真实财务数据
         "revenue_monthly": 6000,
     },
     {
@@ -53,6 +58,7 @@ DEFAULT_PROJECTS = [
         "sop_template": "OPS-001",
         "description": "企业咨询服务交付与客户管理",
         "color": "#2563EB",  # 蓝
+        # HARDCODED: revenue_monthly 为演示值，非真实财务数据
         "revenue_monthly": 15000,
     },
 ]
@@ -204,7 +210,8 @@ def get_recommended_task(mode: str = "dev") -> dict[str, Any]:
 
 def _build_task_recommendation(proj: dict, tasks: list[dict], energy_level: int, mode: str) -> dict:
     """构建任务推荐"""
-    # 模拟任务数据
+    # TODO: task_scenarios 为硬编码模拟数据，后续应从任务数据库动态读取
+    # 当前实现仅用于演示和测试
     task_scenarios = {
         "dev": {
             "task_name": "实现用户权限管理的 RBAC 模块",
