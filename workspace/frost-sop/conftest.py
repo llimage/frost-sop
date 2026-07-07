@@ -31,7 +31,6 @@ def pytest_collection_modifyitems(config, items):
     """自动给没有标记的测试添加 unit 标记。"""
     for item in items:
         if not any(
-            marker.name in ("unit", "smoke", "integration")
-            for marker in item.iter_markers()
+            marker.name in ("unit", "smoke", "integration") for marker in item.iter_markers()
         ):
             item.add_marker(pytest.mark.unit)

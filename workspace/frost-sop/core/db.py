@@ -781,9 +781,7 @@ class DBManager:
                             break
 
                     if not exempt:
-                        raise ValueError(
-                            f"Security: Dangerous keyword '{keyword}' in WHERE clause"
-                        )
+                        raise ValueError(f"Security: Dangerous keyword '{keyword}' in WHERE clause")
 
         conn = self.get_connection()
         cursor = conn.cursor()

@@ -75,7 +75,9 @@ class TestSystemAlive:
         resp1 = result1.get("_llm_response", "").strip()
         resp2 = result2.get("_llm_response", "").strip()
         assert resp1 and resp2, "响应不应为空"
-        assert resp1 == resp2, f"execute profile temperature 未生效（两次结果不同: '{resp1}' vs '{resp2}'）"
+        assert resp1 == resp2, (
+            f"execute profile temperature 未生效（两次结果不同: '{resp1}' vs '{resp2}'）"
+        )
 
     def test_database_read_write(self):
         """数据库能读写。"""
@@ -121,6 +123,7 @@ class TestSystemAlive:
     def test_sop_load_and_validate(self):
         """SOP 能加载并通过基础验证。"""
         from pathlib import Path
+
         from core.sop import SOP
 
         sop_path = Path(__file__).parent.parent.parent / "sops" / "templates" / "OPS-007.yaml"

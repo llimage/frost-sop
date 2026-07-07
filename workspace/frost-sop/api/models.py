@@ -20,7 +20,10 @@ class TaskCreateRequest(BaseModel):
     description: str = Field(..., min_length=1, description="任务描述")
     sop_id: str = Field(default="DEV-001", description="SOP模板ID")
     project_id: str = Field(default="default", description="项目ID")
-    use_real_llm: bool = Field(default=False, description="是否使用真实LLM")
+    use_real_llm: bool = Field(
+        default=True,
+        description="是否使用真实LLM（默认True，测试时可设为False）"
+    )
     web_content: str = Field(default=None, description="预抓取的网页内容（由外部Agent提供）")
 
 

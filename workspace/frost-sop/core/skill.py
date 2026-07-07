@@ -7,7 +7,6 @@ V2.0: 增加错误处理、输入验证、输出验证、超时控制
 """
 
 import logging
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -76,9 +75,7 @@ class Skill:
             import signal
 
             def _timeout_handler(signum, frame):
-                raise TimeoutError(
-                    f"Skill {self.name} 执行超过 {self._timeout_seconds} 秒"
-                )
+                raise TimeoutError(f"Skill {self.name} 执行超过 {self._timeout_seconds} 秒")
 
             old_handler = None
             try:
@@ -117,9 +114,7 @@ class Skill:
                 self.name,
                 type(result).__name__,
             )
-            context["_skill_error"] = (
-                f"返回值类型错误: 期望 dict, 实际 {type(result).__name__}"
-            )
+            context["_skill_error"] = f"返回值类型错误: 期望 dict, 实际 {type(result).__name__}"
             context["_skill_error_name"] = self.name
             context["_skill_failed"] = True
             return context

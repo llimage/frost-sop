@@ -68,8 +68,12 @@ def _call_llm_for_briefing(prompt: str, max_tokens: int = 300) -> str:
         # 尝试导入LLM调用函数
         from skills.llm import call_llm
 
-        response = call_llm(prompt=prompt, max_tokens=max_tokens, temperature=0.3)
-        return response
+        response = call_llm({
+            "_prompt": prompt,
+            "_max_tokens": max_tokens,
+            "_llm_profile": "review",
+        })
+        return response.get("_llm_response", "")
     except Exception as e:
         logger.error(f"[Analytics] LLM call failed: {e}")
         return f"[LLM调用失败: {e}]"

@@ -209,8 +209,8 @@ def _parse_intent_with_llm(user_input: str) -> dict:
     response = _call_llm_raw(
         system_prompt=_INTENT_SYSTEM_PROMPT,
         prompt=user_input,
-        temperature=0.1,
         max_tokens=256,
+        _llm_profile="execute",
     )
 
     try:

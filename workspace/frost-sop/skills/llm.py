@@ -609,7 +609,7 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
 
 
 def _call_llm_raw(
-    system_prompt: str = "", prompt: str = "", temperature: float = 0.7, max_tokens: int = 2048
+    system_prompt: str = "", prompt: str = "", temperature: float | None = None, max_tokens: int = 2048, _llm_profile: str = "",
 ) -> str:
     """
     简易 LLM 调用接口：直接传入参数，返回原始文本。
@@ -620,9 +620,12 @@ def _call_llm_raw(
     ctx = {
         "_system_prompt": system_prompt,
         "_prompt": prompt,
-        "_temperature": temperature,
         "_max_tokens": max_tokens,
     }
+    if temperature is not None:
+        ctx["_temperature"] = temperature
+    if _llm_profile:
+        ctx["_llm_profile"] = _llm_profile
     ctx = call_llm(ctx)
     return str(ctx.get("_llm_response", ""))
 
