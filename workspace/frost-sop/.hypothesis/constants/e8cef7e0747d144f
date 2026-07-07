@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\graph_executor.py
-# hypothesis_version: 6.145.0
-
-['*', '..', 'api', 'binding_type', 'bindings', 'conditions', 'config', 'continue', 'decision', 'decisions', 'default', 'dependencies', 'edges', 'equals', 'error', 'executed', 'executed_nodes', 'execution_mode', 'execution_time', 'exists', 'field', 'id', 'name', 'native', 'no matching function', 'nodes', 'not_equals', 'not_exists', 'note', 'operator', 'platform', 'sdk', 'skill', 'skill_id', 'sop_name', 'source', 'status', 'target', 'total_nodes', 'type', 'unavailable', 'unknown', 'utf-8', 'value', '默认绑定（原生执行）']

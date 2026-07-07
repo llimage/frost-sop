@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\store.py
-# hypothesis_version: 6.145.0
-
-['%Y%m%d_%H%M%S', 'assets/', 'config', 'config:%', 'content', 'description', 'frost.store', 'functional', 'id', 'json', 'key', 'key LIKE ?', 'kv_store', 'name', 'pending', 'result_summary', 'skill_gene:', 'skill_type', 'skills', 'status', 'task:', 'tasks', 'title', 'type', 'value', 'value_type']

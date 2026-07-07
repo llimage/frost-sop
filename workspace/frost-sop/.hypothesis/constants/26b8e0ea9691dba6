@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\agents\parent.py
-# hypothesis_version: 6.145.0
-
-['[V3.0] SOP 加载失败: %s', '_sop_stages', '_sop_to_internalize', 'analyze_trends', 'archive_lesson', 'archive_sop', 'assemble_agent', 'call_llm', 'decomposition', 'emit', 'error', 'execute_stage', 'finalize_task', 'forbidden_skills', 'generate_suggestions', 'import_agency_agents', 'internalize_sop', 'load_task_history', 'merge_from', 'name', 'present_for_approval', 'query_lessons', 'required_stages', 'search_skill', 'search_sop', 'sop_id', 'spawn', 'stage_name', 'stage_order', 'stages', 'task_id', 'total_stages', 'unknown', 'validate_sop', 'version']

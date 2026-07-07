@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\relation_meta.py
-# hypothesis_version: 6.145.0
-
-['.', 'affected_count', 'affected_skills', 'affected_sops', 'children', 'circular', 'critical', 'current_version', 'direct_dependents', 'error', 'high', 'id', 'inactive', 'is_breaking_change', 'low', 'medium', 'missing', 'name', 'new_version', 'none', 'ready', 'recommendation', 'risk_level', 'total_deps', 'total_impact', 'type', 'weapon_id', '中等影响：建议在测试环境验证后再变更', '低影响：可以直接变更', '武器不存在', '高度影响：建议先验证所有依赖方兼容性']

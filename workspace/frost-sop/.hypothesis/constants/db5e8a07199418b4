@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\skills\succession.py
-# hypothesis_version: 6.145.0
-
-[0.3, '_asset_store', '_constitution_store', '_new_ancestor', '_old_ancestor', '_reason', '_succession_proposal', '_succession_result', 'compliance', 'event', 'execute_succession', 'fail', 'failed', 'failure_rate', 'list_keys', 'new_ancestor', 'old_ancestor', 'output', 'propose_succession', 'reason', 'recommend', 'stage_results', 'stages', 'status', 'success', 'succession', 'suggested_successor', 'task:', 'timestamp', 'total_tasks_analyzed', '合规', '无资产Store', '缺少必要参数', '需要创始人从长期表现优秀的父辈中指定']

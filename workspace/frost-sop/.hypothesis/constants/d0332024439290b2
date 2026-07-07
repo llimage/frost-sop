@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\memory.py
-# hypothesis_version: 6.145.0
-
-[1.0, '\n[1] 添加记忆...', '\n[2] 搜索记忆...', '\n[3] 获取所有记忆...', '\n[4] 删除记忆...', '\n✅ MemoryStore 测试完成', '=', 'FROST-SOP', 'Python 开发', '__main__', 'agent_id', 'bugfix', 'data/chromadb', 'documents', 'id', 'ids', 'metadata', 'metadatas', 'project', 'score', 'task', 'test_agent', 'text', 'type', '修复了登录页面的 Bug', '完成了一个 Python 项目的开发']

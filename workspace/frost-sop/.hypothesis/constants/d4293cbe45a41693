@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\api\models.py
-# hypothesis_version: 6.145.0
-
-[0.0, '1.0', 'DEV-001', 'Human Agent ID', 'ISO 8601 datetime', 'SOP模板ID', 'SOP模板ID（可选，自动从任务关联）', 'active', 'default', 'idle', 'none', 'pending', 'web_user', '任务ID', '任务描述', '决策ID', '决策理由', '决策结果：确认/驳回/修改', '是否使用真实LLM', '项目ID']

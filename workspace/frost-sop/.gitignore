@@ -1,16 +1,22 @@
 # 环境变量（包含 API Key，禁止提交）
 .env
+.env.local
 
 # Python 缓存
 __pycache__/
 *.pyc
 
-# 测试覆盖率
+# 测试覆盖率 & 缓存
 .coverage
 .coverage.*
 htmlcov/
 .pytest_cache/
 .benchmarks/
+.hypothesis/
+
+# 变异测试（本地配置+数据库）
+cosmic_ray_config.toml
+cosmic_ray_session.sqlite
 
 # 数据目录
 data/
@@ -54,6 +60,13 @@ sop_ui/node_modules/
 # 审计报告/包（大文件，不进入版本控制）
 audit_package*/
 *.zip
+audit_results/detect_secrets_baseline.json
+
+# 配置快照
+assets/config_*.json
+
+# 加密密钥存储
+.secrets.enc
 
 # 交接文档（临时文件，已归档到 docs/）
 HANDOFF_SUMMARY_*.md

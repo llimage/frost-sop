@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\skills\tools.py
-# hypothesis_version: 6.145.0
-
-[0.7, '_agent_id', '_file_content', '_file_path', '_file_result', '_generated_content', '_llm_response', '_output_path', '_output_type', '_prompt', '_reason', '_system_prompt', '_task_description', '_task_id', '_temperature', 'call_llm_for_output', 'code', 'copywriting', 'document', 'path', 'reason', 'success', 'utf-8', 'w', 'write_file', '缺少文件路径']

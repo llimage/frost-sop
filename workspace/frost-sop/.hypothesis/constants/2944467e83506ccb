@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\skills\assemble.py
-# hypothesis_version: 6.145.0
-
-[0.3, 100, '_agent_config', '_agent_requirement', '_assembled_agent', '_asset_store', '_generated_content', '_llm_response', '_output_path', '_output_type', '_parent_agent', '_prompt', '_reason', '_requirement', '_result', '_system_prompt', '_task_description', '_task_id', '_temperature', 'agent_name', 'assemble_agent', 'assembled_agent', 'category', 'description', 'document', 'functional', 'generation', 'generic_agent', 'llm_synthesized', 'name', 'output_type', 'required_skills', 'selected_templates', 'skill_count', 'skill_gene:', 'skill_sources', 'skills', 'sop_steps', 'system_prompt', 'task_id', 'type', 'unknown', '{', '}', '使用LLM合成Skill', '使用基因库Skill', '组装失败：缺少需求描述']

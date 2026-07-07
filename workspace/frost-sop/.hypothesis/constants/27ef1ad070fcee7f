@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\panel.py
-# hypothesis_version: 6.145.0
-
-[1.0, '#2c3e50', '#333333', '#3498db', '#ffffff', '1.0', '100%', '14px', '16px', '4px', 'alert', 'alert_banner', 'auto', 'breadcrumb', 'briefing', 'chart', 'chat', 'cockpit', 'code_editor', 'code_preview', 'collapsible_card', 'config', 'confirm_dialog', 'decision', 'decision_buttons', 'default', 'divider', 'file_upload', 'graph', 'grid', 'health_gauge', 'image', 'lineage', 'markdown', 'multi_select', 'overlay', 'pdf', 'progress_bar', 'rating', 'select', 'single', 'split', 'status_bar', 'system', 'table', 'tabs', 'task', 'task_list', 'terminal', 'text_display', 'text_input', 'textarea', 'timeline']

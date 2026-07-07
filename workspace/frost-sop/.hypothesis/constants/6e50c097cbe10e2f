@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\lifecycle_meta.py
-# hypothesis_version: 6.145.0
-
-[20.0, 1000, 'active', 'allowed', 'allowed_transitions', 'archived', 'batch_operation', 'batch_transition', 'created_at', 'current_state', 'deprecated', 'details', 'discovered', 'error', 'event_count', 'event_id', 'event_type', 'failed', 'from', 'from_state', 'health_score', 'health_updated', 'is_preset', 'is_terminal', 'metadata', 'operation', 'operator', 'reason', 'registered', 'retired', 'skipped', 'state_change_count', 'state_transition', 'status', 'succeeded', 'success_rate', 'system', 'timeline', 'timestamp', 'to', 'to_state', 'total', 'trialed', 'unregistered', 'usage_count', 'usage_recorded', 'validated', 'version_changed', 'warnings', 'weapon_id', 'weapon_name', '废弃武器复活，建议先验证健康评分', '归档武器健康评分达标，批量激活', '武器不存在', '状态相同，无需转换', '退役是不可逆操作，武器将永久不可用', '预置武器有免死金牌，不可自动或手动退役']

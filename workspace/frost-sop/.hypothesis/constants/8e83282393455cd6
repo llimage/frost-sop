@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\skills\orchestration_v3.py
-# hypothesis_version: 6.145.0
-
-['_asset_store', '_current_stage', '_parent_agent', '_stage_results', '_task_id', 'agent', 'call_llm', 'completed', 'name', 'requirement', 'skills', 'stage_name', 'stage_order', 'stages_completed', 'status', 'task_id', 'total', 'total_stages', 'unknown', '执行者', '未知阶段']

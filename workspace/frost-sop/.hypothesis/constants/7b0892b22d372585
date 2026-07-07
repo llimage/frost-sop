@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\decision_manager.py
-# hypothesis_version: 6.145.0
-
-['  用户备注: %s', '  用户选择: %s', '  选项: %s', '  问题: %s', '%Y-%m-%d %H:%M:%S', 'options', 'options_json', 'reject', 'threading', 'unknown', '决策点不存在: %s', '决策点已恢复: %s', '决策点已暂停: %s', '由决策管理器自动创建']

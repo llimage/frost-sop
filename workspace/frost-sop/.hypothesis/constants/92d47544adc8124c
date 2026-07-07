@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\log_config.py
-# hypothesis_version: 6.145.0
-
-['%Y%m%d', '%Y-%m-%d %H:%M:%S', 'Bearer ***', 'Bearer\\s+\\S+', 'DEBUG', 'FROST_LOG_LEVEL', 'INFO', '\\1=***', 'error.log', 'frost', 'frost.log', 'logs', 'midnight', 'sk-***', 'sk-[a-zA-Z0-9]{20,}', 'utf-8']

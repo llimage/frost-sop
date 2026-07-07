@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\core\secrets.py
-# hypothesis_version: 6.145.0
-
-[b'\x8a\x7f>\x1c\xb9M/j\xc3U~\x1b\xa8\x9fM\x02', 600000, '=', 'COMPUTERNAME', 'DEEPSEEK_API_KEY', 'PERPLEXITY_API_KEY', 'ascii', 'data/.secrets.enc', 'utf-8', 'w', '|', '~', '✅ API 密钥设置完成！', '需要以下 API 密钥（至少一个）：']

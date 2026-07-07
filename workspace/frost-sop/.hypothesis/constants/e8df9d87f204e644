@@ -1,4 +1,0 @@
-# file: D:\my_ai\Solo-Ops-Platform\workspace\frost-sop\skills\knowledge.py
-# hypothesis_version: 6.145.0
-
-['_archive_result', '_asset_store', '_error_type', '_lesson', '_lessons', '_reason', '_sop_source', '_sop_to_archive', '_task_id', 'active', 'archive_lesson', 'archive_sop', 'archived_at', 'content', 'description', 'error_type', 'lesson:', 'lesson_key', 'message', 'name', 'query_lessons', 'reason', 'recorded_at', 'solution', 'sop_id', 'sop_name', 'source', 'status', 'success', 'task_id', 'times_encountered', 'unknown', 'usage_count', '教训已归档到错题本', '未命名SOP', '缺少SOP数据或资产Store', '缺少教训数据或资产Store']
