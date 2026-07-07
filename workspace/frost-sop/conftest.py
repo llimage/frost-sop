@@ -15,7 +15,13 @@ import pytest
 
 
 def pytest_configure(config):
-    """根据测试标记自动设置测试模式。"""
+    """注册自定义标记和根据测试标记自动设置测试模式。"""
+    # 注册自定义标记
+    config.addinivalue_line("markers", "unit: 单元测试（mock 模式，快速）")
+    config.addinivalue_line("markers", "smoke: 冒烟测试（真实 LLM，3 分钟）")
+    config.addinivalue_line("markers", "integration: 集成测试（真实 LLM，手动触发）")
+
+    # 根据测试标记设置测试模式
     marker_expr = config.getoption("-m", default="")
     markers_str = marker_expr if isinstance(marker_expr, str) else ""
 

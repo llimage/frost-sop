@@ -107,16 +107,17 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-asyncio_mode = "auto"
+# asyncio_mode = "auto"  # 需要 pytest-asyncio 插件，当前未安装
 addopts = "-v --tb=short --no-header --strict-markers --strict-config"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::UserWarning",
     "ignore::PendingDeprecationWarning",
 ]
-timeout = 300
+# timeout = 300  # 需要 pytest-timeout 插件，当前未安装
 markers = [
     "unit: Unit tests (fast, no external dependencies)",
+    "smoke: Smoke tests (real LLM, ~3min)",
     "integration: Integration tests (may use DB/memory backends)",
     "e2e: End-to-end tests (full pipeline)",
     "slow: Slow tests (>5s, may use real LLM)",
