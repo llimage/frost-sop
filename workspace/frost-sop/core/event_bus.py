@@ -17,6 +17,22 @@ V2.0 子阶段 4.1 + 4.2:
 - 订阅者回调在发布线程中同步执行（保持可预测性）
 - 持久化失败不影响事件分发（fail-safe）
 - 所有公共 API 线程安全
+
+架构说明：双轨制事件总线
+─────────────────────────
+EventBus（同步）和 AsyncEventBus（异步）是两个独立的单例。
+
+使用场景：
+- 同步代码（main.py、Streamlit UI、Agent.run）→ 使用 EventBus
+- 异步代码（main_async.py、FastAPI 异步端点）→ 使用 AsyncEventBus
+
+注意事项：
+1. 两个总线互不干扰，事件不会自动跨总线传播
+2. 如果同步代码订阅了 EventBus，异步代码发布到 AsyncEventBus，
+   同步订阅者不会收到事件
+3. 生产环境建议统一使用一种模式（推荐：同步 EventBus）
+
+未来规划：V4.0 可能合并为一个统一总线（自动检测同步/异步上下文）
 """
 
 import asyncio
