@@ -169,6 +169,31 @@ class EventBusDaemon:
         """分发单个事件到所有订阅者。"""
         event_type = event.event_type
 
+        # V7.3 修正：始终使用当前 EventBus 单例，避免 EventBus.reset() 后引用失效
+        bus = EventBus()
+        subscribers = bus._subscribers.get(event_type, [])
+
+        if not subscribers:
+            logger.debug("[EventBusDaemon] 无订阅者: %s", event_type)
+            return
+
+        logger.info(
+            "[EventBusDaemon] 分发事件 %s 到 %d 个订阅者",
+            event_type, len(subscribers)
+        )
+
+        for callback in subscribers:
+            try:
+                callback(event)
+            except Exception as e:
+                logger.error(
+                    "[EventBusDaemon] 订阅者处理失败 %s: %s",
+                    event_type, e
+                )
+                continue
+        """分发单个事件到所有订阅者。"""
+        event_type = event.event_type
+
         # 获取订阅者（复用 EventBus 的同步订阅机制）
         # 注意：EventBus 的 _subscribers 是私有属性，但我们在同一个进程，可以直接访问
         subscribers = self._bus._subscribers.get(event_type, [])

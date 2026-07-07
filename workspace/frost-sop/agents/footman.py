@@ -59,6 +59,54 @@ class FootmanAgent:
         plan_id = data.get("plan_id")
         phase_id = data.get("phase_id")
         immediate = data.get("immediate", False)
+        # V7.3: 接收 Coordinator 传递的合并输入（来自前置并行组的输出）
+        coordinator_inputs = data.get("inputs", {})
+
+        trigger_type = "立即触发" if immediate else "定时触发"
+        logger.info(
+            "[FootmanAgent] 收到阶段触发 [%s]: plan=%s phase=%s",
+            trigger_type, plan_id, phase_id,
+        )
+
+        # 1. 读取计划
+        plan = self._load_plan(plan_id)
+        if not plan:
+            logger.error("[FootmanAgent] 计划不存在: %s", plan_id)
+            return
+
+        # 2. 读取阶段
+        phase = self._find_phase(plan, phase_id)
+        if not phase:
+            logger.error("[FootmanAgent] 阶段不存在: %s", phase_id)
+            return
+
+        # 3. 从武器库配发武器
+        module_name = phase.get("module", "")
+        weapons = self._dispatcher.dispatch_for_task(module_name)
+
+        logger.info(
+            "[FootmanAgent] 配发武器: %d skills + SOP=%s",
+            len(weapons.get("skills", {})),
+            weapons.get("sop") is not None,
+        )
+
+        # 4. 执行武器（传入 Coordinator 合并的前置组输出）
+        outputs = self._execute_weapons(phase, weapons, coordinator_inputs)
+
+        # 5. 记录使用到武器库（健康评分）
+        self._record_usage(weapons, outputs)
+
+        # 6. 发布阶段完成事件
+        if self.daemon.is_running():
+            self.daemon.publish_phase_completed(plan_id, phase_id, outputs)
+            logger.info("[FootmanAgent] 阶段完成事件已发布")
+        else:
+            logger.warning("[FootmanAgent] 事件总线未运行，无法发布完成事件")
+        """处理计划阶段触发事件。"""
+        data = event.data
+        plan_id = data.get("plan_id")
+        phase_id = data.get("phase_id")
+        immediate = data.get("immediate", False)
 
         trigger_type = "立即触发" if immediate else "定时触发"
         logger.info(
@@ -121,7 +169,26 @@ class FootmanAgent:
 
     # ────────── 武器执行 ──────────
 
-    def _execute_weapons(self, phase: dict, weapons: dict) -> dict:
+    def _execute_weapons(self, phase: dict, weapons: dict, coordinator_inputs: dict = None) -> dict:
+        """
+        执行配发的武器。
+
+        V7.3 更新: 支持接收 Coordinator 传递的前置组合并输出。
+
+        Args:
+            phase: 阶段配置
+            weapons: 配发的武器
+            coordinator_inputs: Coordinator 传递的合并输入（可选）
+
+        Returns:
+            所有执行结果合并后的字典
+        """
+        outputs = {}
+        # 合并输入：Coordinator 输入（前置组输出）优先于 phase 自身 inputs
+        inputs = dict(phase.get("inputs", {}))
+        if coordinator_inputs:
+            inputs.update(coordinator_inputs)
+            logger.info("[FootmanAgent] 接收 Coordinator 输入: %s", list(coordinator_inputs.keys()))
         """
         执行配发的武器。
 
