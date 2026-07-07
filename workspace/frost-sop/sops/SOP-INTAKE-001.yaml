@@ -1,0 +1,75 @@
+# SOP-INTAKE-001 — 需求澄清（计划生成前审问）
+# 版本: 1.0
+# 目的: 防止计划生成器在需求模糊时生成垃圾计划
+# 触发: 任何计划生成前
+
+questions:
+  - id: Q1
+    question: 你现在的收入来源是什么？
+    purpose: 判断是真创业还是玩票。没有收入来源 = 需要现金流优先阶段
+    required: true
+    type: single_choice
+    options:
+      - 有稳定主业收入
+      - 有兼职/项目收入
+      - 无收入，靠积蓄
+      - 无收入，需要尽快变现
+
+  - id: Q2
+    question: 你的核心技能是什么？
+    purpose: 判断生产模块的武器选择。技术栈/内容能力/销售能力决定 SOP 路径
+    required: true
+    type: text
+    hint: "例如：心理咨询、Python编程、短视频剪辑、社群运营..."
+
+  - id: Q3
+    question: 你每月能投入多少时间？
+    purpose: 判断时间约束。小于40小时/月 = 必须全部自动化
+    required: true
+    type: single_choice
+    options:
+      - 全职投入（160+小时/月）
+      - 兼职投入（40-80小时/月）
+      - 碎片化时间（<40小时/月）
+      - 几乎没时间（<20小时/月）
+
+  - id: Q4
+    question: 你的目标用户是谁？
+    purpose: 判断市场模块定位。模糊回答 = 需要额外市场调研阶段
+    required: true
+    type: text
+    hint: "越具体越好。例如：25-35岁一线城市职场女性，有焦虑症状但不愿意去线下咨询"
+
+  - id: Q5
+    question: 你期望多长时间内看到第一笔收入？
+    purpose: 判断时间压力。3个月内 = 必须选最短变现路径
+    required: true
+    type: single_choice
+    options:
+      - 1个月内（紧急）
+      - 3个月内（合理）
+      - 6个月内（从容）
+      - 不着急，先打磨产品
+
+scoring:
+  - 如果 Q1 选 "无收入，需要尽快变现" 且 Q5 选 "1个月内":
+      flag: 高风险组合
+      action: 必须在计划中加入 "现金流优先" 阶段，并提醒用户不要追求完美
+
+  - 如果 Q3 选 "碎片化时间" 或 "几乎没时间":
+      flag: 自动化强制
+      action: 所有生产/营销/交付模块必须100%自动化，不得依赖人工操作
+
+  - 如果 Q4 回答长度 < 20 字:
+      flag: 用户画像模糊
+      action: 在计划前增加 "用户画像调研" 阶段（使用调研 Skill）
+
+output_format:
+  - 每个问题必须有明确回答
+  - 所有 flag 必须记录到 context._intake_flags
+  - 澄清结果作为 _task_description 的附件传递给 plan_generator
+
+notes:
+  - 这不是问卷，是审问。必须回答才能继续。
+  - 如果用户拒绝回答，记录原因并继续生成计划（标记为 "基于假设"）。
+  - 所有回答存入 PlanStore，plan_id 为前缀（如 plan_xyz/intake_answers）。

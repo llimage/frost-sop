@@ -90,6 +90,12 @@ class EventType:
     DAILY_SNAPSHOT_COMPLETED = "daily_snapshot_completed"  # 每日快照完成
     WEEKLY_RETROSPECTIVE_COMPLETED = "weekly_retrospective_completed"  # 周度复盘完成
 
+    # ── V7.2: SOP 计划与审计事件 ──
+    PLAN_GENERATED = "plan_generated"  # 计划生成完成
+    PLAN_REJECTED = "plan_rejected"  # 计划被拒绝（审计不通过）
+    AUDIT_REQUESTED = "audit_requested"  # 请求审计计划
+    AUDIT_COMPLETED = "audit_completed"  # 审计完成
+
 
 # ============================================================
 # V2.0: Event 数据类（子阶段 4.1）
