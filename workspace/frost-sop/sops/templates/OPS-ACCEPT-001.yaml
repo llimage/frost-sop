@@ -4,7 +4,7 @@ version: "1.0"
 description: |
   FROST-SOP 新版本上线前的验收流程。
   由廖亮（用户/开发者）亲自执行，确认系统可用。
-  
+
   验收标准：全部 5 个阶段通过，或明确标记为"跳过"并说明原因。
 
 category: system
