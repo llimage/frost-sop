@@ -68,7 +68,7 @@ class TestSystemAlive:
 
         backend1 = result1.get("_llm_backend")
         backend2 = result2.get("_llm_backend")
-        if backend1 != "online" or backend2 != "online":
+        if backend1 != "online" or backend2 not in ("online", "cache"):
             pytest.skip(f"LLM API 不可用（backend={backend1}/{backend2}），跳过真实 LLM 测试")
 
         # execute profile 下 temperature=0.1，两次应高度相似
