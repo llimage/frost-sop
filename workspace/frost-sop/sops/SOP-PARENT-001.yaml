@@ -1,0 +1,77 @@
+# SOP-PARENT-001 — 父辈工作流程
+# 版本: 1.0
+# 触发: 祖辈完成战略拆解后
+
+name: 父辈战术细化
+
+description: |
+  父辈接收祖辈的战略级拆解结果，细化为可执行计划。
+  父辈的核心价值：识别并行机会，优化执行路径。
+
+phases:
+  - id: intake
+    name: 接收战略计划
+    inputs:
+      - grandparent_plan: 祖辈拆解的计划（粗粒度）
+      - constraints: 约束条件（预算、时间、法规）
+    outputs:
+      - validated_plan: 验证后的战略计划
+
+  - id: decomposition
+    name: 战术级拆解
+    description: |
+      将每个战略阶段细化为可执行子任务。
+      每个子任务必须对应武器库中的某个 Skill 或 SOP。
+    rules:
+      - 子任务粒度应控制在 30 分钟 ~ 4 小时可完成
+      - 每个子任务必须有明确的输入/输出定义
+      - 子任务之间尽量减少不必要的依赖
+
+  - id: parallel_identification
+    name: 识别并行机会
+    description: |
+      分析子任务之间的依赖图，识别可以并行的任务组。
+    criteria_for_parallelism:
+      - 任务之间无数据依赖
+      - 任务产出可以被独立使用
+      - 任务执行时间大致相当（避免一个快一个慢导致等待）
+      - 资源不冲突（不会同时争抢同一个 API/数据库/文件）
+    output: parallel_group 标记
+
+  - id: dependency_resolution
+    name: 依赖解析
+    description: |
+      建立清晰的依赖链，使用模板语法传递数据。
+    template_syntax: "{{phase_id.outputs.key}}"
+    validation:
+      - 所有依赖的 phase_id 必须存在
+      - 无循环依赖
+      - 并行组内无相互依赖
+
+  - id: output
+    name: 生成可执行计划
+    outputs:
+      - refined_plan: 细化后的计划 JSON
+      - parallel_groups: 并行组清单
+      - critical_path: 关键路径分析
+
+roles:
+  parent_agent:
+    description: 父辈 Agent
+    skills:
+      - plan_refiner: 计划细化 Skill
+      - parallel_orchestrator: 并行编排 Skill
+    stores:
+      - plan_store: 计划存储
+
+# 触发条件
+triggers:
+  - event: TASK_DECOMPOSED
+    condition: 祖辈完成拆解
+    action: 父辈开始细化
+
+# 质量检查
+checkpoints:
+  - 计划是否包含至少一个并行组？（否 = 提示可能有优化空间）
+  - 所有阶段是否有对应的 SOP/Skill？（否 = 标记为风险）
+  - 总执行时间预估是否在预算内？

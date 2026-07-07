@@ -1,179 +1,392 @@
 """
-FROST-SOP Parent Agent Factory
-PHILOSOPHY: 父辈是成年Agent。出厂预装13个本能Skill。
-所有Skill都是普通Skill，不引入特权组件。
+FROST-SOP V7.4 — 父辈 Agent（ParentAgent）
 
-V3.0: 支持 event_driven 模式 — 订阅 TASK_DECOMPOSED → 内化SOP → 逐阶段执行 → 发布 TASK_COMPLETED
-V2.0: 保持原有同步调用方式（被 main() 直接调用）
+父辈是战术规划者。
+
+职责：
+1. 接收祖辈的战略拆解（粗粒度计划）
+2. 细化为可执行计划（识别哪些子任务可以并行）
+3. 标记 parallel_group，定义阶段依赖
+4. 将细化后的计划存入 Store，供府兵执行
+
+PHILOSOPHY: 祖辈出方向，父辈出方案，府兵出执行。
+三代同堂，各安其位。
+
+祖辈（Grandparent）= 战略：做什么、为什么做
+父辈（Parent）    = 战术：怎么做、谁来做、何时并行
+府兵（Footman）   = 执行：做、报告、协同
 """
 
+import json
 import logging
+import uuid
 
-from core.agent import Agent
-from skills.assemble import assemble_agent_skill
-from skills.evolution import (
-    analyze_trends_skill,
-    generate_suggestions_skill,
-    load_task_history_skill,
-    present_for_approval_skill,
-)
-from skills.importer import import_agency_agents_skill
-from skills.knowledge import archive_lesson_skill, archive_sop_skill, query_lessons_skill
-from skills.llm import call_llm_skill
-from skills.orchestration import (
-    emit_skill,
-    execute_stage_skill,
-    finalize_task_skill,
-    internalize_sop_skill,
-    merge_from_skill,
-    spawn_skill,
-    validate_sop_skill,
-)
-from skills.search import search_skill_skill, search_sop_skill
+from core.skill import Skill
+from core.event_bus import EventBus, Event, EventType
+from core.event_bus_daemon import EventBusDaemon
+from core.store import Store
+from skills.llm import call_llm
 
 logger = logging.getLogger(__name__)
-import asyncio
 
 
-def create_parent(
-    name: str, coordination_store, event_driven: bool = False, asset_store=None, sop_id: str = None
-) -> Agent:
+_PARENT_PLAN_REFINER_PROMPT = """你是一名战术规划专家。将以下战略级计划细化为可执行计划。
+
+## 战略计划（祖辈拆解）
+
+{grandparent_plan}
+
+## 细化要求
+
+1. 每个阶段必须有明确的 SOP ID（引用武器库中的已有武器）
+2. 识别可以并行执行的阶段，标记相同的 parallel_group
+3. 并行规则：
+   - 同一 parallel_group 的阶段之间不能有依赖
+   - 并行阶段各自产出独立结果，后续阶段合并使用
+4. 输入参数使用模板语法：{{phase_id.outputs.key}}
+5. 输出完整的可执行计划 JSON
+
+## 输出格式
+
+```json
+{{
+  "plan_id": "plan_xxx",
+  "name": "计划名称",
+  "refined_from": "祖辈计划ID",
+  "phases": [
+    {{
+      "phase_id": "phase_1",
+      "module": "模块名称",
+      "sop_id": "SOP-XXX-001",
+      "trigger": "immediate",
+      "parallel_group": "可选：并行组ID",
+      "inputs": {{}},
+      "outputs": {{}},
+      "depends_on": []
+    }}
+  ]
+}}
+```
+
+## 并行场景示例
+
+输入："自行车定制"
+输出：
+- phase_1: 需求解析（串行）
+- phase_2a: 零部件拆解（parallel_group: "assembly"）
+- phase_2b: 库存查询（parallel_group: "assembly"）
+- phase_3: 报价生成（串行，依赖 2a 和 2b）
+
+直接输出 JSON，不要其他说明。
+"""
+
+
+class ParentAgent:
     """
-    创建父辈Agent。出厂预装15个本能Skill。
+    父辈 Agent。
 
-    Args:
-        name: Agent 名称
-        coordination_store: 协调 Store
-        event_driven: V3.0 — 如果 True，订阅 TASK_DECOMPOSED 事件
-        asset_store: V3.0 事件模式需要（用于 execute_stage）
-        sop_id: V3.0 事件模式需要（用于加载 SOP 模板）
+    不是硬编码的调度器，而是武器库中的一个"角色"。
+    父辈本身也是府兵的一种，执行"计划细化"任务。
 
-    Returns:
-        Agent instance (parent)
+    使用方式：
+        parent = ParentAgent(daemon, store)
+        parent.refine_plan(grandparent_plan)  # 细化为可执行计划
+        parent.start_execution(plan_id)       # 启动并行编排（调用 Skill）
     """
-    skills = {
-        "spawn": spawn_skill,
-        "emit": emit_skill,
-        "validate_sop": validate_sop_skill,
-        "merge_from": merge_from_skill,
-        "internalize_sop": internalize_sop_skill,
-        "execute_stage": execute_stage_skill,
-        "finalize_task": finalize_task_skill,
-        "search_sop": search_sop_skill,
-        "search_skill": search_skill_skill,
-        "call_llm": call_llm_skill,
-        "archive_sop": archive_sop_skill,
-        "archive_lesson": archive_lesson_skill,
-        "query_lessons": query_lessons_skill,
-        "assemble_agent": assemble_agent_skill,
-        "import_agency_agents": import_agency_agents_skill,
-        "load_task_history": load_task_history_skill,
-        "analyze_trends": analyze_trends_skill,
-        "generate_suggestions": generate_suggestions_skill,
-        "present_for_approval": present_for_approval_skill,
+
+    def __init__(self, daemon: EventBusDaemon = None, store: Store = None):
+        self.daemon = daemon or EventBusDaemon()
+        self.store = store or Store()
+        self._orchestrator_skill = parallel_orchestrator_skill
+
+    def refine_plan(self, grandparent_plan: dict, context: dict = None) -> dict:
+        """
+        将祖辈的战略计划细化为可执行计划。
+
+        这是父辈的核心能力：战术级拆解 + 并行识别。
+
+        Args:
+            grandparent_plan: 祖辈生成的粗粒度计划
+            context: 额外上下文（预算、约束等）
+
+        Returns:
+            细化后的可执行计划
+        """
+        plan_json = json.dumps(grandparent_plan, ensure_ascii=False, indent=2)
+
+        prompt = _PARENT_PLAN_REFINER_PROMPT.format(
+            grandparent_plan=plan_json,
+        )
+
+        llm_context = call_llm({
+            "_prompt": prompt,
+            "_llm_profile": "execute",
+            "_max_tokens": 2500,
+        })
+
+        response = llm_context.get("_llm_response", "").strip()
+
+        # 解析 JSON
+        refined_plan = _parse_refined_plan(response)
+        if refined_plan is None:
+            logger.error("[ParentAgent] 计划细化失败，无法解析 LLM 输出")
+            return None
+
+        # 生成 plan_id
+        plan_id = refined_plan.get("plan_id", f"plan_{uuid.uuid4().hex[:8]}")
+        refined_plan["plan_id"] = plan_id
+        refined_plan["_refined_by"] = "parent_agent"
+        refined_plan["_llm_tokens"] = llm_context.get("_llm_tokens", {})
+
+        # 存入 Store
+        self.store.save(f"plan:{plan_id}", refined_plan)
+
+        logger.info(
+            "[ParentAgent] 计划细化完成: %s, %d 阶段",
+            plan_id, len(refined_plan.get("phases", [])),
+        )
+
+        # 发布计划生成事件
+        if self.daemon.is_running():
+            self.daemon.publish(Event(
+                event_type=EventType.PLAN_GENERATED,
+                source="parent_agent",
+                data={"plan_id": plan_id, "phases_count": len(refined_plan.get("phases", []))},
+            ))
+
+        return refined_plan
+
+    def start_execution(self, plan_id: str):
+        """
+        启动计划执行。
+
+        父辈不直接调度府兵，而是调用武器库中的并行编排 Skill。
+        这符合"武器库统一配发"的哲学。
+
+        Args:
+            plan_id: 计划ID
+        """
+        plan = self.store.load(f"plan:{plan_id}")
+        if not plan:
+            logger.error("[ParentAgent] 计划不存在: %s", plan_id)
+            return
+
+        # 调用并行编排 Skill（武器库配发）
+        logger.info("[ParentAgent] 启动执行: %s，调用并行编排器", plan_id)
+
+        context = {
+            "_plan": plan,
+            "_plan_id": plan_id,
+        }
+
+        # 执行编排（这会触发事件总线上的阶段调度）
+        self._orchestrator_skill.execute(context)
+
+    def get_plan(self, plan_id: str) -> dict | None:
+        """从 Store 读取计划。"""
+        return self.store.load(f"plan:{plan_id}")
+
+
+def _parse_refined_plan(response: str) -> dict | None:
+    """解析 LLM 输出的细化计划。"""
+    # 尝试提取 ```json ... ``` 块
+    json_start = response.find("```json")
+    if json_start >= 0:
+        json_start = response.find("{", json_start)
+        json_end = response.find("```", json_start)
+        if json_end > json_start:
+            try:
+                return json.loads(response[json_start:json_end].strip())
+            except json.JSONDecodeError:
+                pass
+
+    # 尝试直接找第一个 {
+    json_start = response.find("{")
+    json_end = response.rfind("}") + 1
+    if json_start >= 0 and json_end > json_start:
+        try:
+            return json.loads(response[json_start:json_end])
+        except json.JSONDecodeError:
+            pass
+
+    return None
+
+
+def refine_plan_skill_fn(context: dict) -> dict:
+    """
+    Skill 入口：计划细化。
+
+    输入 context:
+        _grandparent_plan: dict — 祖辈的战略计划
+        _constraints: list — 约束条件（可选）
+
+    输出 context:
+        _refined_plan: dict — 细化后的可执行计划
+        _plan_id: str — 计划ID
+    """
+    grandparent_plan = context.get("_grandparent_plan")
+    if not grandparent_plan:
+        context["_refine_error"] = "缺少 _grandparent_plan"
+        return context
+
+    parent = ParentAgent()
+    refined = parent.refine_plan(grandparent_plan, context)
+
+    if refined:
+        context["_refined_plan"] = refined
+        context["_plan_id"] = refined["plan_id"]
+    else:
+        context["_refine_error"] = "计划细化失败"
+
+    return context
+
+
+# ──────────────────────────────────────────
+# 武器库注册
+# ──────────────────────────────────────────
+
+plan_refiner_skill = Skill(
+    "plan_refiner",
+    refine_plan_skill_fn,
+    required_keys=["_grandparent_plan"],
+    output_schema={"_refined_plan": dict, "_plan_id": str},
+    timeout_seconds=120,
+)
+
+
+# 并行编排 Skill（将 core/coordinator.py 的核心逻辑武器化）
+def parallel_orchestrate_fn(context: dict) -> dict:
+    """
+    并行编排 Skill。
+
+    武器库中的武器，负责解析 parallel_group 并调度事件。
+
+    输入 context:
+        _plan: dict — 细化后的计划（含 parallel_group）
+        _plan_id: str — 计划ID
+
+    输出 context:
+        _execution_groups: dict — 执行组解析结果
+    """
+    plan = context.get("_plan")
+    plan_id = context.get("_plan_id")
+    if not plan or not plan_id:
+        context["_orchestrate_error"] = "缺少 _plan 或 _plan_id"
+        return context
+
+    from core.coordinator import ParallelCoordinator
+
+    # V7.4: ParallelCoordinator 是库，不是核心组件
+    # 编排 Skill 自己管理事件总线
+    daemon = EventBusDaemon()
+    if not daemon.is_running():
+        daemon.start()
+
+    coordinator = ParallelCoordinator(store=Store())
+    coordinator.load_plan(plan)
+
+    # 触发入口组
+    entry_groups = coordinator.get_entry_groups()
+    for gid in entry_groups:
+        group = coordinator.get_group(gid)
+        # 为组内每个阶段发布触发事件
+        for phase in group.phases:
+            daemon.publish(Event(
+                event_type=EventType.SCHEDULED_EXECUTED,
+                source="parallel_orchestrator",
+                data={
+                    "plan_id": plan_id,
+                    "phase_id": phase["phase_id"],
+                    "inputs": {},
+                    "coordinated": True,
+                },
+            ))
+
+    # 订阅阶段完成事件，驱动后续组
+    def _on_phase_completed(event: Event):
+        if event.data.get("plan_id") != plan_id:
+            return
+        phase_id = event.data.get("phase_id")
+        outputs = event.data.get("outputs", {})
+
+        # 标记阶段完成，检查整组是否完成
+        group_completed = coordinator.mark_group_phase_completed(phase_id, outputs)
+
+        if group_completed:
+            gid = coordinator.get_group_for_phase(phase_id)
+            # 检查并触发后续组
+            ready_groups = coordinator.get_ready_dependent_groups(gid)
+            for ready_gid in ready_groups:
+                ready_group = coordinator.get_group(ready_gid)
+                group_inputs = coordinator.collect_group_inputs(ready_gid)
+                for phase in ready_group.phases:
+                    daemon.publish(Event(
+                        event_type=EventType.SCHEDULED_EXECUTED,
+                        source="parallel_orchestrator",
+                        data={
+                            "plan_id": plan_id,
+                            "phase_id": phase["phase_id"],
+                            "inputs": group_inputs,
+                            "coordinated": True,
+                        },
+                    ))
+
+    EventBus().subscribe(EventType.STAGE_COMPLETED, _on_phase_completed)
+
+    context["_execution_groups"] = {
+        gid: {
+            "phases": [p["phase_id"] for p in g.phases],
+            "depends_on": g.depends_on_groups,
+        }
+        for gid, g in coordinator._groups.items()
     }
 
-    parent = Agent(
-        name=name,
-        store=coordination_store,
-        skills=skills,
-        generation=1,
-    )
-
-    # V3.0: 事件驱动模式
-    if event_driven:
-        _subscribe_parent_to_events(parent, asset_store, sop_id)
-
-    return parent
-
-
-def _subscribe_parent_to_events(parent: Agent, asset_store, sop_id: str) -> bool:
+    logger.info("[parallel_orchestrator] 计划 %s 已开始执行", plan_id)
+    return context
     """
-    V3.0: 让 parent 订阅 AsyncEventBus 上的 TASK_DECOMPOSED 事件。
+    并行编排 Skill。
 
-    收到 TASK_DECOMPOSED 后：
-    1. 内化 SOP
-    2. 逐阶段执行（发布 STAGE_STARTED / STAGE_COMPLETED）
-    3. 全部完成后发布 TASK_COMPLETED
+    武器库中的武器，负责解析 parallel_group 并调度事件。
+
+    输入 context:
+        _plan: dict — 细化后的计划（含 parallel_group）
+        _plan_id: str — 计划ID
+
+    输出 context:
+        _execution_groups: dict — 执行组解析结果
     """
-    try:
-        from core.event_bus import Event, EventType, get_async_event_bus
+    plan = context.get("_plan")
+    plan_id = context.get("_plan_id")
+    if not plan or not plan_id:
+        context["_orchestrate_error"] = "缺少 _plan 或 _plan_id"
+        return context
 
-        bus = get_async_event_bus()
+    from core.coordinator import ParallelCoordinator
 
-        async def on_task_decomposed(event: Event):
-            """TASK_DECOMPOSED 回调：内化SOP → 逐阶段执行 → 发布 TASK_COMPLETED"""
-            task_id = event.data.get("task_id", "unknown")
-            decomposition = event.data.get("decomposition", "")
+    daemon = EventBusDaemon()
+    if not daemon.is_running():
+        daemon.start()
 
-            logger.info("[V3.0] parent 收到 TASK_DECOMPOSED: %s", task_id)
+    coordinator = ParallelCoordinator(daemon=daemon)
+    coordinator.load_plan(plan)
+    coordinator.start_execution()
 
-            # 1. 加载 SOP 模板
-            sop_file = f"sops/templates/{sop_id or 'DEV-001'}.yaml"
-            from core.sop import SOP
+    context["_execution_groups"] = {
+        gid: {
+            "phases": [p["phase_id"] for p in g.phases],
+            "depends_on": g.depends_on_groups,
+        }
+        for gid, g in coordinator._groups.items()
+    }
 
-            try:
-                sop = SOP.load_from_yaml(sop_file)
-            except Exception as e:
-                logger.error("[V3.0] SOP 加载失败: %s", e)
-                await bus.publish(
-                    Event(
-                        event_type=EventType.TASK_FAILED,
-                        source="parent:stage_executor",
-                        data={"task_id": task_id, "error": f"SOP load failed: {e}"},
-                    )
-                )
-                return
+    logger.info("[parallel_orchestrator] 计划 %s 已开始执行", plan_id)
+    return context
 
-            # 2. 内化 SOP
-            sop_to_internalize = {
-                "sop_id": sop.sop_id,
-                "name": sop.name,
-                "version": sop.version,
-                "stages": sop.stages,
-                "required_stages": sop.required_stages,
-                "forbidden_skills": sop.forbidden_skills,
-            }
 
-            # 2. 内化 SOP（P1-1 修复：asyncio.to_thread 避免阻塞事件循环）
-            int_context = await asyncio.to_thread(
-                parent.run,
-                sop_steps=["internalize_sop"],
-                initial_context={"_sop_to_internalize": sop_to_internalize},
-            )
-            sop_stages = int_context.get("_sop_stages", [])
-            logger.info("[V3.0] SOP 内化完成: %s 个阶段", len(sop_stages))
-
-            # 3. 逐阶段发布 STAGE_STARTED（由 orchestration.py 的 stage executor 异步执行）
-            for i, stage in enumerate(sop_stages):
-                stage_name = stage.get("name", f"阶段{i + 1}")
-
-                # 发布 STAGE_STARTED（orchestration.py 的 stage executor 会处理）
-                await bus.publish(
-                    Event(
-                        event_type=EventType.STAGE_STARTED,
-                        source="parent:stage_executor",
-                        data={
-                            "task_id": task_id,
-                            "stage_name": stage_name,
-                            "stage_order": i + 1,
-                            "total_stages": len(sop_stages),
-                        },
-                    )
-                )
-                logger.info(
-                    "[V3.0] 发布 STAGE_STARTED: %s (阶段 %s/%s)", stage_name, i + 1, len(sop_stages)
-                )
-
-            # 4. 等待所有阶段完成（由 stage executor 发布 TASK_COMPLETED）
-            # 注意：不直接执行阶段，而是由事件驱动的 stage executor 处理
-            logger.info("[V3.0] 所有 STAGE_STARTED 已发布，等待阶段执行完成...")
-            logger.info("[V3.0] TASK_COMPLETED 将由 orchestration.py 的 stage executor 发布")
-
-        bus.subscribe_async(EventType.TASK_DECOMPOSED, on_task_decomposed)
-        logger.info("[V3.0] parent 已订阅 TASK_DECOMPOSED 事件")
-        return True
-
-    except Exception as e:
-        logger.warning("[V3.0] parent 事件订阅失败（已忽略）: %s", e)
-        return False
+parallel_orchestrator_skill = Skill(
+    "parallel_orchestrator",
+    parallel_orchestrate_fn,
+    required_keys=["_plan", "_plan_id"],
+    output_schema={"_execution_groups": dict},
+    timeout_seconds=60,
+)
