@@ -43,6 +43,8 @@ ALLOWED_TABLES = {
 }
 
 # S-001 修复：WHERE 子句危险关键字（用于非参数化部分的检测）
+# 注意：这些关键词只应在操作符位置出现，但检测时会误报合法列名（如 updated_at）
+# 因此在 select_all 中使用 _ALLOWED_IN_COLUMN_NAMES 白名单豁免
 _WHERE_DANGEROUS_KEYWORDS = [
     ";",
     "--",
@@ -59,6 +61,13 @@ _WHERE_DANGEROUS_KEYWORDS = [
     "EXECUTE",
     "TRUNCATE",
 ]
+
+# 列名中允许包含的安全关键词子串（白名单豁免）
+# 例如：updated_at 列名包含 UPDATE 关键词，但它是合法的列名
+_ALLOWED_IN_COLUMN_NAMES = {
+    "UPDATE": ["updated_at", "updated_by", "update_time"],
+    "CREATE": ["created_at", "created_by", "creation_date"],
+}
 
 
 class DBManager:
@@ -755,12 +764,26 @@ class DBManager:
         # S-001 修复：表名白名单验证
         if table not in ALLOWED_TABLES:
             raise ValueError(f"Security: Invalid table name '{table}'")
-        # S-001 修复：WHERE 子句安全验证
+        # S-001 修复：WHERE 子句安全验证（V2.0 增加白名单豁免）
         if where:
             where_upper = where.upper()
             for keyword in _WHERE_DANGEROUS_KEYWORDS:
                 if keyword in where_upper:
-                    raise ValueError(f"Security: Dangerous keyword '{keyword}' in WHERE clause")
+                    # 白名单豁免：检查是否是列名的一部分
+                    exempt = False
+                    for allowed_keyword, allowed_columns in _ALLOWED_IN_COLUMN_NAMES.items():
+                        if keyword == allowed_keyword:
+                            for col in allowed_columns:
+                                if col.upper() in where_upper:
+                                    exempt = True
+                                    break
+                        if exempt:
+                            break
+
+                    if not exempt:
+                        raise ValueError(
+                            f"Security: Dangerous keyword '{keyword}' in WHERE clause"
+                        )
 
         conn = self.get_connection()
         cursor = conn.cursor()
