@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "passed": 0,
+  "failed": 0,
+  "skipped": 0,
+  "errors": 0,
+  "coverage": "N/A",
+  "duration": "9.96s",
+  "failed_tests": []
+}

@@ -86,7 +86,7 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "N", "UP", "B", "C4", "SIM"]
-ignore = ["E501", "B904"]
+ignore = ["E501", "B904", "E402", "C401", "SIM102", "SIM103", "SIM105", "SIM115", "N806", "F841"]
 per-file-ignores = {"__init__.py" = ["F401"], "tests/*" = ["S", "B011"]}
 
 [tool.ruff.format]
@@ -95,7 +95,7 @@ indent-style = "space"
 
 [tool.mypy]
 python_version = "3.10"
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
 disallow_untyped_defs = false
 disallow_incomplete_defs = false

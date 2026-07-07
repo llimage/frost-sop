@@ -1,0 +1,256 @@
+sop_id: SELF-HEAL-001
+name: 代码自修复
+version: "1.0"
+description: |
+  诊断代码问题、生成修复方案、在人工确认后自动执行修复并验证。
+  核心价值：减少对外部Agent（WorkBuddy）的依赖，将Token消耗从"反复迭代"压缩为"一次性方案+确认"。
+
+category: system
+required_stages:
+  - 症状收集
+  - 诊断定位
+  - 方案生成
+  - 人工确认
+  - 方案执行
+  - 验证
+
+llm_config:
+  profile: execute
+  temperature: 0.1
+  max_tokens_per_phase: 3000
+
+stages:
+  - stage_id: "1"
+    name: 症状收集
+    description: 从错误日志、测试失败、用户描述中提取关键症状
+    skill: log-analyzer
+    output_format: json
+    constraint: |
+      - 必须输出JSON格式
+      - 不要解释分析过程，只输出结构化结果
+    requirement: |
+      你是一个代码问题分析专家。请从以下输入中提取关键信息：
+
+      ## 输入信息
+      - 错误日志：{error_log}
+      - 测试失败信息：{test_failure}
+      - 用户描述：{user_description}
+      - 涉及文件：{affected_files}
+
+      ## 输出格式（严格JSON）
+      ```json
+      {
+        "symptoms": [
+          {
+            "type": "error|warning|performance|style",
+            "message": "错误信息摘要",
+            "location": "文件路径:行号",
+            "severity": "critical|high|medium|low"
+          }
+        ],
+        "affected_modules": ["模块名1", "模块名2"],
+        "error_pattern": "匹配到的已知模式ID（如没有则留空）",
+        "context_needed": ["需要读取的额外文件路径"]
+      }
+      ```
+
+      ## 约束
+      - type只能是：error, warning, performance, style
+      - severity只能是：critical, high, medium, low
+      - 如果错误信息包含Python异常类型（如KeyError、ImportError），必须在message中标注
+      - 不要编造不存在的文件路径
+
+  - stage_id: "2"
+    name: 诊断定位
+    description: 读取相关代码，分析根因，匹配已知问题模式
+    skill: code-diagnoser
+    output_format: markdown
+    constraint: |
+      - 诊断结论必须有依据（引用代码片段）
+      - 如果匹配已知模式，必须引用模式ID
+      - 不要猜测，不确定时标记为"[NEEDS_MANUAL_REVIEW]"
+    requirement: |
+      你是一个代码诊断专家。基于阶段1的症状分析，进行根因定位。
+
+      ## 已有上下文
+      - 症状摘要：{symptoms}
+      - 涉及模块：{affected_modules}
+      - 已知问题模式库：{pattern_library}
+
+      ## 诊断步骤
+      1. 读取相关代码文件（使用 file-reader Skill）
+      2. 分析问题上下文
+      3. 匹配已知问题模式（优先走模式匹配，不走LLM分析）
+      4. 确定根因
+
+      ## 输出格式
+      ## 诊断报告
+
+      ### 根因分析
+      - 问题类型：[语法错误|逻辑错误|配置错误|安全漏洞|性能问题]
+      - 根因描述：[50字以内]
+      - 涉及代码：
+        ```python
+        [相关代码片段]
+        ```
+
+      ### 已知模式匹配
+      - 匹配模式ID：[如 PATTERN-001，无则留空]
+      - 匹配置信度：[high|medium|low]
+
+      ### 影响范围
+      - 直接影响：[文件/函数]
+      - 潜在影响：[可能波及的模块]
+
+      ### 修复建议
+      - 修复难度：[1-5星]
+      - 建议策略：[直接修复|重构|workaround|需人工介入]
+
+      ### 需要额外信息
+      - [如需更多信息，列出具体问题]
+
+  - stage_id: "3"
+    name: 方案生成
+    description: 生成具体的代码修复方案（diff格式），包含风险评估
+    skill: patch-generator
+    output_format: markdown
+    constraint: |
+      - 必须以diff格式输出修改
+      - 每个修改必须有注释说明原因
+      - 必须包含回滚步骤
+      - 禁止修改与问题无关的代码
+    requirement: |
+      你是一个代码修复专家。基于阶段2的诊断报告，生成具体的修复方案。
+
+      ## 输入
+      - 诊断报告：{diagnosis_report}
+      - 相关代码：{relevant_code}
+
+      ## 输出格式
+      ## 修复方案
+
+      ### 修改清单
+      | 文件 | 修改类型 | 风险等级 | 说明 |
+      |------|---------|---------|------|
+      | path/to/file.py | add|modify|delete | low|medium|high | 简述 |
+
+      ### Diff 详情
+      ```diff
+      --- a/path/to/file.py
+      +++ b/path/to/file.py
+      @@ -line,range +line,range @@
+       def old_function():
+      -    old_code()
+      +    new_code()  # 修复原因：...
+      ```
+
+      ### 风险评估
+      - 回滚难度：[easy|medium|hard]
+      - 测试影响：[是否需要补测试]
+      - 兼容性：[是否破坏已有功能]
+
+      ### 回滚步骤
+      ```bash
+      # 如果修复失败，执行以下命令回滚
+      git checkout -- path/to/file.py
+      ```
+
+      ## 约束
+      - 只修改诊断报告中明确的文件和行
+      - 不要"顺手优化"无关代码
+      - 所有修改必须有注释说明原因
+      - 如果修复需要新增依赖，必须列出
+
+  - stage_id: "4"
+    name: 人工确认
+    description: 暂停执行，等待人类确认修复方案
+    skill: human-gate
+    output_format: json
+    constraint: |
+      - 必须等待人工输入
+      - 默认行为是"拒绝"（安全优先）
+    requirement: |
+      修复方案已生成，等待人工确认。
+
+      ## 当前状态
+      - 问题ID：{task_id}
+      - 修复方案：{patch_summary}
+      - 预估风险：{risk_level}
+
+      ## 请确认
+      输入以下命令之一：
+      - `APPLY` — 应用修复方案
+      - `MODIFY` — 需要修改方案（请描述修改意见）
+      - `REJECT` — 拒绝此方案，返回诊断阶段
+      - `SKIP` — 跳过此问题，记录到债务清单
+
+      默认超时：30分钟无响应自动REJECT
+
+  - stage_id: "5"
+    name: 方案执行
+    description: 在人工确认后，自动应用修复方案
+    skill: patch-applier
+    output_format: json
+    constraint: |
+      - 必须先确认人工输入为APPLY
+      - 应用前自动创建备份
+      - 应用后验证文件语法正确
+    requirement: |
+      你负责在获得人工确认后，安全地应用代码修改。
+
+      ## 执行步骤
+      1. 创建备份（.bak文件或git stash）
+      2. 应用diff修改
+      3. 验证Python语法（python -m py_compile）
+      4. 如果语法错误，自动回滚并报告
+
+      ## 输出
+      ```json
+      {
+        "applied": true|false,
+        "backup_path": "备份文件路径",
+        "modified_files": ["文件路径1", "文件路径2"],
+        "syntax_check": "passed|failed",
+        "error": "如有错误，描述原因"
+      }
+      ```
+
+  - stage_id: "6"
+    name: 验证
+    description: 运行相关测试，验证修复效果
+    skill: test-runner
+    output_format: json
+    constraint: |
+      - 必须运行与修改文件相关的测试
+      - 必须检查覆盖率无下降
+      - 失败时自动回滚
+    requirement: |
+      验证修复是否成功。
+
+      ## 执行步骤
+      1. 运行与修改文件相关的测试：`pytest tests/test_{module}.py -v`
+      2. 运行冒烟测试：`pytest tests/smoke/ -v`
+      3. 检查覆盖率：`pytest --cov={modified_module} --cov-report=term`
+
+      ## 输出
+      ```json
+      {
+        "verification_passed": true|false,
+        "test_results": {
+          "passed": 10,
+          "failed": 0,
+          "skipped": 2
+        },
+        "coverage": {
+          "before": 80.18,
+          "after": 80.25
+        },
+        "rollback_triggered": false,
+        "final_status": "fixed|failed_rolled_back|failed_needs_manual"
+      }
+      ```
+
+      ## 失败处理
+      - 如果测试失败：自动触发回滚（恢复备份）
+      - 如果覆盖率下降>1%：标记为警告，需人工审核
+      - 如果语法检查失败：立即回滚，不上报"已修复"

@@ -222,7 +222,16 @@ def create_and_run_task(req: TaskCreateRequest):
         parent = create_parent(name="parent-api", coordination_store=asset_store)
 
         phases = sop.stages if hasattr(sop, "stages") else []
-        stage_context = {"_stage_results": [], "_parent_agent": parent}
+        stage_context = {
+            "_stage_results": [],
+            "_parent_agent": parent,
+            "_task_description": req.description,  # 注入任务描述，供{topic}变量替换
+            "_task_id": task_id,
+            "_asset_store": asset_store,
+            "_constitution_store": constitution_store,
+            # P2: 接受外部预抓取的网页内容，解决主题偏移根因
+            "_web_content": req.web_content if req.web_content else None,
+        }
 
         for i, phase in enumerate(phases):
             stage_name = phase.get("name", phase.get("phase_id", f"阶段{i + 1}"))
@@ -233,7 +242,7 @@ def create_and_run_task(req: TaskCreateRequest):
             stage_context = parent.run(sop_steps=["execute_stage"], initial_context=stage_context)
 
             result = stage_context.get("_current_stage_result", {})
-            output = str(result.get("output", ""))[:500] if isinstance(result, dict) else ""
+            output = str(result.get("output", "")) if isinstance(result, dict) else ""
             completed = datetime.now().isoformat()
 
             # 写入 task_stages
@@ -294,6 +303,16 @@ def create_and_run_task(req: TaskCreateRequest):
         )
 
     except Exception as e:
+        # 详细日志：记录完整错误信息和堆栈
+        import traceback
+
+        error_detail = traceback.format_exc()
+        print("[ERROR] 任务执行失败:")
+        print(f"  任务ID: {task_id}")
+        print(f"  错误类型: {type(e).__name__}")
+        print(f"  错误信息: {str(e)}")
+        print(f"  完整堆栈:\n{error_detail}")
+
         db.update(
             "tasks",
             "id",
@@ -459,7 +478,9 @@ def chat(req: ChatRequest):
         "_prompt": req.message,
         "_system_prompt": "你是FROST家族AI指挥平台的CEO Agent，负责回答关于项目进展、成本、Agent状态等问题。请用中文简洁回复。",
         "_model": "deepseek-chat",
-        "_temperature": 0.7,
+        # 使用profile自动映射temperature（execute=0.1, create=0.5）
+        # 如需覆盖，通过req.temperature传入
+        "_llm_profile": "execute",  # API调用默认使用execute profile（高确定性）
         "_max_tokens": 1024,
         "_agent_id": "ceo-agent",
     }

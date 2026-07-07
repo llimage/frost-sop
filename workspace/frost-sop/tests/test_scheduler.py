@@ -12,6 +12,21 @@ import pytest
 os.environ["FROST_TESTING"] = "1"
 
 
+@pytest.fixture(autouse=True)
+def _cleanup_scheduler():
+    """每个测试后清理调度器单例，防止后台线程残留。"""
+    yield
+    try:
+        from core.scheduler import FrostScheduler
+
+        sched = FrostScheduler._instance
+        if sched and hasattr(sched, "_started") and sched._started:
+            sched.stop()
+    except Exception:
+        pass
+    time.sleep(0.1)
+
+
 class TestFrostSchedulerCreation:
     """测试调度器创建和基础功能"""
 

@@ -1,32 +1,97 @@
 sop_id: "STR-001"
 name: "项目立项"
-version: "1.0"
+version: "1.1"
 stages:
   - name: "需求调研"
     agent: "product_manager"
     skills: ["research_market", "analyze_requirements"]
-    requirement: "调研市场需求和竞品，明确项目要解决的核心问题"
+    requirement: |
+      调研市场需求和竞品，明确项目要解决的核心问题。
+
+      输出要求：
+      - 以"## 需求调研报告"开头
+      - 必须包含以下部分（按顺序）：
+        1. 核心问题：一段话说明要解决什么问题
+        2. 目标用户：用户画像列表（角色、痛点、期望）
+        3. 竞品分析：表格格式，列出竞品名称、核心功能、优势、劣势
+        4. 市场机会：编号列表，每个机会点附数据支撑
+        5. 结论：GO / NO-GO + 一句话理由
+      - 禁止输出：寒暄语、行业背景铺垫、"经过调研发现"等引导语
+      - 禁止输出：与上述5个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
   - name: "可行性分析"
     agent: "strategist"
     skills: ["analyze_feasibility", "financial_analysis"]
-    requirement: "分析技术可行性、资源需求、投入产出比"
+    requirement: |
+      分析技术可行性、资源需求、投入产出比。
+
+      输出要求：
+      - 以"## 可行性分析报告"开头
+      - 必须包含以下部分（按顺序）：
+        1. 技术可行性：已有技术储备/需新增技术，风险点列表
+        2. 资源需求：人力（角色+人月）、硬件、第三方服务（表格）
+        3. 投入产出比：总投入（元）、预期收益（元/月）、回本周期（月）
+        4. 风险评估：风险矩阵表格（风险项、概率、影响、应对措施）
+        5. 结论：FEASIBLE / NOT_FEASIBLE / CONDITIONAL + 条件说明
+      - 禁止输出：寒暄语、分析方法论描述
+      - 禁止输出：与上述5个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
   - name: "方案设计"
     agent: "architect"
     skills: ["design_solution", "technical_design"]
-    requirement: "设计项目技术方案，包括架构、模块、里程碑"
+    requirement: |
+      设计项目技术方案，包括架构、模块、里程碑。
+
+      输出要求：
+      - 以"## 技术方案"开头
+      - 必须包含以下部分（按顺序）：
+        1. 架构概述：系统架构图描述（文字版）+ 核心组件列表
+        2. 模块设计：每个模块列出：名称、职责、对外接口、依赖模块
+        3. 数据模型：核心实体表格（实体名、字段、类型、关系）
+        4. 里程碑：表格格式（阶段、交付物、预计耗时、验收标准）
+        5. 技术选型：关键技术的选择理由（表格：技术项、选项、选择、理由）
+      - 禁止输出：寒暄语、设计哲学讨论
+      - 禁止输出：与上述5个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
   - name: "资源规划"
     agent: "project_manager"
     skills: ["plan_resources", "estimate_timeline"]
-    requirement: "规划人力资源、预算、时间线，制定项目计划"
+    requirement: |
+      规划人力资源、预算、时间线，制定项目计划。
+
+      输出要求：
+      - 以"## 资源规划"开头
+      - 必须包含以下部分（按顺序）：
+        1. 人力计划：表格（角色、人数、投入比例、起止时间）
+        2. 预算计划：表格（科目、金额、说明），附总计
+        3. 时间线：甘特图描述（文字版），按周列出关键节点
+        4. 里程碑验收标准：每个里程碑的验收条件（编号列表）
+        5. 缓冲策略：风险缓冲时间和资源预留说明
+      - 禁止输出：寒暄语、项目管理理论引用
+      - 禁止输出：与上述5个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
   - name: "立项评审"
     agent: "stakeholder"
     skills: ["review_proposal", "make_decision"]
-    requirement: "向决策层汇报方案，完成立项评审和审批"
+    requirement: |
+      向决策层汇报方案，完成立项评审和审批。
+
+      输出要求：
+      - 以"## 立项评审结论"开头
+      - 必须包含以下部分（按顺序）：
+        1. 方案摘要：一段话概括（不超过100字）
+        2. 评审维度：表格（维度、评分1-5、说明）含：市场价值、技术可行性、资源匹配度、风险可控性
+        3. 评审意见：编号列表，每条附提出人和结论
+        4. 决策结论：APPROVED / REJECTED / REVISION_REQUIRED
+        5. 后续行动项：编号列表（行动项、负责人、截止日期）
+      - 禁止输出：寒暄语、评审过程描述
+      - 禁止输出：与上述5个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
 required_stages:
   - "立项评审"
 forbidden_skills:

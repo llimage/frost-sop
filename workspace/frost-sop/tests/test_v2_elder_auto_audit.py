@@ -12,10 +12,20 @@ V2.0 阶段三验收测试：长老审计自动化
 import os
 import tempfile
 import threading
+import time
+
+import pytest
 
 os.environ["FROST_TESTING"] = "1"
 
 from core.store import Store
+
+
+@pytest.fixture(autouse=True)
+def _join_background_threads():
+    """每个测试结束后等待后台守护线程退出，防止 Python 3.13 segfault。"""
+    yield
+    time.sleep(0.3)
 
 
 class TestElderAutoAudit:

@@ -28,6 +28,9 @@ _SECRETS_FILE = "data/.secrets.enc"
 _KDF_SALT = b"\x8a\x7f\x3e\x1c\xb9\x4d\x2f\x6a\xc3\x55\x7e\x1b\xa8\x9f\x4d\x02"
 _KDF_ITERATIONS = 600_000
 
+# 测试模式下大幅降低迭代次数（安全性由测试环境保证）
+_TEST_KDF_ITERATIONS = 1_000
+
 
 def _get_machine_key() -> bytes:
     """
@@ -79,7 +82,7 @@ def _derive_key(machine_key: bytes) -> bytes:
         algorithm=hashes.SHA256(),
         length=32,
         salt=_KDF_SALT,
-        iterations=_KDF_ITERATIONS,
+        iterations=_TEST_KDF_ITERATIONS if os.getenv("FROST_TESTING") == "1" else _KDF_ITERATIONS,
     )
     return kdf.derive(machine_key)
 

@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-07-02T05:22:05.147899+00:00",
+  "aggregate": {
+    "total_modules": 0,
+    "total_mutations": 0,
+    "total_killed": 0,
+    "total_survived": 0,
+    "kill_rate": 0.0,
+    "duration_ms": 0.8,
+    "pass_threshold_80pct": false
+  },
+  "modules": []
+}

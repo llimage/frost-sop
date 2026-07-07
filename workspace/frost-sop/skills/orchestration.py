@@ -407,7 +407,11 @@ def _assemble_child(context: dict, stage: dict):
     asset_store = context.get("_asset_store")
     parent_agent = context.get("_parent_agent")
     stage_name = stage.get("name", "未知阶段")
-    stage_requirement = stage.get("requirement", f"执行{stage_name}任务")
+    # 兼容 requirement 和 prompt 两种字段名
+    stage_requirement = stage.get("requirement") or stage.get("prompt", f"执行{stage_name}任务")
+    # 注入任务变量（{topic} → 实际任务描述）
+    task_desc = context.get("_task_description", "")
+    stage_requirement = stage_requirement.replace("{topic}", task_desc)
 
     assemble_context = {
         "_agent_requirement": f"角色：{stage.get('agent', '执行者')}。任务：{stage_requirement}",
@@ -521,7 +525,76 @@ def _execute_child(child, context: dict, stage: dict) -> dict:
     5. 更新agent_status为destroyed
     """
     stage_name = stage.get("name", "未知阶段")
-    stage_requirement = stage.get("requirement", f"执行{stage_name}任务")
+    # 兼容 requirement 和 prompt 两种字段名
+    stage_requirement = stage.get("requirement") or stage.get("prompt", f"执行{stage_name}任务")
+    # 注入任务变量（{topic} → 实际任务描述）
+    task_desc = context.get("_task_description", "")
+    stage_requirement = stage_requirement.replace("{topic}", task_desc)
+
+    # 收集前序阶段输出，注入到当前阶段prompt中（阶段间上下文传递）
+    prev_results = context.get("_stage_results", [])
+    if prev_results:
+        logger.info("[上下文传递] 阶段'%s'收到 %d 个前序阶段输出", stage_name, len(prev_results))
+        for prev in prev_results:
+            prev_stage = prev.get("stage", "未知")
+            prev_output = prev.get("output", "")
+            logger.info("[上下文传递]   - %s: %d字符", prev_stage, len(prev_output))
+        prev_summary = "\n\n---\n\n## 前序阶段输出（你必须严格基于这些内容继续）\n\n"
+        for prev in prev_results:
+            prev_stage = prev.get("stage", "未知")
+            prev_output = prev.get("output", "")
+            prev_summary += f"### {prev_stage}的输出:\n{prev_output}\n\n"
+        stage_requirement = f"{stage_requirement}{prev_summary}\n\n【强制规则】你正在执行'{stage_name}'阶段。你必须：\n1. 严格基于以上前序阶段的输出继续，不要引入与前序输出无关的新话题\n2. 如果前序输出关于'长上下文记忆管理'，你的输出也必须关于'长上下文记忆管理'\n3. 禁止凭空想象或依赖训练数据中的无关信息\n4. 如果前序输出包含具体的论文/项目/技术方案，你的分析必须围绕这些内容展开\n"
+
+    # ── P2: web_fetch — 为阶段注入真实网页内容 ──
+    web_fetch_urls = stage.get("web_fetch_urls", [])
+    web_fetch_query = stage.get("web_fetch_query", "")
+    # 替换 {topic} 占位符（与其他字段保持一致）
+    if web_fetch_query:
+        web_fetch_query = web_fetch_query.replace("{topic}", task_desc)
+    if web_fetch_urls:
+        web_fetch_urls = [u.replace("{topic}", task_desc) for u in web_fetch_urls]
+    if web_fetch_urls or web_fetch_query:
+        try:
+            from skills.web_fetcher import web_fetch_skill
+
+            wf_context = {
+                "_urls": web_fetch_urls,
+                "_query": web_fetch_query,
+                "_max_results": stage.get("web_fetch_max_results", 3),
+                "_max_chars_per_url": stage.get("web_fetch_max_chars", 3000),
+            }
+            wf_result = web_fetch_skill.execute(wf_context)
+            web_content = wf_result.get("_web_content", "")
+            web_sources = wf_result.get("_web_sources", [])
+            logger.info(
+                "[web_fetch] 阶段'%s'抓取了 %d 个来源，共 %d 字符",
+                stage_name,
+                len(web_sources),
+                len(web_content),
+            )
+            if web_content:
+                stage_requirement = (
+                    f"{stage_requirement}\n\n---\n\n## 真实信息来源\n\n"
+                    f"以下是真实网页内容，你必须基于这些内容进行分析，不要依赖自己的训练数据。\n\n"
+                    f"{web_content}\n\n"
+                    f"重要：以上是从真实网页抓取的内容，请严格基于这些内容回答问题。"
+                )
+        except Exception as e:
+            logger.warning("[web_fetch] 阶段'%s'抓取失败: %s", stage_name, e)
+
+    # ── P2补充：如果上下文已有预抓取内容（由外部Agent通过API传入），也注入 ──
+    pre_fetched = context.get("_web_content", "")
+    if pre_fetched and "真实信息来源" not in stage_requirement:
+        logger.info("[web_fetch] 阶段'%s'使用预抓取内容（%d字符）", stage_name, len(pre_fetched))
+        logger.info("[web_fetch] 预抓取内容前100字: %s", pre_fetched[:100])
+        stage_requirement = (
+            f"{stage_requirement}\n\n---\n\n## 真实信息来源（预抓取）\n\n"
+            f"以下是外部Agent预抓取的网页内容，你必须基于这些内容进行分析。\n\n"
+            f"{pre_fetched[:5000]}\n\n"
+            f"重要：以上是从真实网页抓取的内容，请严格基于这些内容回答问题。"
+        )
+        logger.info("[web_fetch] stage_requirement现在长度: %d", len(stage_requirement))
 
     initial_context = {
         "_task_description": stage_requirement,
@@ -541,6 +614,59 @@ def _execute_child(child, context: dict, stage: dict) -> dict:
     except Exception as e:
         result_context = {"_generated_content": f"执行失败: {str(e)}"}
         execution_success = False
+
+    # ── P2补充：输出验证 + 主题偏移纠正重试 ──
+    _validation_retry_count = 0
+    _max_validation_retries = 1
+    while _validation_retry_count <= _max_validation_retries:
+        # 提取本阶段输出
+        stage_output = result_context.get("_generated_content", "")
+        if not stage_output:
+            break
+
+        # 调用validate_output skill
+        try:
+            from skills.output_validator import validate_output_skill
+
+            expected_topic = task_desc or ""
+            val_context = {
+                "_output_to_validate": stage_output,
+                "_expected_topic": expected_topic,
+                "_validation_type": "topic",
+                "_stage_name": stage_name,
+            }
+            val_result = validate_output_skill.execute(val_context)
+            validation_passed = val_result.get("_validation_passed", True)
+            validation_issues = val_result.get("_validation_issues", [])
+            correction_prompt = val_result.get("_correction_prompt", "")
+
+            if validation_passed:
+                logger.info("[output_validator] 阶段'%s'输出验证通过", stage_name)
+                break
+            else:
+                _validation_retry_count += 1
+                logger.warning(
+                    "[output_validator] 阶段'%s'输出验证失败（%d/%d）：%s",
+                    stage_name,
+                    _validation_retry_count,
+                    _max_validation_retries,
+                    validation_issues,
+                )
+                if _validation_retry_count <= _max_validation_retries and correction_prompt:
+                    # 注入纠正prompt，重新执行
+                    logger.info("[output_validator] 阶段'%s'重新执行（纠正主题偏移）", stage_name)
+                    initial_context["_task_description"] = (
+                        f"{stage_requirement}\n\n【纠正指令】{correction_prompt}"
+                    )
+                    result_context = child.run(
+                        sop_steps=agent_config.get("sop_steps", ["call_llm_for_output"]),
+                        initial_context=initial_context,
+                    )
+                else:
+                    break
+        except Exception as e:
+            logger.warning("[output_validator] 阶段'%s'验证失败: %s", stage_name, e)
+            break
 
     # ── A-004: merge_from — 孙辈退出 → 父辈合并经验 ──
     _merge_child_store_to_parent(child, context)
@@ -630,10 +756,64 @@ def _record_weapon_usage(agent_config: dict, context: dict, success: bool) -> No
         logger.debug("[A-005] record_usage 失败: %s", e)
 
 
+def _validate_output(result_text: str, stage: dict, stage_name: str) -> dict:
+    """
+    验证LLM输出是否符合格式要求。
+    返回 {"valid": bool, "issues": [str]}。
+    """
+    issues = []
+    output = result_text.strip()
+
+    # 1. 检查寒暄语（最常见的思维飘逸指标）
+    forbidden_prefixes = ["好的", "我来", "以下是", "根据您", "好的，", "当然", "没问题", "以下是"]
+    for prefix in forbidden_prefixes:
+        if output[:20].startswith(prefix):
+            issues.append(f"输出以寒暄语'{prefix}'开头，违反格式约束")
+            break
+
+    # 2. 检查输出长度（太短说明LLM没有认真执行）
+    if len(output) < 100:
+        issues.append(f"输出过短（{len(output)}字符），可能未认真执行任务")
+
+    # 3. 检查是否以Markdown标题开头（格式约束要求）
+    if not output.startswith("#") and not output.startswith("|"):
+        issues.append("输出未以Markdown标题(##)或表格(|)开头，可能不符合格式要求")
+
+    # 4. 检查是否包含"执行失败"等错误标记
+    if "执行失败" in output[:50] or "Error" in output[:50]:
+        issues.append("输出包含执行失败标记")
+
+    return {"valid": len(issues) == 0, "issues": issues}
+
+
+def _log_validation_failure(stage_name: str, issues: list, output_preview: str):
+    """将验证失败记录到 config/AGENTS.md 失败日志。"""
+    try:
+        log_path = os.path.join(os.path.dirname(__file__), "..", "config", "AGENTS.md")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        entry = f"""
+## [{timestamp}] 输出验证失败 — {stage_name}
+
+**问题**:
+{chr(10).join(f"- {i}" for i in issues)}
+
+**输出预览**（前200字）:
+{output_preview[:200]}
+
+**改进方向**: 检查SOP模板的prompt约束是否足够明确
+---
+"""
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(entry)
+    except Exception as e:
+        logger.warning("写入AGENTS.md失败日志失败: %s", e)
+
+
 def _persist_result(context: dict, stage_name: str, result_context: dict, child) -> dict:
     """
     持久化阶段执行结果到context。
     构建result字典，保存child.store数据，更新_stage_results。
+    包含输出格式验证。
     """
     agent_config = context.get("_agent_config", {})
     result_text = result_context.get(
@@ -642,13 +822,22 @@ def _persist_result(context: dict, stage_name: str, result_context: dict, child)
     )
     status = "completed" if "_generated_content" in result_context else "failed"
 
+    # 输出格式验证
+    stage = context.get("_current_stage", {})
+    validation = _validate_output(result_text, stage, stage_name)
+    if not validation["valid"]:
+        _log_validation_failure(stage_name, validation["issues"], result_text)
+        logger.warning("[输出验证] 阶段'%s'输出不合规: %s", stage_name, validation["issues"])
+
     result = {
         "stage": stage_name,
         "agent": child.name if child else "未知",
         "skills_used": agent_config.get("skills", []),
         "skill_sources": agent_config.get("skill_sources", {}),
-        "output": f"[{stage_name}] {result_text[:100]}",
+        "output": result_text,  # 不再截断，保留完整输出
         "status": status,
+        "format_valid": validation["valid"],
+        "format_issues": validation["issues"],
         "child_generation": child.generation if child else 0,
         "agent_assembled": True,
     }
@@ -724,6 +913,43 @@ def execute_stage(context: dict) -> dict:
 
     # 4. 持久化结果
     context = _persist_result(context, stage_name, result_context, child)
+
+    # P0: 输出验证失败时自动重试1次
+    current_result = context.get("_current_stage_result", {})
+    if not current_result.get("format_valid", True) and current_result.get("status") == "completed":
+        issues = current_result.get("format_issues", [])
+        logger.warning("[P0重试] 阶段'%s'输出不合规，自动重试1次。问题: %s", stage_name, issues)
+
+        # 从_stage_results中移除不合格的结果
+        stage_results = context.get("_stage_results", [])
+        if stage_results and stage_results[-1].get("stage") == stage_name:
+            stage_results.pop()
+            context["_stage_results"] = stage_results
+
+        # 构建纠正prompt：在原requirement前加上纠正指令
+        correction_prefix = (
+            "【重要纠正】上一次输出存在以下问题，请修正后重新生成：\n"
+            + "\n".join(f"- {issue}" for issue in issues)
+            + "\n\n请严格遵守输出格式要求，直接以Markdown标题开头，不要任何寒暄语。\n\n---\n\n"
+        )
+        # 临时修改stage的requirement/prompt，加入纠正前缀
+        original_requirement = stage.get("requirement") or stage.get("prompt", "")
+        stage["requirement"] = correction_prefix + original_requirement
+
+        # 重新组装并执行
+        child_retry = _assemble_child(context, stage)
+        if child_retry is not None:
+            result_context_retry = _execute_child(child_retry, context, stage)
+            context = _persist_result(context, stage_name, result_context_retry, child_retry)
+            retry_result = context.get("_current_stage_result", {})
+            if retry_result.get("format_valid", False):
+                logger.info("[P0重试] 阶段'%s'重试后输出合规", stage_name)
+            else:
+                logger.warning("[P0重试] 阶段'%s'重试后仍不合规，保留重试结果", stage_name)
+
+        # 恢复原始requirement（避免污染后续执行）
+        stage["requirement"] = original_requirement
+
     return context
 
 

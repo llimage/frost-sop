@@ -113,3 +113,20 @@ locust_report.html
 # Source archives
 *-source.zip
 frost-sop-v3.0-audit-package.zip
+
+# Node
+node_modules/
+
+# === V7.0 additions ===
+# Backup files
+*.bak
+*.bak.*
+
+# Miscreated tilde dir
+~/
+
+# Test output
+workspace/frost-sop/output/
+
+# WorkBuddy session files
+.workbuddyignore

@@ -37,6 +37,9 @@ ALLOWED_TABLES = {
     "kv_store",
     "event_log",
     "scheduled_jobs",
+    "project_skills",
+    "config_snapshots",
+    "daily_reviews",
 }
 
 # S-001 修复：WHERE 子句危险关键字（用于非参数化部分的检测）

@@ -1,0 +1,113 @@
+{
+  "timestamp": "2026-07-07T18:55:49.503242",
+  "answers": {
+    "identity": "IT小白",
+    "destination_6m": "零收入",
+    "destination_12m": "",
+    "destination_36m": "",
+    "assets": "FROST框架",
+    "constraints": "零预算",
+    "content_strategy": "小红书",
+    "growth_flywheel": "不知道"
+  },
+  "gaps": [
+    {
+      "gap_id": "GAP-001",
+      "description": "技术执行能力",
+      "source_question": "identity",
+      "priority": "P0",
+      "suggested_hunt_target": "tech_execution"
+    },
+    {
+      "gap_id": "GAP-002",
+      "description": "变现路径设计",
+      "source_question": "destination_6m",
+      "priority": "P0",
+      "suggested_hunt_target": "monetization_path"
+    },
+    {
+      "gap_id": "GAP-003",
+      "description": "零预算工具栈",
+      "source_question": "constraints",
+      "priority": "P0",
+      "suggested_hunt_target": "zero_budget_tools"
+    },
+    {
+      "gap_id": "GAP-004",
+      "description": "小红书运营能力",
+      "source_question": "content_strategy",
+      "priority": "P0",
+      "suggested_hunt_target": "redbook_ops"
+    },
+    {
+      "gap_id": "GAP-005",
+      "description": "增长飞轮设计",
+      "source_question": "growth_flywheel",
+      "priority": "P0",
+      "suggested_hunt_target": "flywheel_design"
+    },
+    {
+      "gap_id": "GAP-006",
+      "description": "资产变现路径",
+      "source_question": "assets",
+      "priority": "P1",
+      "suggested_hunt_target": "asset_monetization"
+    }
+  ],
+  "tasks": [
+    {
+      "task_id": "INIT-HUNT-001",
+      "title": "初始狩猎：技术执行能力",
+      "target_skill": "tech_execution",
+      "priority": "P0",
+      "status": "pending",
+      "created_at": "2026-07-07T18:55:49.502935",
+      "gap_id": "GAP-001"
+    },
+    {
+      "task_id": "INIT-HUNT-002",
+      "title": "初始狩猎：变现路径设计",
+      "target_skill": "monetization_path",
+      "priority": "P0",
+      "status": "pending",
+      "created_at": "2026-07-07T18:55:49.502970",
+      "gap_id": "GAP-002"
+    },
+    {
+      "task_id": "INIT-HUNT-003",
+      "title": "初始狩猎：零预算工具栈",
+      "target_skill": "zero_budget_tools",
+      "priority": "P0",
+      "status": "pending",
+      "created_at": "2026-07-07T18:55:49.502981",
+      "gap_id": "GAP-003"
+    },
+    {
+      "task_id": "INIT-HUNT-004",
+      "title": "初始狩猎：小红书运营能力",
+      "target_skill": "redbook_ops",
+      "priority": "P0",
+      "status": "pending",
+      "created_at": "2026-07-07T18:55:49.502990",
+      "gap_id": "GAP-004"
+    },
+    {
+      "task_id": "INIT-HUNT-005",
+      "title": "初始狩猎：增长飞轮设计",
+      "target_skill": "flywheel_design",
+      "priority": "P0",
+      "status": "pending",
+      "created_at": "2026-07-07T18:55:49.502998",
+      "gap_id": "GAP-005"
+    },
+    {
+      "task_id": "INIT-HUNT-006",
+      "title": "初始狩猎：资产变现路径",
+      "target_skill": "asset_monetization",
+      "priority": "P1",
+      "status": "pending",
+      "created_at": "2026-07-07T18:55:49.503007",
+      "gap_id": "GAP-006"
+    }
+  ]
+}

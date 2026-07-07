@@ -3,8 +3,19 @@ V6.0 端到端测试: 狩猎→分析→进化完整闭环
 """
 
 import os
+import time
+
+import pytest
 
 os.environ["FROST_TESTING"] = "1"
+
+
+@pytest.fixture(autouse=True)
+def _join_background_threads():
+    """每个测试结束后等待后台守护线程退出，防止 Python 3.13 segfault。"""
+    yield
+    # 给守护线程 0.5 秒优雅退出时间
+    time.sleep(0.5)
 
 
 class TestE2EHuntEvolution:

@@ -4,6 +4,7 @@ PHILOSOPHY: LLM is the shared nervous system. It is called as a Skill,
 not hardwired into Agent. This preserves the fractal purity of the architecture.
 """
 
+import hashlib
 import json
 import os
 import uuid
@@ -49,6 +50,75 @@ def _write_failure_log(
         filepath.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
         pass  # best-effort logging; never crash the caller
+
+
+# ── 响应缓存（prompt去重，减少重复LLM调用）──────────────────────────────
+_LLM_CACHE: dict[str, dict] = {}
+_LLM_CACHE_MAX_SIZE = 500
+_LLM_CACHE_HITS = 0
+_LLM_CACHE_MISSES = 0
+
+
+def _cache_key(context: dict) -> str | None:
+    """生成缓存key。测试模式或bypass标记时不缓存。"""
+    if context.get("_llm_cache_bypass", False):
+        return None
+    if os.getenv("FROST_TESTING") == "1":
+        return None
+    key_parts = [
+        context.get("_prompt", ""),
+        context.get("_system_prompt", ""),
+        str(context.get("_temperature", "")),
+        context.get("_model", "deepseek-chat"),
+        str(context.get("_max_tokens", "")),
+        context.get("_llm_profile", ""),
+    ]
+    return hashlib.sha256("|".join(key_parts).encode("utf-8")).hexdigest()
+
+
+def _get_cached_response(key: str) -> dict | None:
+    """从缓存获取响应。"""
+    global _LLM_CACHE_HITS, _LLM_CACHE_MISSES
+    entry = _LLM_CACHE.get(key)
+    if entry is not None:
+        _LLM_CACHE_HITS += 1
+        return dict(entry)
+    _LLM_CACHE_MISSES += 1
+    return None
+
+
+def _store_cached_response(key: str, context: dict):
+    """存储成功响应到缓存（LRU淘汰）。"""
+    global _LLM_CACHE
+    if len(_LLM_CACHE) >= _LLM_CACHE_MAX_SIZE:
+        oldest = next(iter(_LLM_CACHE))
+        del _LLM_CACHE[oldest]
+    _LLM_CACHE[key] = {
+        "_llm_response": context.get("_llm_response", ""),
+        "_llm_tokens": context.get("_llm_tokens", {}),
+        "_llm_model": context.get("_llm_model", ""),
+        "_reason": context.get("_reason", ""),
+    }
+
+
+def get_cache_stats() -> dict:
+    """获取缓存统计信息。"""
+    total = _LLM_CACHE_HITS + _LLM_CACHE_MISSES
+    return {
+        "hits": _LLM_CACHE_HITS,
+        "misses": _LLM_CACHE_MISSES,
+        "hit_rate": round(_LLM_CACHE_HITS / total, 4) if total > 0 else 0.0,
+        "cache_size": len(_LLM_CACHE),
+        "max_size": _LLM_CACHE_MAX_SIZE,
+    }
+
+
+def clear_llm_cache():
+    """清空LLM响应缓存。"""
+    global _LLM_CACHE, _LLM_CACHE_HITS, _LLM_CACHE_MISSES
+    _LLM_CACHE.clear()
+    _LLM_CACHE_HITS = 0
+    _LLM_CACHE_MISSES = 0
 
 
 # ── 离线模型全局变量 ──────────────────────────────────────────────────
@@ -283,6 +353,33 @@ def _call_online_llm(context: dict) -> dict:
     temperature = context.get("_temperature", 0.7)
     max_tokens = context.get("_max_tokens", 2048)
 
+    # ── 可控性改进：基于任务类型的 temperature 映射 ─────────────────────
+    # _llm_profile: "execute"(0.1) | "create"(0.5) | "review"(0.2) | 未设置(0.3)
+    _llm_profile = context.get("_llm_profile", "")
+    if _llm_profile == "execute":
+        default_temp = 0.1  # 执行类：高确定性，低飘逸
+    elif _llm_profile == "create":
+        default_temp = 0.5  # 创意类：适度发散
+    elif _llm_profile == "review":
+        default_temp = 0.2  # 审查类：高一致性
+    else:
+        default_temp = 0.3  # 默认：比原0.7更保守，减少飘逸
+
+    # 如果用户未显式传_temperature，用profile映射的默认值
+    if "_temperature" not in context:
+        temperature = default_temp
+
+    # ── max_tokens 按阶段设定（减少output token浪费）──
+    if "_max_tokens" not in context:
+        _PROFILE_MAX_TOKENS = {
+            "execute": 2048,
+            "create": 2048,
+            "review": 1024,
+            "summary": 512,
+            "match": 256,
+        }
+        max_tokens = _PROFILE_MAX_TOKENS.get(_llm_profile, 1024)
+
     client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
 
     messages = []
@@ -391,6 +488,48 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
 
         return context
 
+    # ── 响应缓存检查 ──
+    cache_key = _cache_key(context)
+    if cache_key is not None:
+        cached = _get_cached_response(cache_key)
+        if cached is not None:
+            context["_llm_response"] = cached["_llm_response"]
+            context["_llm_tokens"] = cached["_llm_tokens"]
+            context["_llm_model"] = cached["_llm_model"]
+            context["_reason"] = f"[CACHE_HIT] {cached['_reason']}"
+            context["_llm_backend"] = "cache"
+            return context
+
+    # ── 断路器检查 ──
+    from core.circuit_breaker import get_circuit_breaker
+
+    _cb_agent_id = context.get("_agent_id", "default")
+    _cb = get_circuit_breaker(_cb_agent_id)
+    _cb_allowed, _cb_reason = _cb.can_call()
+    if not _cb_allowed:
+        context["_llm_response"] = f"断路器熔断中：{_cb_reason}"
+        context["_llm_tokens"] = {"prompt": 0, "completion": 0, "total": 0}
+        context["_reason"] = f"[CIRCUIT_BREAKER] {_cb_reason}"
+        context["_llm_backend"] = "circuit_open"
+        return context
+
+    # ── 模型分级路由：简单任务优先本地模型（cost=0）──
+    _llm_profile = context.get("_llm_profile", "")
+    if _llm_profile in ("match", "summary") and not context.get("_model"):
+        _local_resp = call_local_llm(
+            context.get("_prompt", ""),
+            max_tokens=256,
+            temperature=0.1,
+        )
+        if "error" not in _local_resp:
+            context["_llm_response"] = _local_resp["text"]
+            context["_llm_tokens"] = {"prompt": 0, "completion": 0, "total": 0}
+            context["_llm_model"] = "local-gguf"
+            context["_reason"] = "[MODEL_ROUTING] 简单任务路由到本地模型(cost=0)"
+            context["_llm_backend"] = "offline-routed"
+            return context
+        # 本地模型不可用，继续走在线流程
+
     # ── 离线模式 ──
     if effective_mode == "offline":
         resp = call_local_llm(
@@ -417,8 +556,16 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
         try:
             context = _call_online_llm(context)
             context["_llm_backend"] = "online"
+            _resp = context.get("_llm_response", "")
+            if _resp and not _resp.startswith(("错误", "LLM调用失败", "预算")):
+                _cb.record_success()
+                if cache_key:
+                    _store_cached_response(cache_key, context)
+            else:
+                _cb.record_failure()
         except Exception as e:
             _write_failure_log("call_llm_online", str(e), context)
+            _cb.record_failure()
             context["_llm_response"] = f"LLM调用失败：{str(e)}"
             context["_llm_tokens"] = {"prompt": 0, "completion": 0, "total": 0}
             context["_reason"] = f"LLM调用失败：{str(e)}"
@@ -429,9 +576,17 @@ def call_llm(context: dict, mode: str = "auto") -> dict:
     try:
         context = _call_online_llm(context)
         context["_llm_backend"] = "online"
+        _resp = context.get("_llm_response", "")
+        if _resp and not _resp.startswith(("错误", "LLM调用失败", "预算")):
+            _cb.record_success()
+            if cache_key:
+                _store_cached_response(cache_key, context)
+        else:
+            _cb.record_failure()
         return context
     except Exception as e:
         _write_failure_log("call_llm_auto_online", str(e), context)
+        _cb.record_failure()
         print(f"Online LLM 失败，降级到离线模式: {e}")
         resp = call_local_llm(
             context.get("_prompt", ""),

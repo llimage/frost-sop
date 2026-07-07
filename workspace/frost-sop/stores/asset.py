@@ -18,10 +18,18 @@ class FileStore(Store):
     def __init__(self, filepath: str):
         super().__init__()
         self.filepath = filepath
-        if os.path.exists(filepath):
-            with open(filepath, encoding="utf-8") as f:
-                self._memory = json.load(f)
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+            try:
+                with open(filepath, encoding="utf-8") as f:
+                    self._memory = json.load(f)
+            except json.JSONDecodeError as e:
+                print(f"[WARN] FileStore: {filepath} JSON格式错误，初始化为空字典")
+                print(f"  错误: {e}")
+                self._memory = {}
         else:
+            # 文件不存在或为空，初始化为空字典
+            if os.path.exists(filepath):
+                print(f"[INFO] FileStore: {filepath} 文件为空，初始化为空字典")
             self._memory = {}
 
     def save(self, key: str, value):
@@ -54,7 +62,7 @@ def create_asset_store(backend: str = "file", path: str = "data/assets.json") ->
 
 
 def _init_skill_genes(asset_store):
-    """初始化九种基础能力基因种子"""
+    """初始化十二种基础能力基因种子"""
     base_genes = {
         "需求分析": {
             "name": "需求分析",
@@ -118,6 +126,27 @@ def _init_skill_genes(asset_store):
             "description": "分析运营数据，提出流程优化建议",
             "input_keys": ["ops_data"],
             "output_keys": ["optimization_plan"],
+        },
+        "小红书运营": {
+            "name": "小红书运营",
+            "type": "functional",
+            "description": "小红书内容运营，包括种草笔记创作、达人合作策略、爆款内容公式",
+            "input_keys": ["topic", "target_audience"],
+            "output_keys": ["xiaohongshu_content"],
+        },
+        "掘金发布": {
+            "name": "掘金发布",
+            "type": "functional",
+            "description": "掘金平台技术文章发布，包括格式适配、标签选择、专栏管理",
+            "input_keys": ["article_content", "tags"],
+            "output_keys": ["juejin_published"],
+        },
+        "邮件Newsletter": {
+            "name": "邮件Newsletter",
+            "type": "functional",
+            "description": "邮件Newsletter内容创作与发送，包括模板设计、订阅管理、发送调度",
+            "input_keys": ["content", "subscriber_list"],
+            "output_keys": ["newsletter_sent"],
         },
     }
 

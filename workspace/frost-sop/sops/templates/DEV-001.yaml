@@ -1,32 +1,94 @@
 sop_id: "DEV-001"
 name: "新功能开发"
-version: "1.0"
+version: "1.1"
 stages:
   - name: "需求分析"
     agent: "product_manager"
     skills: ["analyze_requirements"]
-    requirement: "分析功能需求，明确验收标准和约束条件"
+    requirement: |
+      分析功能需求，明确验收标准和约束条件。
+
+      输出要求：
+      - 以"## 需求分析报告"开头
+      - 必须包含以下部分（按顺序）：
+        1. 功能概述：一段话说明功能目标
+        2. 验收标准：编号列表，每条以"验收标准N:"开头，必须可测试
+        3. 约束条件：编号列表，列出技术/业务/时间约束
+        4. 非目标：明确列出本次不做的内容
+      - 禁止输出：寒暄语、背景铺垫、"好的我来分析"等废话
+      - 禁止输出：与上述4个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
   - name: "技术设计"
     agent: "architect"
     skills: ["design_architecture"]
-    requirement: "设计技术方案，包括架构、接口、数据模型"
+    requirement: |
+      设计技术方案，包括架构、接口、数据模型。
+
+      输出要求：
+      - 以"## 技术设计方案"开头
+      - 必须包含以下部分（按顺序）：
+        1. 架构概述：一段话+核心组件列表
+        2. 接口设计：每个接口列出：路径、方法、入参、出参、异常
+        3. 数据模型：字段名、类型、约束、说明（表格格式）
+        4. 依赖清单：外部依赖及其版本
+      - 禁止输出：寒暄语、设计思路阐述、方案对比（除非有多个候选）
+      - 禁止输出：与上述4个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
   - name: "代码实现"
     agent: "developer"
     skills: ["generate_code"]
-    requirement: "按设计方案编写代码，确保可运行和可测试"
+    requirement: |
+      按设计方案编写代码，确保可运行和可测试。
+
+      输出要求：
+      - 以"## 代码实现"开头
+      - 每个文件输出格式：
+        ### 文件：{文件路径}
+        ```{语言}
+        {代码}
+        ```
+      - 代码必须包含：函数注释、关键逻辑注释、异常处理
+      - 代码末尾附"### 变更说明"：编号列表说明每个文件的改动点
+      - 禁止输出：寒暄语、设计思路、"以下是代码"等引导语
+      - 禁止输出：未在技术设计中定义的接口或数据模型
     output_type: "code"
+    output_format: "markdown_with_code_blocks"
   - name: "测试验证"
     agent: "tester"
     skills: ["run_tests"]
-    requirement: "运行测试套件，验证功能和回归"
+    requirement: |
+      运行测试套件，验证功能和回归。
+
+      输出要求：
+      - 以"## 测试报告"开头
+      - 必须包含以下部分（按顺序）：
+        1. 测试摘要：通过数/失败数/跳过数/总数（表格）
+        2. 失败用例：每个失败用例列出：用例名、失败原因、堆栈摘要
+        3. 覆盖率：行覆盖率、分支覆盖率（百分比）
+        4. 结论：PASS / FAIL（明确判定，不含糊）
+      - 禁止输出：寒暄语、测试过程描述、"正在运行测试"等日志
+      - 禁止输出：与上述4个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
   - name: "审查交付"
     agent: "auditor"
     skills: ["audit_code"]
-    requirement: "审查代码质量，审计合规性，完成交付"
+    requirement: |
+      审查代码质量，审计合规性，完成交付。
+
+      输出要求：
+      - 以"## 审查报告"开头
+      - 必须包含以下部分（按顺序）：
+        1. 审查清单：每项列出：检查项、状态（通过/不通过/不适用）、备注
+        2. 问题列表：按严重程度排序（P0 > P1 > P2），每个问题：位置、描述、修复建议
+        3. 合规审计：安全、性能、可维护性各一项评级（A/B/C/D）
+        4. 交付结论：APPROVED / REJECTED + 理由
+      - 禁止输出：寒暄语、审查过程描述
+      - 禁止输出：与上述4个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
 required_stages:
   - "审查交付"
 forbidden_skills:

@@ -89,11 +89,24 @@ def call_llm_for_output(context: dict) -> dict:
 
     prompt = f"{task}\n\n{type_prompts.get(output_type, type_prompts['document'])}"
 
+    # 从context读取temperature，默认0.1（确定性优先，减少思维飘逸）
+    temperature = context.get("_temperature", 0.1)
+
+    # P1: 强化system prompt — 禁止寒暄、禁止偏题、强制直接输出
+    system_prompt = (
+        "你是一个专业的内容生成引擎。严格遵守以下规则：\n"
+        "1. 直接输出内容，禁止任何寒暄语（如'好的'、'我来'、'以下是'、'根据您的要求'）\n"
+        "2. 输出必须以Markdown标题(##)或表格(|)开头\n"
+        "3. 严格围绕给定主题生成内容，禁止自由发挥到无关话题\n"
+        "4. 如果提供了前序阶段输出，必须基于前序内容继续，不要重新假设主题\n"
+        "5. 输出必须是完整的、可直接使用的内容，不是模板或说明"
+    )
+
     llm_context = call_llm_skill.execute(
         {
             "_prompt": prompt,
-            "_system_prompt": "你是一个专业的AI助手。请根据要求生成内容。",
-            "_temperature": 0.7,
+            "_system_prompt": system_prompt,
+            "_temperature": temperature,
             "_task_id": context.get("_task_id"),  # F14: propagate for cost_log
             "_agent_id": context.get("_agent_id"),  # F14: propagate for cost_log
         }

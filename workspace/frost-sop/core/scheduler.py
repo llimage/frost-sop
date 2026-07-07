@@ -203,7 +203,9 @@ class FrostScheduler:
             jobs.append(
                 {
                     "id": job.id,
-                    "next_run_time": str(job.next_run_time) if job.next_run_time else None,
+                    "next_run_time": str(job.next_run_time)
+                    if getattr(job, "next_run_time", None)
+                    else None,
                     "trigger": str(job.trigger),
                 }
             )

@@ -1,27 +1,76 @@
 sop_id: "OPS-006"
 name: "知识资产管理"
-version: "1.0"
+version: "1.1"
 stages:
   - name: "资产盘点"
     agent: "knowledge_manager"
     skills: ["inventory_assets", "knowledge_management"]
-    requirement: "盘点本月新增的知识资产，包括文档、代码、经验"
+    requirement: |
+      盘点本月新增的知识资产，包括文档、代码、经验。
+
+      输出要求：
+      - 以"## 资产盘点报告"开头
+      - 必须包含以下部分（按顺序）：
+        1. 盘点范围：时间区间、资产类型、数据来源
+        2. 资产清单：表格（资产名称、类型、位置/路径、创建人、创建日期、大小）
+        3. 统计摘要：按类型分组的数量和总量（表格）
+        4. 异常发现：编号列表（缺失文件、损坏文件、命名不规范等）
+      - 禁止输出：寒暄语、盘点过程描述
+      - 禁止输出：与上述4个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
   - name: "分类归档"
     agent: "knowledge_manager"
     skills: ["categorize", "archive_sop", "archive_lesson"]
-    requirement: "将知识资产按类型分类，归档到家族资产Store"
+    requirement: |
+      将知识资产按类型分类，归档到家族资产Store。
+
+      输出要求：
+      - 以"## 分类归档报告"开头
+      - 必须包含以下部分（按顺序）：
+        1. 分类标准：说明分类维度和规则
+        2. 归档明细：表格（资产名称、原位置、目标分类、Store前缀、归档状态）
+        3. 归档统计：成功数/失败数/跳过数/总数
+        4. 失败原因：如有失败，逐条列出（资产名、失败原因、建议处理方式）
+      - 禁止输出：寒暄语、分类理论讨论
+      - 禁止输出：与上述4个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
   - name: "检索优化"
     agent: "knowledge_engineer"
     skills: ["optimize_search", "update_index"]
-    requirement: "优化知识资产的检索索引，确保后续可快速找到"
+    requirement: |
+      优化知识资产的检索索引，确保后续可快速找到。
+
+      输出要求：
+      - 以"## 检索优化报告"开头
+      - 必须包含以下部分（按顺序）：
+        1. 索引现状：当前索引条目数、上次更新时间、已知问题
+        2. 优化操作：编号列表，每条：操作类型（新增/更新/删除）、影响条目数
+        3. 优化效果：表格（指标、优化前、优化后），含：索引条目数、平均检索耗时、命中率
+        4. 建议维护周期：推荐的索引更新频率和触发条件
+      - 禁止输出：寒暄语、索引算法讨论
+      - 禁止输出：与上述4个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
   - name: "价值评估"
     agent: "knowledge_analyst"
     skills: ["assess_value", "generate_recommendations"]
-    requirement: "评估知识资产的使用价值，生成复用建议"
+    requirement: |
+      评估知识资产的使用价值，生成复用建议。
+
+      输出要求：
+      - 以"## 价值评估报告"开头
+      - 必须包含以下部分（按顺序）：
+        1. 评估方法：评估维度和打分标准说明
+        2. 资产评分：表格（资产名称、使用频率、复用潜力、文档质量、综合评分）
+        3. 高价值资产：Top 5资产，每个附推荐复用场景
+        4. 低价值资产：列表，附处置建议（保留/归档/删除）
+        5. 复用建议：编号列表，针对团队当前需求的具体复用方案
+      - 禁止输出：寒暄语、价值评估理论
+      - 禁止输出：与上述5个部分无关的内容
     output_type: "document"
+    output_format: "markdown"
 required_stages:
   - "分类归档"
 forbidden_skills:

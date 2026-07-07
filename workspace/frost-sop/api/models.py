@@ -21,6 +21,7 @@ class TaskCreateRequest(BaseModel):
     sop_id: str = Field(default="DEV-001", description="SOP模板ID")
     project_id: str = Field(default="default", description="项目ID")
     use_real_llm: bool = Field(default=False, description="是否使用真实LLM")
+    web_content: str = Field(default=None, description="预抓取的网页内容（由外部Agent提供）")
 
 
 class TaskResponse(BaseModel):
