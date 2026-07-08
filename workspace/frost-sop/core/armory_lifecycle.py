@@ -489,45 +489,54 @@ class ArmoryDispatcher:
         return None
 
     def dispatch_for_task(
-        self, task_description: str, required_categories: list[WeaponCategory] = None
+        self, task_description: str, required_categories: list = None
     ) -> dict[str, Any]:
         """
-        根据任务描述配发完整武器套装。
+        V7.4: 府兵自主决策——根据任务描述场景驱动配发武器。
+
+        不再是硬编码映射，而是：
+        1. 分析任务描述提取场景关键词
+        2. 查询武器库按评分排序
+        3. 选择最优武器组合
 
         Returns:
             {
                 "skills": {skill_name: Skill, ...},
-                "sop": SOP,
+                "tactics": [WeaponMetadata, ...],
+                "primary": WeaponMetadata | None,
                 "recommended_weapons": [WeaponMetadata, ...],
-                "reason": str
+                "reason": str,
+                "scores": {weapon_id: float, ...}
             }
         """
         from core.armory import WeaponType
 
-        # 军师推荐
-        bundle = self.registry.recommend_bundle(task_description, required_categories)
+        # V7.4: 使用场景驱动推荐
+        bundle = self.registry.recommend_bundle_for_task(task_description)
 
+        # 配发 SKILL
         skills = {}
-        for _cat, weapons in bundle.items():
-            for w in weapons:
-                if w.type == WeaponType.SKILL:
-                    skill = self.dispatch(w.id)
-                    if skill:
-                        skills[w.name] = skill
+        for w in bundle.get("skills", []):
+            skill = self.dispatch(w.id)
+            if skill:
+                skills[w.name] = skill
 
-        # 推荐 SOP
-        sop_candidates = self.registry.recommend(
-            task_description, weapon_type=WeaponType.SOP, top_k=1
-        )
-        sop = None
-        if sop_candidates:
-            sop_weapon = sop_candidates[0]
-            sop_id = sop_weapon.id.replace("sop:", "")
-            sop = self.dispatch_sop(sop_id)
+        # 配发 TACTIC（原 SOP）
+        tactics = []
+        tactic_weapon = bundle.get("tactic")
+        if tactic_weapon:
+            tactics.append(tactic_weapon)
+
+        # 收集推荐武器列表
+        recommended = []
+        recommended.extend(bundle.get("skills", []))
+        if tactic_weapon:
+            recommended.append(tactic_weapon)
 
         return {
             "skills": skills,
-            "sop": sop,
-            "recommended_weapons": [w for ws in bundle.values() for w in ws],
-            "reason": f"根据任务'{task_description}'配发 {len(skills)} 个Skill + SOP",
+            "tactics": tactics,
+            "primary": bundle.get("primary"),
+            "recommended_weapons": recommended,
+            "reason": f"场景驱动配发：'{task_description}' → {len(skills)} SKILL + {len(tactics)} TACTIC",
         }

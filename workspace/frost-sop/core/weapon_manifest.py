@@ -128,6 +128,36 @@ LESSON_ARCHIVIST = WeaponMetadata(
 # ────────────────────────────────────────────────────────────────────────────
 
 INTAKE_CLARIFIER = WeaponMetadata(
+    id="tactic:SOP-INTAKE-001",
+    name="需求澄清TACTIC",
+    type=WeaponType.TACTIC,
+    category=WeaponCategory.GOVERNANCE,
+    description="计划生成前审问：5个战略问题防止模糊需求",
+    applicable_scenarios=["需求澄清", "项目启动", "客户沟通", "战略对齐"],
+    not_applicable_scenarios=["技术实现", "代码编写"],
+    tags=["intake", "requirements", "clarification", "tactic"],
+    state=WeaponState.ACTIVE,
+    is_active=True,
+    is_preset=True,
+    created_from="manual",
+    source="sops/SOP-INTAKE-001.yaml",
+)
+
+PARENT_WORKFLOW = WeaponMetadata(
+    id="tactic:SOP-PARENT-001",
+    name="父辈工作流程TACTIC",
+    type=WeaponType.TACTIC,
+    category=WeaponCategory.STRATEGY,
+    description="父辈战术细化的标准操作流程：接收→拆解→并行识别→依赖解析→输出",
+    applicable_scenarios=["战术规划", "计划细化", "并行设计"],
+    not_applicable_scenarios=["战略制定", "代码执行"],
+    tags=["parent", "workflow", "tactic", "refinement"],
+    state=WeaponState.ACTIVE,
+    is_active=True,
+    is_preset=True,
+    created_from="manual",
+    source="sops/SOP-PARENT-001.yaml",
+)
     id="sop:SOP-INTAKE-001",
     name="需求澄清SOP",
     type=WeaponType.SOP,

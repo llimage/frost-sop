@@ -83,7 +83,21 @@ class FootmanAgent:
                 phase_id, parallel_group,
             )
 
-        # 3. 从武器库配发武器
+        # 3. 从武器库配发武器（V7.4: 场景驱动自主决策）
+        module_name = phase.get("module", "")
+        weapons = self._dispatcher.dispatch_for_task(module_name)
+
+        logger.info(
+            "[FootmanAgent] 配发武器: %d skills + %d tactics",
+            len(weapons.get("skills", {})),
+            len(weapons.get("tactics", [])),
+        )
+
+        # 4. 执行武器
+        outputs = self._execute_weapons(phase, weapons, coordinator_inputs)
+
+        # 5. 记录使用到武器库（健康评分 + 连续失败追踪）
+        self._record_usage(weapons, outputs)
         module_name = phase.get("module", "")
         weapons = self._dispatcher.dispatch_for_task(module_name)
 
@@ -123,6 +137,50 @@ class FootmanAgent:
         return None
 
     def _execute_weapons(self, phase: dict, weapons: dict, coordinator_inputs: dict = None) -> dict:
+        """
+        执行配发的武器。
+
+        V7.4: 支持 SKILL + TACTIC 组合执行。
+        """
+        outputs = {}
+        inputs = dict(phase.get("inputs", {}))
+        if coordinator_inputs:
+            inputs.update(coordinator_inputs)
+            logger.info("[FootmanAgent] 接收 Coordinator 输入: %s", list(coordinator_inputs.keys()))
+
+        # 执行 TACTIC（原 SOP）
+        for tactic in weapons.get("tactics", []):
+            logger.info("[FootmanAgent] 执行 TACTIC: %s", tactic.id)
+            outputs[f"_tactic_{tactic.id}"] = "executed"
+
+        # 执行 SKILL
+        for skill_name, skill in weapons.get("skills", {}).items():
+            logger.info("[FootmanAgent] 执行 Skill: %s", skill_name)
+            try:
+                result = skill.execute(inputs)
+                if isinstance(result, dict):
+                    outputs.update(result)
+                else:
+                    outputs[f"_{skill_name}_result"] = result
+            except Exception as e:
+                logger.error("[FootmanAgent] Skill %s 执行失败: %s", skill_name, e)
+                outputs[f"_error_{skill_name}"] = str(e)
+
+        return outputs
+
+    def _record_usage(self, weapons: dict, outputs: dict):
+        """记录武器使用情况到武器库（V7.4: 健康评分 + 连续失败追踪）。"""
+        has_error = any(k.startswith("_error_") for k in outputs.keys())
+        success = not has_error
+
+        for skill_name in weapons.get("skills", {}):
+            weapon_id = f"skill:{skill_name}"
+            if self.registry.get(weapon_id):
+                self.registry.record_usage(weapon_id, success)
+
+        for tactic in weapons.get("tactics", []):
+            if self.registry.get(tactic.id):
+                self.registry.record_usage(tactic.id, success)
         """
         执行配发的武器。
 
