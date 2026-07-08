@@ -96,6 +96,17 @@ class EventType:
     PLAN_REJECTED = "plan_rejected"  # 计划被拒绝（审计不通过）
     AUDIT_REQUESTED = "audit_requested"  # 请求审计计划
     AUDIT_COMPLETED = "audit_completed"  # 审计完成
+
+    # ── V8.0: 项目生命周期事件 ──
+    USER_INPUT = "user_input"  # 使用者输入（朝廷消息）
+    DEVIATION_REPORTED = "deviation_reported"  # 执行偏差报告
+    PROJECT_CREATED = "project_created"  # 项目创建
+    PROJECT_COMPLETED = "project_completed"  # 项目完成
+    PLAN_GENERATED = "plan_generated"  # 计划生成完成（祖辈）
+    PLAN_REFINED = "plan_refined"  # 计划细化完成（父辈）
+    PLAN_REJECTED = "plan_rejected"  # 计划被拒绝（审计不通过）
+    AUDIT_REQUESTED = "audit_requested"  # 请求审计计划
+    AUDIT_COMPLETED = "audit_completed"  # 审计完成
     PLAN_GENERATED = "plan_generated"  # 计划生成完成
     PLAN_REJECTED = "plan_rejected"  # 计划被拒绝（审计不通过）
     AUDIT_REQUESTED = "audit_requested"  # 请求审计计划
