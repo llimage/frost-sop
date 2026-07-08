@@ -10,6 +10,7 @@ from datetime import datetime
 from core.event_bus import EventBus, Event, EventType
 from core.event_bus_daemon import EventBusDaemon
 from core.project import Project, ProjectStore
+from core.trace import ExecutionTrace, TraceStore
 from skills.llm import call_llm
 
 logger = logging.getLogger(__name__)
@@ -24,10 +25,12 @@ Vision: {project_vision}
 class TaskParentAgent:
     """Task-level project manager, bound to one Project."""
 
-    def __init__(self, project: Project, project_store: ProjectStore, daemon: EventBusDaemon = None):
+    def __init__(self, project: Project, project_store: ProjectStore,
+                 daemon: EventBusDaemon = None, trace: ExecutionTrace = None):
         self.project = project
         self.project_store = project_store
         self.daemon = daemon or EventBusDaemon()
+        self.trace = trace
         self._agent_id = f"parent_{project.id}"
 
     @property
@@ -45,17 +48,29 @@ class TaskParentAgent:
         self.project.name = raw_input[:30] + ("..." if len(raw_input) > 30 else "")
         self.project.status = "vision_aligning"
         self.project_store.save(self.project)
+
+        if self.trace:
+            self.trace.add_event("TaskParentAgent", "new_task_received", {"raw_input": raw_input})
+
         self._align_vision()
 
     def handle_user_message(self, message: str):
         logger.info("[TaskParent] User message: %s", message)
         intent = self._classify_intent(message)
+
+        if self.trace:
+            self.trace.add_event("TaskParentAgent", "user_message_received",
+                                {"message": message, "intent": intent})
+
         if intent == "vision_update":
             self._handle_vision_update(message)
         elif intent == "status_query":
             self._handle_status_query()
         else:
             self._handle_general_chat(message)
+
+        if self.trace:
+            TraceStore().save(self.trace)
 
     def _align_vision(self):
         prompt = f'User said: "{self.project.raw_input}"\nExtract a clear project vision.'
@@ -66,26 +81,40 @@ class TaskParentAgent:
         self.project_store.save(self.project)
         logger.info("[TaskParent] Vision aligned: %s", vision[:80])
 
+        if self.trace:
+            self.trace.add_event("TaskParentAgent", "vision_aligned", {"vision": vision[:100]})
+            self.trace.add_decision("vision_alignment", "llm_extraction", {"vision_length": len(vision)})
+            TraceStore().save(self.trace)
+
     def _handle_vision_update(self, message: str):
         if self.project.status == "executing":
             self._report_deviation("vision_change_during_execution",
                 "Project is executing. Changing vision may require replanning.",
                 ["A. Adjust future phases only", "B. Full replan", "C. Keep current plan"])
         else:
+            old_vision = self.project.vision
             self.project.vision = message
             self.project.status = "vision_aligned"
             self.project_store.save(self.project)
             logger.info("[TaskParent] Vision updated")
 
+            if self.trace:
+                self.trace.add_event("TaskParentAgent", "vision_updated",
+                                    {"old": old_vision[:50] if old_vision else None, "new": message[:50]})
+
     def _handle_status_query(self):
         report = self._generate_status_report()
         logger.info("[TaskParent] Status report: %s", report)
+        if self.trace:
+            self.trace.add_event("TaskParentAgent", "status_query", {"report": report})
 
     def _handle_general_chat(self, message: str):
         self.project.context.setdefault("chat_history", []).append({
             "role": "user", "content": message, "timestamp": datetime.now().isoformat()
         })
         self.project_store.save(self.project)
+        if self.trace:
+            self.trace.add_event("TaskParentAgent", "general_chat", {"message": message[:50]})
 
     def _on_stage_completed(self, event: Event):
         data = event.data
@@ -111,6 +140,12 @@ class TaskParentAgent:
         report = {"project_id": self.project.id, "type": dev_type, "description": description,
                   "options": options, "requires_decision": True}
         logger.info("[TaskParent] Deviation reported: %s", dev_type)
+
+        if self.trace:
+            self.trace.add_error("TaskParentAgent", dev_type, description)
+            self.trace.add_decision("deviation_reported", dev_type, {"options": options})
+            TraceStore().save(self.trace)
+
         if self.daemon.is_running():
             self.daemon.publish(Event(event_type=EventType.DEVIATION_REPORTED, source=self._agent_id, data=report))
 
@@ -119,14 +154,8 @@ class TaskParentAgent:
 
     def _classify_intent(self, message: str) -> str:
         m = message.lower()
-        if any(w in m for w in ["progress", "status"]):
+        if any(w in m for w in ["progress", "status", "进度", "状态", "怎么样"]):
             return "status_query"
-        if any(w in m for w in ["change", "update", "modify", "\u6539\u6210", "\u6362\u6210", "\u53d8\u6210"]):
-            return "vision_update"
-        return "general"
-        m = message.lower()
-        if any(w in m for w in ["progress", "status"]):
-            return "status_query"
-        if any(w in m for w in ["change", "update", "modify"]):
+        if any(w in m for w in ["change", "update", "modify", "\u6539\u6210", "\u6362\u6210", "\u53d8\u6210", "\u8c03\u6574"]):
             return "vision_update"
         return "general"

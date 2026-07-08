@@ -158,36 +158,7 @@ PARENT_WORKFLOW = WeaponMetadata(
     created_from="manual",
     source="sops/SOP-PARENT-001.yaml",
 )
-    id="sop:SOP-INTAKE-001",
-    name="需求澄清SOP",
-    type=WeaponType.SOP,
-    category=WeaponCategory.GOVERNANCE,
-    description="计划生成前审问：5个战略问题防止模糊需求",
-    applicable_scenarios=["需求澄清", "项目启动", "客户沟通", "战略对齐"],
-    not_applicable_scenarios=["技术实现", "代码编写"],
-    tags=["intake", "requirements", "clarification", "sop"],
-    state=WeaponState.ACTIVE,
-    is_active=True,
-    is_preset=True,
-    created_from="manual",
-    source="sops/SOP-INTAKE-001.yaml",
-)
 
-PARENT_WORKFLOW = WeaponMetadata(
-    id="sop:SOP-PARENT-001",
-    name="父辈工作流程SOP",
-    type=WeaponType.SOP,
-    category=WeaponCategory.STRATEGY,
-    description="父辈战术细化的标准操作流程：接收→拆解→并行识别→依赖解析→输出",
-    applicable_scenarios=["战术规划", "计划细化", "并行设计"],
-    not_applicable_scenarios=["战略制定", "代码执行"],
-    tags=["parent", "workflow", "sop", "refinement"],
-    state=WeaponState.ACTIVE,
-    is_active=True,
-    is_preset=True,
-    created_from="manual",
-    source="sops/SOP-PARENT-001.yaml",
-)
 
 # ────────────────────────────────────────────────────────────────────────────
 # 认知层武器（基础能力）
@@ -208,6 +179,74 @@ CALL_LLM = WeaponMetadata(
     source="skills/llm.py",
 )
 
+
+# ────────────────────────────────────────────────────────────────────────────
+# V8.0 新增武器：项目生命周期
+# ────────────────────────────────────────────────────────────────────────────
+
+VISION_ALIGNER = WeaponMetadata(
+    id="skill:vision_aligner",
+    name="愿景对齐器",
+    type=WeaponType.SKILL,
+    category=WeaponCategory.STRATEGY,
+    description="V8.0：与朝廷持续对话，将模糊需求逐步对齐为清晰愿景",
+    applicable_scenarios=["项目启动", "愿景对齐", "需求澄清", "偏差检测", "愿景更新"],
+    not_applicable_scenarios=["代码编写", "数据清洗"],
+    tags=["vision", "alignment", "dialogue", "parent", "project"],
+    state=WeaponState.ACTIVE,
+    is_active=True,
+    is_preset=True,
+    created_from="manual",
+    source="skills/strategy/vision_aligner.py",
+)
+
+PROJECT_EXECUTOR = WeaponMetadata(
+    id="skill:project_executor",
+    name="项目执行器",
+    type=WeaponType.SKILL,
+    category=WeaponCategory.ORCHESTRATE,
+    description="V8.0：组建府兵小队、调度并行执行、监控进度、汇总结果",
+    applicable_scenarios=["计划执行", "府兵调度", "并行编排", "进度监控", "结果汇总"],
+    not_applicable_scenarios=["愿景对齐", "需求澄清"],
+    tags=["execution", "footman", "parallel", "orchestrate", "project"],
+    state=WeaponState.ACTIVE,
+    is_active=True,
+    is_preset=True,
+    created_from="manual",
+    source="skills/strategy/project_executor.py",
+)
+
+MATURITY_TRACKER = WeaponMetadata(
+    id="skill:maturity_tracker",
+    name="成熟度追踪器",
+    type=WeaponType.SKILL,
+    category=WeaponCategory.GOVERNANCE,
+    description="V8.0：武器成熟度评估（🔴初创→🟡测试→🟢稳定），自动升级/退化",
+    applicable_scenarios=["武器评估", "健康检查", "进化触发", "成熟度标记"],
+    not_applicable_scenarios=["任务执行", "计划生成"],
+    tags=["maturity", "health", "evolution", "assessment", "governance"],
+    state=WeaponState.ACTIVE,
+    is_active=True,
+    is_preset=True,
+    created_from="manual",
+    source="skills/strategy/maturity_tracker.py",
+)
+
+PROJECT_LIFECYCLE = WeaponMetadata(
+    id="tactic:project_lifecycle",
+    name="项目生命周期TACTIC",
+    type=WeaponType.TACTIC,
+    category=WeaponCategory.STRATEGY,
+    description="V8.0：项目管理全流程SOP——创建→对齐→计划→执行→复盘→归档",
+    applicable_scenarios=["项目管理", "任务生命周期", "全流程管理"],
+    not_applicable_scenarios=["单一技能执行", "无状态操作"],
+    tags=["project", "lifecycle", "tactic", "workflow", "sop"],
+    state=WeaponState.ACTIVE,
+    is_active=True,
+    is_preset=True,
+    created_from="manual",
+    source="sops/TACTIC-PROJECT-LIFECYCLE.yaml",
+)
 # ────────────────────────────────────────────────────────────────────────────
 # 武器清单汇总
 # ────────────────────────────────────────────────────────────────────────────
@@ -227,6 +266,11 @@ ALL_WEAPONS: list[WeaponMetadata] = [
     PARENT_WORKFLOW,
     # 认知层
     CALL_LLM,
+    # V8.0 新增
+    VISION_ALIGNER,
+    PROJECT_EXECUTOR,
+    MATURITY_TRACKER,
+    PROJECT_LIFECYCLE,
 ]
 
 
