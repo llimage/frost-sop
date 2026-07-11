@@ -1,0 +1,51 @@
+sop_id: TEST-001
+name: 测试规范检查
+version: "1.0"
+description: >
+  FROST-SOP V8.0 测试硬性要求检查清单。
+  每个测试文件必须满足此清单。
+
+stages:
+  - name: 异常路径覆盖
+    description: 测试必须覆盖异常路径，不仅仅是 happy path
+    checklist:
+      - item: 每个被测函数至少有一个异常场景测试
+        required: true
+      - item: 使用 pytest.raises 验证异常类型
+        required: true
+      - item: 测试非法输入的处理（None、空值、越界）
+        required: true
+    skills:
+      - test_validator
+
+  - name: 断言完整性
+    description: 每个测试必须有断言，禁止零断言测试
+    checklist:
+      - item: 每个测试函数至少一个 assert
+        required: true
+      - item: 断言验证具体值，不仅仅是类型
+        required: true
+      - item: 异常测试断言错误消息内容
+        required: false
+    skills:
+      - test_validator
+
+  - name: 边界条件测试
+    description: 测试边界条件和边缘场景
+    checklist:
+      - item: 空集合/空字符串测试
+        required: true
+      - item: 最大值/最小值边界测试
+        required: true
+      - item: 并发场景测试（如适用）
+        required: false
+    skills:
+      - test_validator
+
+exit_criteria:
+  - 所有 required checklist 项完成
+  - test_validator_skill 检查得分 >= 80
+
+on_failure:
+  action: block_merge
+  message: "测试规范检查未通过，请补充测试后重新提交"

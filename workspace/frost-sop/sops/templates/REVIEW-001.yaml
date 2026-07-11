@@ -1,0 +1,77 @@
+sop_id: REVIEW-001
+name: 代码审查规范检查
+version: "1.0"
+description: >
+  FROST-SOP V8.0 代码审查硬性要求检查清单。
+  每次代码审查必须执行此清单。
+
+stages:
+  - name: 异常清单审查
+    description: 审查每个函数的异常清单完整性
+    checklist:
+      - item: 函数文档字符串包含 4 类失败场景
+        required: true
+      - item: 每类失败场景有对应的处理策略
+        required: true
+      - item: 处理策略具体明确（不是泛泛而谈）
+        required: true
+    skills:
+      - review_auditor
+
+  - name: 零静默失败审查
+    description: 审查异常处理是否合规
+    checklist:
+      - item: 无空的 except 块
+        required: true
+      - item: 每个 except 有错误码
+        required: true
+      - item: 每个 except 有结构化日志
+        required: true
+      - item: 处理策略明确（重试/降级/报错）
+        required: true
+    skills:
+      - review_auditor
+
+  - name: 防御式编程审查
+    description: 审查输入校验和外部调用保护
+    checklist:
+      - item: 函数入口有参数校验
+        required: true
+      - item: 外部调用有超时设置
+        required: true
+      - item: 敏感操作有权限检查
+        required: true
+    skills:
+      - review_auditor
+
+  - name: 可观测性审查
+    description: 审查审计痕迹完整性
+    checklist:
+      - item: 异常路径有日志记录
+        required: true
+      - item: 关键操作有审计日志
+        required: true
+      - item: 日志包含足够的上下文信息
+        required: true
+    skills:
+      - review_auditor
+
+  - name: 代码分层审查
+    description: 审查异常是否跨越层边界裸抛
+    checklist:
+      - item: API 层异常转换为 HTTPException
+        required: true
+      - item: 无裸抛 Exception/ValueError
+        required: true
+      - item: 领域错误有明确的 ErrorCode
+        required: true
+    skills:
+      - review_auditor
+
+exit_criteria:
+  - 所有 CRITICAL 和 HIGH 级别违规已修复
+  - review_auditor_skill 检查得分 >= 80
+
+on_failure:
+  action: request_changes
+  message: "代码审查未通过，请修复硬性要求违规后重新审查"

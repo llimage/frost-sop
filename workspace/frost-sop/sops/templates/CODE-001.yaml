@@ -1,0 +1,85 @@
+sop_id: CODE-001
+name: 编码规范检查
+version: "1.0"
+description: >
+  FROST-SOP V8.0 编码硬性要求检查清单。
+  每个函数在实现前必须完成此清单。
+
+stages:
+  - name: 异常清单先行
+    description: 在写任何函数之前，先列出该函数所有可能的失败场景
+    checklist:
+      - item: 输入非法（参数类型错误、值为 None、超出有效范围）
+        required: true
+      - item: 依赖服务失败（数据库连接异常、外部 API 超时、文件系统错误）
+        required: true
+      - item: 并发冲突（共享状态竞争条件、死锁、竞态条件）
+        required: true
+      - item: 资源耗尽（内存不足、句柄耗尽、磁盘空间不足、连接池耗尽）
+        required: true
+    skills:
+      - code_validator
+
+  - name: 零静默失败
+    description: 禁止任何空的 catch/except 块
+    checklist:
+      - item: 每个异常必须有明确的错误码（ErrorCode 枚举）
+        required: true
+      - item: 每个异常必须有结构化日志（log_error 调用）
+        required: true
+      - item: 每个异常必须有明确的处理策略（重试/降级/报错）
+        required: true
+      - item: 禁止 except: pass 或空的 except 块
+        required: true
+    skills:
+      - code_validator
+
+  - name: 防御式编程
+    description: 所有外部输入必须校验，所有外部调用必须有超时和熔断
+    checklist:
+      - item: 函数入口参数类型校验
+        required: true
+      - item: 空值/None 检查
+        required: true
+      - item: 外部 HTTP 调用有 timeout 参数
+        required: true
+      - item: 数据库查询有超时设置
+        required: true
+      - item: 文件操作有异常处理
+        required: true
+    skills:
+      - code_validator
+
+  - name: 可观测性
+    description: 每个异常路径都要留下审计痕迹
+    checklist:
+      - item: 异常处理路径调用 log_error 或 audit_log
+        required: true
+      - item: 关键操作记录 info 级别日志
+        required: false
+      - item: 性能敏感操作记录执行时间
+        required: false
+    skills:
+      - code_validator
+
+  - name: 代码分层
+    description: 异常不得跨越层边界裸抛
+    checklist:
+      - item: API 层将原始异常转换为 HTTPException（含 ErrorCode）
+        required: true
+      - item: 服务层将底层异常转换为领域错误
+        required: true
+      - item: 数据访问层将数据库异常转换为存储错误
+        required: true
+      - item: 禁止在 API 层直接 raise Exception/ValueError
+        required: true
+    skills:
+      - code_validator
+
+exit_criteria:
+  - 所有 checklist 的 required 项标记为完成
+  - code_validator_skill 检查得分 >= 80
+
+on_failure:
+  action: block_commit
+  message: "编码规范检查未通过，请修复后重新提交"

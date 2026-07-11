@@ -1,0 +1,41 @@
+intent: 测试规范检查
+description: >
+  自动化检查测试代码是否符合 FROST-SOP V8.0 硬性要求。
+applicable_when: "测试编写、测试审查、提交前验证"
+not_applicable_when: "非测试代码"
+
+inputs:
+  - name: code
+    type: string
+    description: 测试代码字符串
+    required: true
+  - name: filename
+    type: string
+    description: 测试文件名
+    required: false
+    default: "<unknown>"
+
+outputs:
+  - name: passed
+    type: boolean
+  - name: score
+    type: number
+  - name: violations
+    type: array
+  - name: summary
+    type: string
+
+example:
+  input:
+    code: |
+      def test_add():
+          assert add(1, 2) == 3
+    filename: "test_math.py"
+  output:
+    passed: false
+    score: 60
+    violations:
+      - rule: "exception_coverage"
+        line: 1
+        message: "测试文件缺少异常路径覆盖"
+    summary: "test_math.py: 1 项违规, 得分 60/100"

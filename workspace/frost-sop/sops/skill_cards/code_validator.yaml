@@ -1,0 +1,49 @@
+intent: 编码规范检查
+description: >
+  自动化检查代码是否符合 FROST-SOP V8.0 五大硬性要求：
+  异常清单先行、零静默失败、防御式编程、可观测性、代码分层。
+applicable_when: "编码阶段、代码审查、提交前验证"
+not_applicable_when: "非 Python 代码、配置文件、文档"
+
+inputs:
+  - name: code
+    type: string
+    description: 源代码字符串
+    required: true
+  - name: filename
+    type: string
+    description: 文件名
+    required: false
+    default: "<unknown>"
+
+outputs:
+  - name: passed
+    type: boolean
+    description: 是否通过检查
+  - name: score
+    type: number
+    description: 得分 0-100
+  - name: violations
+    type: array
+    description: 违规项列表
+  - name: summary
+    type: string
+    description: 检查摘要
+
+example:
+  input:
+    code: |
+      def divide(a, b):
+          return a / b
+    filename: "math.py"
+  output:
+    passed: false
+    score: 20
+    violations:
+      - rule: "exception_manifest"
+        line: 1
+        message: "函数 'divide' 缺少文档字符串"
+      - rule: "defensive_programming"
+        line: 1
+        message: "函数 'divide' 缺少输入校验"
+    summary: "math.py: 2 项违规, 得分 20/100"

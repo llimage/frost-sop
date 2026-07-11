@@ -1,0 +1,54 @@
+intent: 代码审查规范检查
+description: >
+  对代码变更进行 V8.0 硬性要求审计，输出审查报告。
+applicable_when: "代码审查、发布前验证、合规审计"
+not_applicable_when: "非代码文件"
+
+inputs:
+  - name: code
+    type: string
+    description: 代码字符串
+    required: true
+  - name: filename
+    type: string
+    description: 文件名
+    required: false
+    default: "<unknown>"
+
+outputs:
+  - name: passed
+    type: boolean
+  - name: score
+    type: number
+  - name: violations
+    type: array
+  - name: summary
+    type: string
+  - name: recommendation
+    type: string
+    description: 审查建议（通过/需修复）
+
+example:
+  input:
+    code: |
+      def process(data):
+          try:
+              result = api.call(data)
+              return result
+          except:
+              pass
+    filename: "service.py"
+  output:
+    passed: false
+    score: 0
+    violations:
+      - rule: "no_silent_failure"
+        line: 5
+        severity: "CRITICAL"
+        message: "except: pass - 静默失败，严重违规"
+      - rule: "defensive_programming"
+        line: 3
+        severity: "MEDIUM"
+        message: "外部调用缺少 timeout 参数"
+    summary: "审查审计 service.py: 2 项违规, 得分 0/100"
+    recommendation: "需修复后重新审查"
