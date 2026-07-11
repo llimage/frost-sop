@@ -548,7 +548,9 @@ class DBManager:
         self._migrate_table(cursor, "skill_versions", {"file_path": "TEXT DEFAULT ''"})
 
     def _migrate_decision_points_table(self, cursor):
-        """F8: 为 decision_points 表添加决策管理需要的列"""
+        """F8: 为 decision_points 表添加决策管理需要的列
+        V9.1: 添加超时机制字段 (timeout_minutes, expires_at, timeout_action)
+        """
         self._migrate_table(
             cursor,
             "decision_points",
@@ -561,6 +563,10 @@ class DBManager:
                 "user_note": "TEXT DEFAULT ''",
                 "created_at": "TIMESTAMP",
                 "responded_at": "TIMESTAMP",
+                # V9.1: 人类府兵超时机制
+                "timeout_minutes": "INTEGER DEFAULT 30",
+                "expires_at": "TIMESTAMP",
+                "timeout_action": "TEXT DEFAULT 'escalate'",  # escalate/abort/auto_approve
             },
         )
 
@@ -825,6 +831,75 @@ class DBManager:
         else:
             conn.commit()
             return cursor.rowcount
+
+    # ═══════════════════════════════════════════════════════════════
+    # V9.1: 人类府兵超时机制
+    # ═══════════════════════════════════════════════════════════════
+    def check_expired_decisions(self) -> list[dict[str, Any]]:
+        """
+        检查已超时的决策点。
+        
+        失败场景:
+        1. DB 连接失败 → 返回空列表 + 日志
+        2. 时间计算错误 → 捕获异常 + 返回空列表
+        
+        返回:
+            已超时且状态仍为 pending 的决策点列表
+        """
+        try:
+            # 查找: 状态=pending AND (expires_at < now OR created_at + timeout_minutes < now)
+            sql = """
+            SELECT * FROM decision_points 
+            WHERE status = 'pending' 
+            AND (
+                (expires_at IS NOT NULL AND expires_at < datetime('now'))
+                OR (
+                    expires_at IS NULL 
+                    AND created_at IS NOT NULL
+                    AND datetime(created_at, '+' || timeout_minutes || ' minutes') < datetime('now')
+                )
+            )
+            ORDER BY created_at ASC
+            """
+            return self.execute_sql(sql)
+        except Exception as e:
+            print(f"[ERROR] CHECK_EXPIRED_DECISIONS_FAILED:")
+            print(f"  错误类型: {type(e).__name__}")
+            print(f"  错误信息: {str(e)[:200]}")
+            return []
+
+    def resolve_decision_timeout(self, decision_id: int, action: str = "escalate") -> bool:
+        """
+        处理超时决策点。
+        
+        Args:
+            decision_id: 决策点ID
+            action: 超时后的动作 (escalate/abort/auto_approve)
+        
+        返回:
+            是否成功处理
+        """
+        try:
+            # 更新决策点状态为超时
+            self.execute_sql(
+                """
+                UPDATE decision_points 
+                SET status = 'timeout', 
+                    user_decision = ?, 
+                    responded_at = datetime('now')
+                WHERE id = ? AND status = 'pending'
+                """,
+                [f"TIMEOUT:{action}", decision_id]
+            )
+            
+            print(f"[WARN] DECISION_TIMEOUT: 决策点 {decision_id} 已超时，执行动作: {action}")
+            return True
+        except Exception as e:
+            print(f"[ERROR] RESOLVE_DECISION_TIMEOUT_FAILED:")
+            print(f"  决策ID: {decision_id}")
+            print(f"  错误类型: {type(e).__name__}")
+            print(f"  错误信息: {str(e)[:200]}")
+            return False
 
     # ============================================================
     # 特定业务操作

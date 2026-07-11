@@ -22,6 +22,23 @@ from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
+# FROST-SOP V9.1: SSE Event Types for real-time state synchronization
+EVENT_TYPES = {
+    "task.created": "任务创建",
+    "task.updated": "任务状态更新",
+    "task.completed": "任务完成",
+    "task.failed": "任务失败",
+    "stage.started": "阶段开始",
+    "stage.completed": "阶段完成",
+    "stage.failed": "阶段失败",
+    "stage.waiting_human": "等待人工决策",
+    "agent.status_changed": "Agent状态变更",
+    "decision.pending": "新决策点",
+    "decision.resolved": "决策已解决",
+    "cost.threshold_warning": "成本阈值警告",
+    "cost.budget_exceeded": "预算超支",
+}
+
 # Ensure frost-sop root is on path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -82,6 +99,55 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
 )
+
+
+# ═══════════════════════════════════════════════════════════════
+# FROST-SOP V9.1: 全局异常处理 — 零静默失败
+# 捕获所有未处理的异常，转换为结构化错误响应
+# ═══════════════════════════════════════════════════════════════
+from fastapi import HTTPException
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    全局异常处理器。
+    策略: 记录完整错误 → 返回结构化错误响应
+    """
+    import traceback
+    error_id = f"err-{uuid.uuid4().hex[:8]}"
+    error_detail = traceback.format_exc()
+    
+    print(f"[ERROR] UNHANDLED_EXCEPTION:")
+    print(f"  错误ID: {error_id}")
+    print(f"  路径: {request.url.path}")
+    print(f"  方法: {request.method}")
+    print(f"  错误类型: {type(exc).__name__}")
+    print(f"  错误信息: {str(exc)[:200]}")
+    print(f"  堆栈:\n{error_detail}")
+    
+    # 如果是 HTTPException，保留其状态码
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error_code": f"HTTP_{exc.status_code}",
+                "error_id": error_id,
+                "message": exc.detail,
+                "path": request.url.path,
+            },
+        )
+    
+    # 其他异常返回 500
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error_code": "INTERNAL_SERVER_ERROR",
+            "error_id": error_id,
+            "message": f"服务器内部错误 ({type(exc).__name__})",
+            "path": request.url.path,
+        },
+    )
 
 
 # ── Helpers ──
@@ -367,12 +433,42 @@ def list_tasks(
 
 # ═══════════════════════════════════════════════════════════════
 # 5. GET /api/tasks/{id}/stages — 任务阶段详情
+# 失败场景:
+#   1. 输入非法: task_id 为空/格式错误 → 400 Bad Request
+#   2. 依赖服务失败: DB 连接断开 → 500 + 日志
+#   3. 资源耗尽: 阶段数据过多 → 限制返回数量(100条)
 # ═══════════════════════════════════════════════════════════════
 @app.get("/api/tasks/{task_id}/stages", response_model=list[TaskStageResponse], tags=["任务"])
 def get_task_stages(task_id: str):
-    db = get_db()
-    rows = db.select_all("task_stages", "task_id = ? ORDER BY stage_order ASC", [task_id])
-    return _rows_to_list(rows)
+    # 1. 输入校验
+    if not task_id or task_id.strip() == "" or task_id == "undefined":
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="TASK_ID_INVALID: 任务ID不能为空")
+
+    try:
+        db = get_db()
+        # 限制返回数量防止资源耗尽
+        rows = db.select_all(
+            "task_stages",
+            "task_id = ? ORDER BY stage_order ASC LIMIT 100",
+            [task_id]
+        )
+        return _rows_to_list(rows)
+    except Exception as e:
+        # 结构化日志: 错误码 + 上下文 + 堆栈
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"[ERROR] API_GET_TASK_STAGES_FAILED:")
+        print(f"  错误码: DB_QUERY_FAILED")
+        print(f"  任务ID: {task_id}")
+        print(f"  错误类型: {type(e).__name__}")
+        print(f"  错误信息: {str(e)}")
+        print(f"  堆栈:\n{error_detail}")
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=500,
+            detail=f"STAGES_QUERY_FAILED: 无法获取任务阶段 ({type(e).__name__})"
+        )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -413,13 +509,16 @@ def get_costs(
     recent_logs = _rows_to_list(recent)
 
     # 预算限制
-    budget_limit = None
+    budget_limit = 50.0  # 默认值
     try:
         from core.config import get_config
-
         budget_limit = float(get_config("budget_limit", "50.0"))
-    except Exception:
-        budget_limit = 50.0
+    except Exception as e:
+        # 降级策略: 使用默认值，但记录日志
+        print(f"[WARN] BUDGET_CONFIG_FALLBACK: 无法读取预算配置，使用默认值 50.0")
+        print(f"  错误类型: {type(e).__name__}")
+        print(f"  错误信息: {str(e)}")
+        # budget_limit 保持默认值 50.0
 
     return CostSummaryResponse(
         monthly_total=round(monthly_total, 6),
@@ -481,7 +580,7 @@ def chat(req: ChatRequest):
         # 使用profile自动映射temperature（execute=0.1, create=0.5）
         # 如需覆盖，通过req.temperature传入
         "_llm_profile": "execute",  # API调用默认使用execute profile（高确定性）
-        "_max_tokens": 1024,
+        "_max_tokens": 4096,  # FROST-SOP V9.1: 增加token限制以支持长文本对话
         "_agent_id": "ceo-agent",
     }
 
@@ -531,7 +630,13 @@ async def stream_logs(
                             continue
                         yield f"data: {json.dumps(rd, ensure_ascii=False)}\n\n"
                         last_id = max(last_id, rd.get("id", 0))
-            except Exception:
+            except Exception as e:
+                # SSE 流中的 DB 错误: 记录日志但不中断流，下次迭代重试
+                print(f"[WARN] SSE_AUDIT_LOG_QUERY_FAILED (iteration {iteration}):")
+                print(f"  错误类型: {type(e).__name__}")
+                print(f"  错误信息: {str(e)[:200]}")
+                # 策略: 继续循环，下次迭代重试
+                # 如果连续失败多次，可考虑增加退避延迟
                 pass
             iteration += 1
             await asyncio.sleep(2)
@@ -687,7 +792,123 @@ def health():
     }
 
 
-# ── Helper — Panel JSON 序列化 ──────────────────────────────
+# ── 17. GET /api/events — 实时状态事件 (SSE 流式输出) ─────
+# FROST-SOP V9.1: 通用状态同步事件流，替代前端轮询
+@app.get("/api/events", tags=["系统"])
+async def stream_events(
+    request: Request,
+    max_iterations: int = Query(
+        0, alias="max_iterations", ge=0, description="最大迭代次数，0=无限"
+    ),
+):
+    """
+    SSE 流式输出系统状态变更事件。
+    事件类型: task.created, task.updated, stage.completed, agent.status_changed, decision.pending 等
+    前端订阅此流，收到事件后自动刷新 TanStack Query 缓存。
+    """
+    db = get_db()
+    disconnect_check_interval = 5
+
+    # 各表的最后观察ID
+    last_ids = {
+        "tasks": 0,
+        "task_stages": 0,
+        "agents": 0,
+        "agent_status": 0,
+        "decision_points": 0,
+        "audit_log": 0,
+    }
+
+    async def event_generator():
+        iteration = 0
+        while max_iterations == 0 or iteration < max_iterations:
+            if (
+                iteration > 0
+                and iteration % disconnect_check_interval == 0
+                and await request.is_disconnected()
+            ):
+                break
+
+            events = []
+
+            # 1. 检查任务变更
+            try:
+                rows = db.execute_sql(
+                    "SELECT * FROM tasks WHERE updated_at > datetime('now', '-5 seconds') ORDER BY updated_at DESC LIMIT 5"
+                )
+                for row in rows:
+                    events.append({
+                        "type": "task.updated",
+                        "data": _row_to_dict(row),
+                        "timestamp": datetime.now().isoformat(),
+                    })
+            except Exception as e:
+                print(f"[WARN] SSE_TASK_QUERY_FAILED (iter {iteration}): {type(e).__name__}: {str(e)[:100]}")
+
+            # 2. 检查阶段变更
+            try:
+                rows = db.execute_sql(
+                    "SELECT * FROM task_stages WHERE completed_at > datetime('now', '-5 seconds') OR started_at > datetime('now', '-5 seconds') ORDER BY id DESC LIMIT 10"
+                )
+                for row in rows:
+                    status = row.get("status", "")
+                    event_type = "stage.updated"
+                    if status == "completed":
+                        event_type = "stage.completed"
+                    elif status == "failed":
+                        event_type = "stage.failed"
+                    events.append({
+                        "type": event_type,
+                        "data": _row_to_dict(row),
+                        "timestamp": datetime.now().isoformat(),
+                    })
+            except Exception as e:
+                print(f"[WARN] SSE_STAGE_QUERY_FAILED (iter {iteration}): {type(e).__name__}: {str(e)[:100]}")
+
+            # 3. 检查决策点
+            try:
+                rows = db.execute_sql(
+                    "SELECT * FROM decision_points WHERE status = 'pending' AND created_at > datetime('now', '-5 seconds') ORDER BY id DESC LIMIT 5"
+                )
+                for row in rows:
+                    events.append({
+                        "type": "decision.pending",
+                        "data": _row_to_dict(row),
+                        "timestamp": datetime.now().isoformat(),
+                    })
+            except Exception as e:
+                print(f"[WARN] SSE_DECISION_QUERY_FAILED (iter {iteration}): {type(e).__name__}: {str(e)[:100]}")
+
+            # 4. 检查 Agent 状态变更
+            try:
+                rows = db.execute_sql(
+                    "SELECT * FROM agent_status WHERE last_heartbeat > datetime('now', '-5 seconds') ORDER BY agent_id LIMIT 10"
+                )
+                for row in rows:
+                    events.append({
+                        "type": "agent.status_changed",
+                        "data": _row_to_dict(row),
+                        "timestamp": datetime.now().isoformat(),
+                    })
+            except Exception as e:
+                print(f"[WARN] SSE_AGENT_QUERY_FAILED (iter {iteration}): {type(e).__name__}: {str(e)[:100]}")
+
+            # 发送事件
+            for event in events:
+                yield f"event: {event['type']}\ndata: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+            iteration += 1
+            await asyncio.sleep(2)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 def _enum_to_str(v):
@@ -748,10 +969,13 @@ def generate_panel(req: PanelGenerateRequest):
     if sop_id:
         try:
             from core.sop import SOP
-
             sop = SOP.load_from_yaml(f"sops/templates/{sop_id}.yaml")
-        except Exception:
-            pass
+        except Exception as e:
+            # SOP 模板加载失败: 降级到无模板模式，记录日志
+            print(f"[WARN] SOP_TEMPLATE_LOAD_FAILED: {sop_id}")
+            print(f"  错误类型: {type(e).__name__}")
+            print(f"  错误信息: {str(e)[:200]}")
+            # sop 保持 None，后续使用无模板模式
 
     # 3. 读取 stages
     stage_rows = db.select_all("task_stages", "task_id = ? ORDER BY stage_order ASC", [req.task_id])
@@ -843,3 +1067,179 @@ def list_pending_decisions(
     cursor.execute(sql, params)
     rows = cursor.fetchall()
     return [dict(r) for r in rows]
+
+
+# ═══════════════════════════════════════════════════════════════
+# V9.1: 人类府兵超时机制 API
+# ═══════════════════════════════════════════════════════════════
+@app.post("/api/decisions/check-timeout", tags=["决策"])
+def check_decision_timeout():
+    """
+    检查并处理超时的决策点。
+    由前端或定时任务调用，自动处理超时的人类府兵决策。
+    
+    失败场景:
+    1. DB 查询失败 → 返回错误计数 + 日志
+    2. 处理单个超时失败 → 继续处理其他，记录失败
+    
+    返回:
+        { checked: 检查数量, resolved: 处理数量, failed: 失败数量 }
+    """
+    db = get_db()
+    
+    try:
+        expired = db.check_expired_decisions()
+    except Exception as e:
+        print(f"[ERROR] CHECK_TIMEOUT_API_FAILED:")
+        print(f"  错误类型: {type(e).__name__}")
+        print(f"  错误信息: {str(e)[:200]}")
+        raise HTTPException(status_code=500, detail="CHECK_TIMEOUT_FAILED")
+    
+    resolved = 0
+    failed = 0
+    
+    for decision in expired:
+        decision_id = decision.get("id")
+        action = decision.get("timeout_action", "escalate")
+        
+        try:
+            success = db.resolve_decision_timeout(decision_id, action)
+            if success:
+                resolved += 1
+            else:
+                failed += 1
+        except Exception as e:
+            print(f"[ERROR] RESOLVE_SINGLE_TIMEOUT_FAILED:")
+            print(f"  决策ID: {decision_id}")
+            print(f"  错误类型: {type(e).__name__}")
+            failed += 1
+    
+    return {
+        "checked": len(expired),
+        "resolved": resolved,
+        "failed": failed,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
+# V9.1: 自进化 API — 错误记录 → 教训 → 复盘 → 进化
+# ═══════════════════════════════════════════════════════════════
+@app.post("/api/evolution/trigger", tags=["进化"])
+def trigger_evolution(error_record: dict):
+    """
+    触发自进化流程。
+    
+    请求体:
+        {
+            "error_type": "API_ERROR|DB_ERROR|LLM_ERROR|...",
+            "error_message": "具体错误信息",
+            "component": "api.main|core.db|...",
+            "context": { ... }
+        }
+    
+    返回:
+        { task_id, status, message }
+    
+    失败场景:
+    1. 输入非法 → 400
+    2. SOP 模板不存在 → 500
+    3. 任务创建失败 → 500 + 日志
+    """
+    # 输入校验
+    if not error_record.get("error_type"):
+        raise HTTPException(status_code=400, detail="EVOLUTION_ERROR_TYPE_EMPTY: 错误类型不能为空")
+    if not error_record.get("error_message"):
+        raise HTTPException(status_code=400, detail="EVOLUTION_ERROR_MESSAGE_EMPTY: 错误信息不能为空")
+    
+    try:
+        # 创建自进化任务
+        from sops.templates.self_evolution import create_self_evolution_task
+        
+        task_context = create_self_evolution_task(error_record)
+        task_id = f"evolution-{uuid.uuid4().hex[:8]}"
+        
+        # 记录到数据库
+        db = get_db()
+        db.insert("tasks", {
+            "id": task_id,
+            "description": f"自进化: {error_record['error_type']} - {error_record['error_message'][:50]}",
+            "status": "pending",
+            "project_id": "system_evolution",
+            "created_at": datetime.now().isoformat(),
+        })
+        
+        print(f"[INFO] EVOLUTION_TRIGGERED: 任务ID={task_id}, 错误类型={error_record['error_type']}")
+        
+        return {
+            "task_id": task_id,
+            "status": "pending",
+            "message": "自进化任务已创建，等待执行",
+            "timestamp": datetime.now().isoformat(),
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] EVOLUTION_TRIGGER_FAILED:")
+        print(f"  错误类型: {type(e).__name__}")
+        print(f"  错误信息: {str(e)[:200]}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"EVOLUTION_TRIGGER_FAILED: {type(e).__name__}"
+        )
+
+
+@app.get("/api/evolution/status", tags=["进化"])
+def get_evolution_status():
+    """
+    获取自进化系统状态。
+    
+    返回:
+        {
+            total_errors: 总错误数,
+            archived_lessons: 归档教训数,
+            pending_evolutions: 待处理进化数,
+            last_evolution: 上次进化时间
+        }
+    """
+    db = get_db()
+    
+    try:
+        # 统计错误日志
+        error_count = db.execute_sql(
+            "SELECT COUNT(*) as count FROM audit_log WHERE level = 'ERROR'"
+        )
+        total_errors = error_count[0]["count"] if error_count else 0
+        
+        # 统计教训 (通过 lesson: 前缀的 key)
+        # 注意: 这里简化处理，实际应该从 asset_store 查询
+        
+        # 统计待处理进化任务
+        pending = db.execute_sql(
+            "SELECT COUNT(*) as count FROM tasks WHERE project_id = 'system_evolution' AND status = 'pending'"
+        )
+        pending_evolutions = pending[0]["count"] if pending else 0
+        
+        # 上次进化时间
+        last = db.execute_sql(
+            "SELECT MAX(created_at) as last FROM tasks WHERE project_id = 'system_evolution'"
+        )
+        last_evolution = last[0]["last"] if last and last[0]["last"] else None
+        
+        return {
+            "total_errors": total_errors,
+            "archived_lessons": 0,  # 需要从 asset_store 查询
+            "pending_evolutions": pending_evolutions,
+            "last_evolution": last_evolution,
+            "timestamp": datetime.now().isoformat(),
+        }
+    
+    except Exception as e:
+        print(f"[ERROR] EVOLUTION_STATUS_FAILED:")
+        print(f"  错误类型: {type(e).__name__}")
+        print(f"  错误信息: {str(e)[:200]}")
+        raise HTTPException(
+            status_code=500,
+            detail="EVOLUTION_STATUS_FAILED"
+        )

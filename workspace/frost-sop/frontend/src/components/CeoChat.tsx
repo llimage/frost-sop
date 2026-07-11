@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useStore } from "@/lib/store";
 import { sendChat } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
 interface ChatMessage {
@@ -183,23 +183,30 @@ export default function CeoChat() {
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-[#E2E8F0] flex gap-2 shrink-0">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              sendMessage(input);
-            }
-          }}
-          placeholder="输入消息... (Enter 发送)"
-          disabled={isLoading}
-          className="flex-1"
-        />
+        <div className="flex-1 relative">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage(input);
+              }
+            }}
+            placeholder="输入消息... (Shift+Enter 换行, Enter 发送)"
+            disabled={isLoading}
+            className="min-h-[60px] max-h-[200px] resize-y"
+            rows={2}
+          />
+          <div className="absolute bottom-1 right-2 text-xs text-[#64748B]">
+            {input.length} 字
+          </div>
+        </div>
         <Button
           onClick={() => sendMessage(input)}
           disabled={isLoading || !input.trim()}
           size="sm"
+          className="self-end"
         >
           发送
         </Button>
